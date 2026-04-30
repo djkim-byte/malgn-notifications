@@ -16072,3 +16072,194 @@ body {
     min-width: 96px;
     flex: 0 0 auto;
 }
+
+/* =========================================
+   페이지 목록(pagelists)
+   ========================================= */
+
+.pagelists h1 {
+    font-size: 28px;
+}
+
+.pagelists-stat {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 10px 16px;
+    min-width: 96px;
+    text-align: center;
+}
+
+.pagelists-stat-label {
+    font-size: 12px;
+    color: var(--gray-500);
+    margin-bottom: 2px;
+}
+
+.pagelists-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1.1;
+}
+
+.pagelists-search-input {
+    height: 44px;
+    padding-left: 40px;
+    padding-right: 40px;
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+}
+
+.pagelists-search-input:focus {
+    border-color: var(--color-sky);
+    box-shadow: 0 0 0 3px rgba(79, 192, 252, 0.18);
+}
+
+.pagelists-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+}
+
+.pagelists-search-clear {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    padding: 4px 8px;
+    text-decoration: none;
+}
+
+.pagelists-search-clear:hover {
+    color: var(--gray-600);
+}
+
+.pagelists-cat-title {
+    color: var(--gray-900);
+    border-left: 4px solid var(--color-sky);
+    padding-left: 10px;
+}
+
+.pagelists-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.pagelists-card .table {
+    margin-bottom: 0;
+}
+
+.pagelists-card thead th {
+    background: var(--gray-50);
+    color: var(--gray-600);
+    font-size: 13px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 12px 16px;
+}
+
+.pagelists-card tbody td {
+    padding: 12px 16px;
+    border-top: 1px solid var(--gray-100);
+    font-size: 14px;
+    color: var(--gray-800);
+}
+
+.pagelists-card tbody tr:first-child td {
+    border-top: none;
+}
+
+.pagelists-col-type {
+    width: 80px;
+}
+
+.pagelists-col-name {
+    width: 38%;
+}
+
+.pagelists-col-url {
+    color: var(--gray-500);
+}
+
+.pagelists-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+}
+
+.pagelists-badge-page {
+    background: var(--color-sky-soft);
+    color: var(--color-sky-vivid);
+}
+
+.pagelists-badge-pu {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.pagelists-name-link {
+    color: var(--gray-900);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.pagelists-name-link:hover {
+    color: var(--color-sky-vivid);
+    text-decoration: underline;
+}
+
+.pagelists-url-link {
+    color: var(--gray-500);
+    text-decoration: none;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.pagelists-url-link:hover {
+    color: var(--color-sky-vivid);
+    text-decoration: underline;
+}
+
+.pagelists-empty {
+    background: #fff;
+    border: 1px dashed var(--gray-300);
+    border-radius: 12px;
+    padding: 56px 24px;
+    text-align: center;
+}
+
+.pagelists-empty-icon {
+    font-size: 32px;
+    color: var(--gray-400);
+    margin-bottom: 12px;
+    display: block;
+}
+
+.pagelists-empty-text {
+    color: var(--gray-500);
+    margin-bottom: 16px;
+}
+
+@media (max-width: 768px) {
+    .pagelists-col-name {
+        width: auto;
+    }
+    .pagelists-card tbody td {
+        font-size: 13px;
+    }
+    .pagelists-url-link {
+        font-size: 12px;
+    }
+}
+

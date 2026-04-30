@@ -1,0 +1,14 @@
+.claude/
+.wrangler/
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+.env
+*.log
+node_modules/
+CLAUDE.md
+README.md
+docs/
+.assetsignore

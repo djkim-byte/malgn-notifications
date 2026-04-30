@@ -1,0 +1,89 @@
+<div class="container py-5 pagelists">
+    <!-- 헤더 -->
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="fw-bold mb-2">페이지 목록</h1>
+            <p class="text-muted mb-0">맑은 NOTIFICATIONS의 모든 화면 및 팝업(PU) 목록입니다.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="pagelists-stat">
+                <div class="pagelists-stat-label">Pages</div>
+                <div class="pagelists-stat-value">{{ totalPages }}</div>
+            </div>
+            <div class="pagelists-stat">
+                <div class="pagelists-stat-label">Popups</div>
+                <div class="pagelists-stat-value">{{ totalPopups }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검색 -->
+    <div class="position-relative mb-4">
+        <i class="bi bi-search pagelists-search-icon"></i>
+        <input
+            v-model="search"
+            type="text"
+            class="form-control pagelists-search-input"
+            placeholder="페이지명 또는 경로 검색…"
+        >
+        <button
+            v-if="search"
+            type="button"
+            class="btn btn-link pagelists-search-clear"
+            @click="search = ''"
+            aria-label="검색어 초기화"
+        >
+            <i class="bi bi-x-circle-fill"></i>
+        </button>
+    </div>
+
+    <!-- 카테고리별 테이블 -->
+    <div v-for="cat in filteredCategories" :key="cat.title" class="mb-5">
+        <h2 class="fs-5 fw-bold mb-3 pagelists-cat-title">{{ cat.title }}</h2>
+        <div class="table-responsive pagelists-card">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th class="pagelists-col-type">구분</th>
+                        <th class="pagelists-col-name">이름</th>
+                        <th class="pagelists-col-url">URL</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(item, idx) in cat.items" :key="cat.title + '-' + idx">
+                        <td>
+                            <span
+                                class="badge pagelists-badge"
+                                :class="item.type === 'Page' ? 'pagelists-badge-page' : 'pagelists-badge-pu'"
+                            >{{ item.type }}</span>
+                        </td>
+                        <td>
+                            <a
+                                href="javascript:void(0)"
+                                class="pagelists-name-link"
+                                @click="openItem(item.path)"
+                            >{{ item.name }}</a>
+                        </td>
+                        <td>
+                            <a
+                                :href="getFullUrl(item.path)"
+                                target="_blank"
+                                rel="noopener"
+                                class="pagelists-url-link"
+                            >{{ getFullUrl(item.path) }}</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 빈 상태 -->
+    <div v-if="filteredCategories.length === 0" class="pagelists-empty">
+        <i class="bi bi-search pagelists-empty-icon"></i>
+        <p class="pagelists-empty-text">"{{ search }}"에 해당하는 결과가 없습니다.</p>
+        <button type="button" class="btn btn-outline-primary btn-sm" @click="search = ''">
+            검색 초기화
+        </button>
+    </div>
+</div>
