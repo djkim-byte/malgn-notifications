@@ -1,0 +1,693 @@
+<div class="tpl-settings-page">
+    <div class="container py-5">
+        <h2 class="page-title text-center fw-bold mb-5">상세 설정</h2>
+
+        <section class="sms-card mb-3">
+            <!-- 탭 바 -->
+            <div class="tpl-settings-tabs">
+                <button v-for="tab in tabs"
+                    :key="tab.value"
+                    type="button"
+                    class="tpl-settings-tab"
+                    :class="{ active: activeTab === tab.value }"
+                    @click="activeTab = tab.value">
+                    {{ tab.label }}
+                </button>
+            </div>
+
+            <!-- ===================== 문자 메시지 탭 ===================== -->
+            <div v-if="activeTab === 'sms'">
+                <!-- 국제 SMS 설정 -->
+                <div class="tpl-settings-section">
+                    <div class="tpl-settings-section-label">국제 SMS 설정</div>
+                    <div class="tpl-settings-section-body">
+                        <h4 class="tpl-settings-section-title">
+                            국제 SMS 메시지 발송 설정
+                        </h4>
+                        <p class="tpl-settings-section-desc">
+                            국제 SMS 발송 기능의 사용 여부를 설정할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.smsIntl = !sections.smsIntl">
+                                {{ sections.smsIntl ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.smsIntl ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.smsIntl" class="tpl-settings-box">
+                            <ul class="tpl-settings-bullet">
+                                <li>국제 발송 자동 차단 기능은 비정상적인 국제 발송을 줄일 수 있는 보조적인 기능입니다.</li>
+                                <ul>
+                                    <li>설정된 임계치(월 발송 건수)를 넘으면 자동 차단되며 국제 발송 특성상 발송 데이터가 수집되는 속도에 따라 차단 시점이 정확하지 않을 수 있습니다.</li>
+                                </ul>
+                                <li>국제 SMS 월 발송 건수는 최소 1건에서 최대 10,000건까지 설정할 수 있습니다. 10,000건 초과 발송이 필요한 경우 [고객 센터]로 문의하세요.</li>
+                                <li>어뷰징이 자주 발생하는 일부 국가는 발송 차단이 기본 설정된 상태이며, 발송을 허용하려면 국가를 선택하여 허용할 수 있습니다.</li>
+                                <ul>
+                                    <li><span class="text-danger fw-semibold">빨간색</span>으로 표기된 국가는 어뷰징 발생 빈도가 높은 국가입니다. 발송 허용 시 참고하세요.</li>
+                                </ul>
+                                <li><a href="javascript:void(0)" class="text-decoration-none">국제 SMS 발송 정책 바로 가기</a></li>
+                            </ul>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">국제 SMS 발송</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="sms.intl.enabled">
+                                        <option value="off">사용 안 함</option>
+                                        <option value="on">사용</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">월 발송 건수</label>
+                                <div class="tpl-settings-row-control">
+                                    <input type="number" class="form-control" v-model.number="sms.intl.monthlyLimit" min="1" max="10000">
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row tpl-settings-row-wide">
+                                <label class="tpl-settings-row-label">발송 허용 국가</label>
+                                <div class="tpl-settings-row-control">
+                                    <div class="tpl-settings-tag-input">
+                                        <span v-for="(c, i) in sms.intl.allowedCountries" :key="c.code" class="tpl-settings-tag">
+                                            {{ c.label }}
+                                            <button type="button" class="tpl-settings-tag-remove" @click="sms.intl.allowedCountries.splice(i, 1)" aria-label="삭제">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('smsIntl')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('smsIntl')">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 메시지 설정 -->
+                <div class="tpl-settings-section">
+                    <div class="tpl-settings-section-label">메시지 설정</div>
+                    <div class="tpl-settings-section-body">
+                        <h4 class="tpl-settings-section-title">
+                            메시지 중복 발송 차단 시간 설정
+                        </h4>
+                        <p class="tpl-settings-section-desc">
+                            설정한 시간 동안 같은 내용의 메시지가 발송되지 않도록 설정할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.smsDup = !sections.smsDup">
+                                {{ sections.smsDup ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.smsDup ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.smsDup" class="tpl-settings-box">
+                            <ul class="tpl-settings-bullet">
+                                <li>발송 유형(SMS/LMS/MMS), 발신 번호, 수신 번호, 제목, 내용, 첨부 파일이 모두 일치하는 경우 중복으로 판단하여 차단됩니다.</li>
+                            </ul>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">중복 발송 차단</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="sms.dup.enabled">
+                                        <option value="off">사용 안 함</option>
+                                        <option value="on">사용</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">차단 시간</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="sms.dup.blockMinutes" :disabled="sms.dup.enabled !== 'on'">
+                                        <option value="10">10분</option>
+                                        <option value="20">20분</option>
+                                        <option value="30">30분</option>
+                                        <option value="60">1시간</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('smsDup')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('smsDup')">취소</button>
+                            </div>
+                        </div>
+
+                        <h4 class="tpl-settings-section-title mt-4">대체 문자 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            발송 내용(제목/본문)에 발송 불가능한 문자(EUC-KR 인코딩 범위 외 문자)가 포함된 경우 발송 가능한 문자로 대체하여 발송하도록 설정할 수 있습니다.
+                            <button type="button" class="tpl-settings-inline-link" @click="openSubstitutionModal">
+                                설정 변경 <i class="bi bi-chevron-down"></i>
+                            </button>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- 광고성 메시지 설정 -->
+                <div class="tpl-settings-section">
+                    <div class="tpl-settings-section-label">광고성 메시지 설정</div>
+                    <div class="tpl-settings-section-body">
+                        <h4 class="tpl-settings-section-title">광고성 메시지 발송 시간 제한 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            광고성 메시지의 발송 시간을 제한할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.smsAd = !sections.smsAd">
+                                {{ sections.smsAd ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.smsAd ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.smsAd" class="tpl-settings-box">
+                            <ul class="tpl-settings-bullet">
+                                <li>설정 가능한 시간은 다음과 같습니다.</li>
+                                <ul>
+                                    <li>광고 발송 제한 시작 설정 가능 시간: 18:00~21:00</li>
+                                    <li>광고 발송 제한 종료 설정 가능 시간: 08:00~12:00</li>
+                                </ul>
+                            </ul>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">광고 발송 제한</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="sms.ad.enabled">
+                                        <option value="off">사용 안 함</option>
+                                        <option value="on">사용</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">
+                                    광고 발송 제한 시간
+                                    <i class="bi bi-question-circle tpl-settings-row-help-icon" title="시작 18:00~21:00 / 종료 08:00~12:00"></i>
+                                </label>
+                                <div class="tpl-settings-row-control">
+                                    <div class="tpl-settings-time-range">
+                                        <select class="form-select" v-model="sms.ad.startTime" :disabled="sms.ad.enabled !== 'on'">
+                                            <option v-for="t in startTimeOptions" :key="t" :value="t">{{ t }}</option>
+                                        </select>
+                                        <span class="tpl-settings-time-range-sep">-</span>
+                                        <select class="form-select" v-model="sms.ad.endTime" :disabled="sms.ad.enabled !== 'on'">
+                                            <option v-for="t in endTimeOptions" :key="t" :value="t">{{ t }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">미발송 메시지 처리 방식</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="sms.ad.failPolicy" :disabled="sms.ad.enabled !== 'on'">
+                                        <option value="fail">실패 처리</option>
+                                        <option value="hold">보류</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('smsAd')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('smsAd')">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== RCS 탭 ===================== -->
+            <div v-if="activeTab === 'rcs'">
+                <div class="tpl-settings-section">
+                    <div class="tpl-settings-section-label">광고성 메시지 설정</div>
+                    <div class="tpl-settings-section-body">
+                        <h4 class="tpl-settings-section-title">광고성 메시지 발송 시간 제한 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            광고성 메시지의 발송 시간을 제한할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.rcsAd = !sections.rcsAd">
+                                {{ sections.rcsAd ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.rcsAd ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.rcsAd" class="tpl-settings-box">
+                            <ul class="tpl-settings-bullet">
+                                <li>설정 가능한 시간은 다음과 같습니다.</li>
+                                <ul>
+                                    <li>광고 발송 제한 시작 설정 가능 시간: 18:00~21:00</li>
+                                    <li>광고 발송 제한 종료 설정 가능 시간: 08:00~12:00</li>
+                                </ul>
+                            </ul>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">광고 발송 제한</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="rcs.ad.enabled">
+                                        <option value="off">사용 안 함</option>
+                                        <option value="on">사용</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">
+                                    광고 발송 제한 시간
+                                    <i class="bi bi-question-circle tpl-settings-row-help-icon" title="시작 18:00~21:00 / 종료 08:00~12:00"></i>
+                                </label>
+                                <div class="tpl-settings-row-control">
+                                    <div class="tpl-settings-time-range">
+                                        <select class="form-select" v-model="rcs.ad.startTime" :disabled="rcs.ad.enabled !== 'on'">
+                                            <option v-for="t in startTimeOptions" :key="t" :value="t">{{ t }}</option>
+                                        </select>
+                                        <span class="tpl-settings-time-range-sep">-</span>
+                                        <select class="form-select" v-model="rcs.ad.endTime" :disabled="rcs.ad.enabled !== 'on'">
+                                            <option v-for="t in endTimeOptions" :key="t" :value="t">{{ t }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">미발송 메시지 처리 방식</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="rcs.ad.failPolicy" :disabled="rcs.ad.enabled !== 'on'">
+                                        <option value="fail">실패 처리</option>
+                                        <option value="hold">보류</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('rcsAd')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('rcsAd')">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== PUSH 탭 ===================== -->
+            <div v-if="activeTab === 'push'">
+                <!-- 토큰 설정 -->
+                <div class="tpl-settings-section">
+                    <div class="tpl-settings-section-label">토큰 설정</div>
+                    <div class="tpl-settings-section-body">
+                        <!-- 토큰 만료 기간 설정 -->
+                        <h4 class="tpl-settings-section-title">토큰 만료 기간 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            토큰 만료 기간을 설정하여 설정 기간 동안 요청이 없는 토큰으로의 메시지 발송을 제외할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.pushTokenExpire = !sections.pushTokenExpire">
+                                {{ sections.pushTokenExpire ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.pushTokenExpire ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.pushTokenExpire" class="tpl-settings-box">
+                            <p class="tpl-settings-note">설정한 기간 동안 앱을 사용하지 않은 사용자(토큰)는 메시지 발송 대상에서 제외됩니다.</p>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">&nbsp;</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="push.token.expireMonths">
+                                        <option value="3">3개월</option>
+                                        <option value="6">6개월</option>
+                                        <option value="12">12개월</option>
+                                        <option value="24">24개월</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('pushTokenExpire')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('pushTokenExpire')">취소</button>
+                            </div>
+                        </div>
+
+                        <!-- 앱 유형 설정 -->
+                        <h4 class="tpl-settings-section-title mt-4">앱 유형 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            연동된 앱의 유형을 선택하여 토큰을 관리할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.pushAppType = !sections.pushAppType">
+                                {{ sections.pushAppType ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.pushAppType ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.pushAppType" class="tpl-settings-box">
+                            <p class="tpl-settings-note">다중 토큰(하나의 앱을 여러 기기에서 이용), 단일 토큰(하나의 앱을 1개의 기기에서 이용)</p>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">&nbsp;</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="push.token.appType">
+                                        <option value="multi">다중 토큰</option>
+                                        <option value="single">단일 토큰</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('pushAppType')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('pushAppType')">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 메시지 설정 -->
+                <div class="tpl-settings-section">
+                    <div class="tpl-settings-section-label">메시지 설정</div>
+                    <div class="tpl-settings-section-body">
+                        <!-- 메시지 중복 발송 차단 시간 설정 -->
+                        <h4 class="tpl-settings-section-title">메시지 중복 발송 차단 시간 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            설정한 시간 동안 같은 내용의 메시지가 발송되지 않도록 설정할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.pushDup = !sections.pushDup">
+                                {{ sections.pushDup ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.pushDup ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.pushDup" class="tpl-settings-box">
+                            <p class="tpl-settings-note">발송 목적(일반용/광고용), 내용(콘텐츠), 발신 정보, 수신 동의 설정 가이드, 광고 표시 문구 위치, 토큰이 모두 일치하는 경우 중복으로 판단하여 차단됩니다.</p>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">중복 발송 차단</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="push.dup.enabled">
+                                        <option value="off">사용 안 함</option>
+                                        <option value="on">사용</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">차단 시간</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="push.dup.blockMinutes" :disabled="push.dup.enabled !== 'on'">
+                                        <option value="10">10분</option>
+                                        <option value="20">20분</option>
+                                        <option value="30">30분</option>
+                                        <option value="60">1시간</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('pushDup')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('pushDup')">취소</button>
+                            </div>
+                        </div>
+
+                        <!-- 메시지 수신/확인 수집 설정 -->
+                        <h4 class="tpl-settings-section-title mt-4">메시지 수신/확인 수집 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            발송된 메시지의 수신 및 확인 여부 수집을 설정할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.pushCollect = !sections.pushCollect">
+                                {{ sections.pushCollect ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.pushCollect ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.pushCollect" class="tpl-settings-box">
+                            <ul class="tpl-settings-bullet">
+                                <li>v1.4 SDK 이상 버전을 적용해야 정보를 수집할 수 있습니다. (Android/iOS 지원)</li>
+                                <li>수집된 발송, 수신, 확인 데이터에 일부 차이가 있을 수 있습니다.</li>
+                            </ul>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">&nbsp;</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="push.collect.enabled">
+                                        <option value="off">사용 안 함</option>
+                                        <option value="on">사용</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('pushCollect')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('pushCollect')">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 광고성 메시지 설정 -->
+                <div class="tpl-settings-section">
+                    <div class="tpl-settings-section-label">광고성 메시지 설정</div>
+                    <div class="tpl-settings-section-body">
+                        <!-- 광고 표시 문구 위치 설정 -->
+                        <h4 class="tpl-settings-section-title">광고 표시 문구 위치 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            광고성 메시지 발송 시 (광고) 표시 위치를 설정할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.pushAdLabel = !sections.pushAdLabel">
+                                {{ sections.pushAdLabel ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.pushAdLabel ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.pushAdLabel" class="tpl-settings-box">
+                            <p class="tpl-settings-note">제목에 (광고) 표시 노출 설정 시 수신 동의 철회 방법은 내용에 노출됩니다.</p>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">&nbsp;</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="push.adLabel.position">
+                                        <option value="title">제목</option>
+                                        <option value="content">내용</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('pushAdLabel')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('pushAdLabel')">취소</button>
+                            </div>
+                        </div>
+
+                        <!-- 광고성 메시지 수신 동의 자동 발송 설정 -->
+                        <h4 class="tpl-settings-section-title mt-4">광고성 메시지 수신 동의 자동 발송 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            광고성 메시지 수신을 동의한 지 만 2년이 된 사용자(토큰)에게 수신 재동의 메시지 자동 발송을 설정할 수 있습니다.
+                            <button type="button" class="tpl-settings-toggle-link" @click="sections.pushAdReconsent = !sections.pushAdReconsent">
+                                {{ sections.pushAdReconsent ? '닫기' : '열기' }}
+                                <i class="bi" :class="sections.pushAdReconsent ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                        </p>
+
+                        <div v-if="sections.pushAdReconsent" class="tpl-settings-box">
+                            <ul class="tpl-settings-bullet">
+                                <li>메시지 내용에는 광고성 메시지 수신 동의 날짜, 동의 유지 및 철회 방법을 반드시 포함해야 합니다.</li>
+                                <li>광고성 메시지 수신 동의 일시 치환자(<code class="tpl-settings-token">###AD_AGREEMENT_DATE_TIME###</code>)를 본문에 넣으면 메시지 발송 시 해당 토큰의 동의 일시로 치환됩니다.</li>
+                            </ul>
+
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">
+                                    예약일
+                                    <i class="bi bi-question-circle tpl-settings-row-help-icon" title="2년이 되기 며칠 전에 발송할지"></i>
+                                </label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="push.adReconsent.reserveDay">
+                                        <option v-for="d in 30" :key="d" :value="String(d)">{{ d }}일</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">
+                                    예약 시간
+                                    <i class="bi bi-question-circle tpl-settings-row-help-icon" title="발송할 시간을 지정하세요."></i>
+                                </label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="push.adReconsent.reserveHour">
+                                        <option v-for="h in 24" :key="h - 1" :value="String(h - 1)">{{ h - 1 }}시</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">입력 유형</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="push.adReconsent.inputType">
+                                        <option value="basic">기본</option>
+                                        <option value="json">JSON</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row tpl-settings-row-wide">
+                                <label class="tpl-settings-row-label">제목</label>
+                                <div class="tpl-settings-row-control">
+                                    <input type="text" class="form-control" v-model="push.adReconsent.title">
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row tpl-settings-row-wide tpl-settings-row-top">
+                                <label class="tpl-settings-row-label">내용</label>
+                                <div class="tpl-settings-row-control">
+                                    <textarea class="form-control tpl-settings-textarea" rows="6" v-model="push.adReconsent.content"></textarea>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">
+                                    발송 테스트
+                                    <i class="bi bi-question-circle tpl-settings-row-help-icon" title="설정한 메시지로 테스트 발송합니다."></i>
+                                </label>
+                                <div class="tpl-settings-row-control">
+                                    <button type="button" class="tpl-settings-btn-save" @click="sendReconsentTest">확인 발송</button>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('pushAdReconsent')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('pushAdReconsent')">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== 웹훅 탭 ===================== -->
+            <div v-if="activeTab === 'webhook'">
+                <div class="tpl-settings-section">
+                    <div class="tpl-settings-section-label">웹훅 설정</div>
+                    <div class="tpl-settings-section-body">
+                        <h4 class="tpl-settings-section-title">웹훅 URL 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            발송 결과를 수신할 웹훅 URL을 설정할 수 있습니다.
+                        </p>
+
+                        <div class="tpl-settings-box">
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">웹훅 사용</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="webhook.enabled">
+                                        <option value="off">사용 안 함</option>
+                                        <option value="on">사용</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row tpl-settings-row-wide">
+                                <label class="tpl-settings-row-label">웹훅 URL</label>
+                                <div class="tpl-settings-row-control">
+                                    <input type="text" class="form-control" v-model="webhook.url" placeholder="https://your-server.com/webhook" :disabled="webhook.enabled !== 'on'">
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">재시도 횟수</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="webhook.retryCount" :disabled="webhook.enabled !== 'on'">
+                                        <option value="0">0회</option>
+                                        <option value="1">1회</option>
+                                        <option value="3">3회</option>
+                                        <option value="5">5회</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('webhook')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('webhook')">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===================== 백업 탭 ===================== -->
+            <div v-if="activeTab === 'backup'">
+                <div class="tpl-settings-section">
+                    <div class="tpl-settings-section-label">백업 설정</div>
+                    <div class="tpl-settings-section-body">
+                        <h4 class="tpl-settings-section-title">발송 데이터 백업 설정</h4>
+                        <p class="tpl-settings-section-desc">
+                            발송 이력 데이터를 외부 저장소로 자동 백업할 수 있습니다.
+                        </p>
+
+                        <div class="tpl-settings-box">
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">백업 사용</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="backup.enabled">
+                                        <option value="off">사용 안 함</option>
+                                        <option value="on">사용</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">백업 주기</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="backup.interval" :disabled="backup.enabled !== 'on'">
+                                        <option value="daily">매일</option>
+                                        <option value="weekly">매주</option>
+                                        <option value="monthly">매월</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="tpl-settings-row">
+                                <label class="tpl-settings-row-label">보관 기간</label>
+                                <div class="tpl-settings-row-control">
+                                    <select class="form-select" v-model="backup.retention" :disabled="backup.enabled !== 'on'">
+                                        <option value="30">30일</option>
+                                        <option value="90">90일</option>
+                                        <option value="180">180일</option>
+                                        <option value="365">1년</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tpl-settings-actions">
+                                <button type="button" class="tpl-settings-btn-save" @click="saveSection('backup')">저장</button>
+                                <button type="button" class="tpl-settings-btn-cancel" @click="cancelSection('backup')">취소</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 페이지 하단 액션 (전체 저장/취소) -->
+        <div class="tpl-settings-page-actions">
+            <button type="button" class="tpl-btn-cancel" @click="cancelAll">취소</button>
+            <button type="button" class="tpl-btn-save" @click="saveAll">저장하기</button>
+        </div>
+    </div>
+
+    <!-- 알림 모달 -->
+    <div class="modal fade" ref="alertModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeAlert" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon tpl-alert-icon-info">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <p class="sms-modal-confirm-text">{{ alertText }}</p>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-confirm tpl-modal-confirm-only" @click="closeAlert">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 대체 문자 설정 모달 (W480) -->
+    <div class="modal fade" ref="substitutionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeSubstitutionModal" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">대체 문자 설정</h4>
+                    <p class="sms-modal-text">발송 불가능한 문자가 포함된 경우의 처리 방식을 선택하세요.</p>
+                    <div class="sms-radio-group">
+                        <label class="sms-radio">
+                            <input type="radio" v-model="substitution.mode" value="replace">
+                            <span>대체 문자로 자동 변환</span>
+                        </label>
+                        <label class="sms-radio">
+                            <input type="radio" v-model="substitution.mode" value="remove">
+                            <span>해당 문자 제거</span>
+                        </label>
+                        <label class="sms-radio">
+                            <input type="radio" v-model="substitution.mode" value="fail">
+                            <span>발송 실패 처리</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeSubstitutionModal">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmSubstitution">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

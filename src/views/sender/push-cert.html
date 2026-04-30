@@ -1,0 +1,142 @@
+<div class="contacts-page push-cert-page">
+    <div class="container py-5">
+        <h2 class="contacts-page-title">발신 정보 관리</h2>
+
+        <section class="contacts-card">
+            <h3 class="contacts-card-title">PUSH 인증 관리</h3>
+
+            <div v-for="(section, idx) in sections"
+                 :key="section.key"
+                 class="push-cert-row"
+                 :class="{ 'push-cert-row-divider': idx > 0 }">
+                <div class="push-cert-row-label">{{ section.label }}</div>
+                <div class="push-cert-row-body">
+                    <div class="push-cert-row-head">
+                        <span class="push-cert-row-title">{{ section.title }}</span>
+                        <button type="button" class="push-cert-toggle-btn"
+                                @click="toggleOpen(section.key)">
+                            {{ open[section.key] ? '닫기' : '열기' }}
+                            <i class="bi" :class="open[section.key] ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                        </button>
+                    </div>
+
+                    <div class="push-cert-row-content" v-show="open[section.key]">
+                        <ul class="push-cert-info-list">
+                            <li v-for="(line, li) in section.notes" :key="li">
+                                <span v-html="line"></span>
+                            </li>
+                            <li>
+                                자세한 내용은
+                                <a href="javascript:void(0)" class="push-cert-link"
+                                   @click="openGuide(section.key)">[사용자 가이드]</a>를 참고하세요.
+                            </li>
+                        </ul>
+
+                        <div class="push-cert-toggle-row">
+                            <span class="push-cert-toggle-label">{{ section.toggleLabel }}</span>
+                            <label class="push-cert-switch">
+                                <input type="checkbox" v-model="form[section.key].enabled">
+                                <span class="push-cert-switch-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="push-cert-form" v-show="form[section.key].enabled">
+                            <!-- FCM -->
+                            <template v-if="section.key === 'fcm'">
+                                <label class="push-cert-field-label">서비스 계정 키 (JSON)</label>
+                                <textarea class="contacts-input push-cert-textarea"
+                                          v-model="form.fcm.serviceAccountKey"
+                                          rows="8"
+                                          placeholder='{"type":"service_account","project_id":"...","private_key_id":"...","private_key":"...","client_email":"...","client_id":"..."}'></textarea>
+                                <p class="push-cert-field-hint">Google Cloud Console에서 발급한 서비스 계정 키 JSON 전체를 붙여넣으세요.</p>
+                            </template>
+
+                            <!-- APNS -->
+                            <template v-else-if="section.key === 'apns'">
+                                <div class="push-cert-grid">
+                                    <div class="push-cert-field">
+                                        <label class="push-cert-field-label">Key ID</label>
+                                        <input type="text" class="contacts-input"
+                                               v-model="form.apns.keyId" placeholder="예: ABC123DEFG">
+                                    </div>
+                                    <div class="push-cert-field">
+                                        <label class="push-cert-field-label">Team ID</label>
+                                        <input type="text" class="contacts-input"
+                                               v-model="form.apns.teamId" placeholder="예: 1A2B3C4D5E">
+                                    </div>
+                                    <div class="push-cert-field">
+                                        <label class="push-cert-field-label">Bundle ID</label>
+                                        <input type="text" class="contacts-input"
+                                               v-model="form.apns.bundleId" placeholder="예: com.malgnsoft.app">
+                                    </div>
+                                    <div class="push-cert-field">
+                                        <label class="push-cert-field-label">환경</label>
+                                        <select class="contacts-input" v-model="form.apns.env">
+                                            <option value="production">Production</option>
+                                            <option value="sandbox">Sandbox</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <label class="push-cert-field-label push-cert-field-label-block">인증 키 (.p8 파일)</label>
+                                <div class="push-cert-file-row">
+                                    <input type="text" class="contacts-input push-cert-file-name"
+                                           :value="form.apns.fileName" readonly placeholder="파일을 선택하세요">
+                                    <button type="button" class="contacts-btn-file"
+                                            @click="pickFile('apns')">
+                                        <i class="bi bi-upload"></i> 파일 선택
+                                    </button>
+                                    <input type="file" class="contacts-file-hidden"
+                                           ref="apnsFile" accept=".p8"
+                                           @change="onFileChange($event, 'apns')">
+                                </div>
+                                <p class="push-cert-field-hint">.p8 형식의 APNs 인증 키 파일을 업로드하세요.</p>
+                            </template>
+
+                            <!-- ADM -->
+                            <template v-else-if="section.key === 'adm'">
+                                <div class="push-cert-grid">
+                                    <div class="push-cert-field">
+                                        <label class="push-cert-field-label">Client ID</label>
+                                        <input type="text" class="contacts-input"
+                                               v-model="form.adm.clientId" placeholder="Amazon Developer Client ID">
+                                    </div>
+                                    <div class="push-cert-field">
+                                        <label class="push-cert-field-label">Client Secret</label>
+                                        <input type="password" class="contacts-input"
+                                               v-model="form.adm.clientSecret" placeholder="Amazon Developer Client Secret">
+                                    </div>
+                                </div>
+                                <p class="push-cert-field-hint">Amazon Developer Portal에서 발급한 Client ID/Secret을 입력하세요.</p>
+                            </template>
+                        </div>
+
+                        <div class="push-cert-actions">
+                            <button type="button" class="push-cert-btn-save"
+                                    @click="save(section.key)">저장</button>
+                            <button type="button" class="push-cert-btn-cancel"
+                                    @click="cancel(section.key)">취소</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 저장 완료 알림 (W400) -->
+    <div class="modal fade" ref="resultModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('result')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">{{ resultMessage }}</p>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions-single">
+                    <button type="button" class="contacts-btn-modal-confirm" @click="closeModal('result')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

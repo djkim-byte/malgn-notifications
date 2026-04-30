@@ -1,0 +1,155 @@
+<div class="contacts-page sender-page sender-optout080-page">
+    <div class="container py-5">
+        <h2 class="contacts-page-title">발신 정보 관리</h2>
+
+        <!-- 결과 카드 -->
+        <section class="contacts-card">
+            <h3 class="contacts-card-title">080 수신 거부 번호 관리</h3>
+
+            <ul class="sender-info-list">
+                <li>
+                    고성 메시지 발송 시 수신자가 수신 거부나 수신 동의의 철회를 무료로 할 수 있도록
+                    <span class="sender-em-danger">무료 수신 거부 방법을 반드시 기재</span>해야 합니다.<br>
+                    이를 어기는 경우 '정보통신망 이용촉진 및 정보보호 등에 관한 법률'에 의거하여 3,000만 원 이하의 과태료가 부과될 수 있습니다.
+                </li>
+                <li>'사용중 - 외부 등록, 사용중 - 공유 번호' 상태인 080 번호는 080 수신 거부 번호 이용 해지가 불가합니다.</li>
+            </ul>
+
+            <!-- 상단 툴바 -->
+            <div class="contacts-toolbar">
+                <div class="contacts-toolbar-left">
+                    <button type="button" class="contacts-btn-primary" @click="openApplyModal">
+                        <i class="bi bi-plus-lg"></i> 080 수신 거부 번호 신청
+                    </button>
+                    <button type="button" class="contacts-btn-soft contacts-btn-soft-delete"
+                            :disabled="selectedRowIds.length === 0" @click="openCancelConfirm">
+                        080 수신 거부 번호 이용 해지
+                    </button>
+                    <div class="contacts-search">
+                        <input type="text"
+                               class="contacts-search-input"
+                               v-model="searchKeyword"
+                               placeholder="080 수신 거부 번호를 입력하세요."
+                               @keyup.enter="search">
+                        <button type="button" class="contacts-search-btn" @click="search" aria-label="검색">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="contacts-toolbar-right">
+                    <button type="button" class="contacts-btn-ghost" @click="refresh">
+                        <i class="bi bi-arrow-clockwise"></i> 새로고침
+                    </button>
+                    <button type="button" class="contacts-btn-ghost"
+                            :disabled="page === 1" @click="goPage(page - 1)">
+                        <i class="bi bi-chevron-left"></i> 이전
+                    </button>
+                    <button type="button" class="contacts-btn-ghost"
+                            :disabled="page === totalPages" @click="goPage(page + 1)">
+                        다음 <i class="bi bi-chevron-right"></i>
+                    </button>
+                    <span class="contacts-total">총 <strong>{{ totalCount }}</strong>건</span>
+                </div>
+            </div>
+
+            <!-- 결과 테이블 -->
+            <div class="contacts-table-wrap">
+                <table class="contacts-table sender-table sender-optout080-table">
+                    <thead>
+                        <tr>
+                            <th class="contacts-th-check">
+                                <input type="checkbox" :checked="isAllSelected" @change="toggleAllRows">
+                            </th>
+                            <th>080 수신 거부 번호</th>
+                            <th>회사명</th>
+                            <th>신청 일시</th>
+                            <th>개통 일시</th>
+                            <th>상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in pagedRows" :key="row.id">
+                            <td class="contacts-th-check">
+                                <input type="checkbox"
+                                       :value="row.id"
+                                       v-model="selectedRowIds"
+                                       :disabled="!isCancellable(row)">
+                            </td>
+                            <td>{{ row.number || '-' }}</td>
+                            <td>{{ row.companyName }}</td>
+                            <td>{{ row.requestedAt }}</td>
+                            <td>{{ row.activatedAt || '-' }}</td>
+                            <td>
+                                <span class="sender-status" :class="statusClass(row.status)">{{ row.statusLabel }}</span>
+                            </td>
+                        </tr>
+                        <tr v-if="pagedRows.length === 0">
+                            <td colspan="6" class="contacts-empty">표시할 항목이 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- 080 수신 거부 번호 신청 (W800) -->
+    <div class="modal fade" ref="applyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('apply')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">080 수신 거부 번호 신청</h4>
+
+                    <ul class="sms-modal-bullet">
+                        <li>080 수신 거부는 회선 개통이 필요합니다.</li>
+                        <li>080 수신 거부 신청 후, 영업일 기준으로 약 3~4일이 소요됩니다. (주말 및 공휴일 제외)</li>
+                        <li>080 수신 거부 신청 후에는 완료되기 전까지 신청을 취소할 수 없습니다.</li>
+                        <li>회선 개통 완료 후에는 24시간이 지난 뒤부터 회선을 해지할 수 있습니다.</li>
+                    </ul>
+
+                    <div class="contacts-form-row sender-optout080-form-row">
+                        <label class="contacts-form-label">회사명</label>
+                        <div class="contacts-form-control">
+                            <div class="contacts-input-wrap">
+                                <input type="text"
+                                       class="contacts-input"
+                                       v-model="applyForm.companyName"
+                                       maxlength="100"
+                                       placeholder="">
+                                <span class="contacts-input-counter">{{ applyForm.companyName.length }}/100</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('apply')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="submitApply">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 080 수신 거부 번호 이용 해지 컨펌 (W480) -->
+    <div class="modal fade" ref="cancelConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('cancelConfirm')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        선택한 {{ selectedRowIds.length }}개의 080 수신 거부 번호 이용을 해지하시겠습니까?<br>
+                        해지 후에는 동일 번호의 재사용이 어려울 수 있습니다.
+                    </p>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('cancelConfirm')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="confirmCancel">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

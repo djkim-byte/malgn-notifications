@@ -1,0 +1,36 @@
+<div class="error-page d-flex flex-column align-items-center justify-content-center">
+    <div class="error-logo mb-4">
+        <svg class="gnb-logo-icon" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="6" width="30" height="24" rx="6" fill="#404040"/>
+            <path d="M10 30l-2 8 8-5" fill="#404040"/>
+            <path d="M36 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1z" fill="#404040" opacity="0.7"/>
+            <path d="M40 16l0.7 2 2 0.7-2 0.7-0.7 2-0.7-2-2-0.7 2-0.7z" fill="#404040" opacity="0.45"/>
+            <circle cx="12" cy="18" r="2.2" fill="white"/>
+            <circle cx="19" cy="18" r="2.2" fill="white"/>
+            <circle cx="26" cy="18" r="2.2" fill="white"/>
+        </svg>
+        <span class="error-logo-text">쏠쏠</span>
+        <span class="error-logo-sub">message</span>
+    </div>
+
+    <h1 class="inspection-main-title mb-3">서비스 안정화를 위한 시스템 정기점검 안내</h1>
+
+    <p class="inspection-subtitle mb-4">원활한 서비스를 위해 시스템 점검 중이에요.</p>
+
+    <p class="error-description mb-0">점검시간 동안 서비스 이용이 제한돼요.</p>
+    <p class="error-description mb-4">더욱 나은 서비스로 찾아 뵐게요!</p>
+
+    <div class="error-illustration mb-5">
+        <img src="assets/images/inspection-scheduled.svg" alt="정기 점검" class="error-illustration-img">
+    </div>
+
+    <div class="inspection-schedule">
+        <p class="inspection-schedule-title mb-3">
+            <i class="bi bi-info-circle"></i>
+            서비스 점검 예정시간
+        </p>
+        <ul class="inspection-schedule-list">
+            <li v-for="item in scheduleList" :key="item">{{ item }}</li>
+        </ul>
+    </div>
+</div>

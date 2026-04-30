@@ -1,0 +1,331 @@
+<div class="contacts-page sender-page profiles-page">
+    <div class="container py-5">
+        <h2 class="contacts-page-title">발신 정보 관리</h2>
+
+        <!-- 발신 프로필 관리 카드 -->
+        <section class="contacts-card">
+            <h3 class="contacts-card-title">발신 프로필 관리</h3>
+
+            <ul class="sender-info-list profiles-info-list">
+                <li>
+                    발신 프로필을 등록하려면 카카오톡 채널이 생성되어야 합니다. 카카오톡 홈페이지에서 카카오톡 채널을 생성하세요.
+                    <a class="profiles-link-em" href="https://center-pf.kakao.com/login" target="_blank" rel="noopener">[카카오톡 채널 생성 바로 가기]</a>
+                    <ul class="profiles-info-sublist">
+                        <li>(참고) 발신 프로필을 등록하려면 카카오톡 채널 등록 후 비즈니스 인증을 받아야 합니다.</li>
+                    </ul>
+                </li>
+                <li>
+                    발신 프로필 등록을 위해 토큰 인증을 진행해야 합니다.
+                    <ul class="profiles-info-sublist">
+                        <li>발신 프로필 등록 정보 입력 후 토큰 요청 시 입력한 관리자 휴대폰 번호로 토큰 번호 6자리가 전송됩니다.</li>
+                        <li>토큰 번호를 입력하여 발신 프로필 등록을 완료하세요.</li>
+                    </ul>
+                </li>
+                <li>
+                    알림톡 일별
+                    <span class="profiles-text-em">최대 발송량은 1,000건으로 기본 설정되어 있습니다.</span>
+                    일별 최대 발송량을 변경하려면
+                    <a class="profiles-link-em" href="#/inquiry" @click.prevent="navigateTo('/inquiry')">[고객 센터]</a>로 문의하세요.
+                </li>
+            </ul>
+
+            <!-- 상단 툴바 -->
+            <div class="contacts-toolbar">
+                <div class="contacts-toolbar-left">
+                    <button type="button" class="contacts-btn-primary" @click="openRegister">
+                        <i class="bi bi-plus-lg"></i> 발신 프로필 등록
+                    </button>
+                    <button type="button" class="contacts-btn-soft contacts-btn-soft-delete"
+                            :disabled="selectedRowIds.length === 0" @click="openDeleteConfirm">
+                        발신 프로필 삭제
+                    </button>
+                    <button type="button" class="contacts-btn-ghost" @click="openGroupManage">
+                        발신 프로필 그룹 관리
+                    </button>
+                    <div class="contacts-search profiles-search">
+                        <input type="text" class="contacts-search-input"
+                               v-model="searchTerm"
+                               placeholder="발신 프로필 아이디를 입력하세요."
+                               @keyup.enter="applySearch">
+                        <button type="button" class="contacts-search-btn" @click="applySearch" aria-label="검색">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="contacts-toolbar-right">
+                    <button type="button" class="contacts-btn-ghost" @click="refresh">
+                        <i class="bi bi-arrow-clockwise"></i> 새로고침
+                    </button>
+                    <button type="button" class="contacts-btn-ghost profiles-page-btn"
+                            :disabled="page === 1" @click="goPage(page - 1)">
+                        <i class="bi bi-chevron-left"></i> 이전
+                    </button>
+                    <button type="button" class="contacts-btn-ghost profiles-page-btn"
+                            :disabled="page === totalPages" @click="goPage(page + 1)">
+                        다음 <i class="bi bi-chevron-right"></i>
+                    </button>
+                    <span class="contacts-total">총 <strong>{{ totalCount }}</strong>개</span>
+                </div>
+            </div>
+
+            <!-- 결과 테이블 -->
+            <div class="contacts-table-wrap">
+                <table class="contacts-table sender-table profiles-table">
+                    <thead>
+                        <tr>
+                            <th class="contacts-th-check">
+                                <input type="checkbox" :checked="isAllSelected" @change="toggleAllRows">
+                            </th>
+                            <th>발신 프로필 아이디</th>
+                            <th>발신 키</th>
+                            <th>등록 일시</th>
+                            <th>토큰 인증 상태</th>
+                            <th>발신 프로필 상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in pagedRows" :key="row.id">
+                            <td class="contacts-th-check">
+                                <input type="checkbox" :value="row.id" v-model="selectedRowIds">
+                            </td>
+                            <td>{{ row.profileId }}</td>
+                            <td class="profiles-key-cell">{{ row.senderKey }}</td>
+                            <td>{{ row.registeredAt }}</td>
+                            <td>{{ row.tokenStatusLabel }}</td>
+                            <td>
+                                <span class="sender-status" :class="profileStatusClass(row.profileStatus)">
+                                    {{ row.profileStatusLabel }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr v-if="pagedRows.length === 0">
+                            <td colspan="6" class="contacts-empty">등록된 발신 프로필이 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="sms-modal-pagination sender-pagination" v-if="totalPages > 1">
+                <button type="button" class="sms-page-btn" @click="goPage(1)" :disabled="page === 1">«</button>
+                <button type="button" class="sms-page-btn" @click="goPage(page - 1)" :disabled="page === 1">‹</button>
+                <button v-for="p in pageRange" :key="p"
+                        type="button"
+                        class="sms-page-btn"
+                        :class="{ active: p === page }"
+                        @click="goPage(p)">{{ p }}</button>
+                <button type="button" class="sms-page-btn" @click="goPage(page + 1)" :disabled="page === totalPages">›</button>
+                <button type="button" class="sms-page-btn" @click="goPage(totalPages)" :disabled="page === totalPages">»</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- 발신 프로필 등록 모달 (W800) -->
+    <div class="modal fade" ref="registerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal profiles-register-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('register')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sender-register-body">
+                    <h4 class="sms-modal-title">발신 프로필 등록</h4>
+
+                    <ul class="profiles-info-sublist profiles-modal-hint">
+                        <li>발신 프로필 등록 정보 입력 후 토큰 요청 시 입력한 관리자 휴대폰 번호로 토큰 번호 6자리가 전송됩니다.</li>
+                        <li>토큰 번호를 입력하여 발신 프로필 등록을 완료하세요.</li>
+                    </ul>
+
+                    <!-- 발신 프로필 아이디 -->
+                    <div class="sender-form-row">
+                        <label class="sender-form-label">
+                            발신 프로필 아이디 <span class="contacts-required">*</span>
+                        </label>
+                        <div class="sender-form-control">
+                            <div class="contacts-input-wrap">
+                                <input type="text" class="contacts-input"
+                                       v-model="form.profileId"
+                                       maxlength="16"
+                                       placeholder="@아이디">
+                                <span class="contacts-input-counter">{{ form.profileId.length }}/16</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 관리자 휴대폰 번호 -->
+                    <div class="sender-form-row">
+                        <label class="sender-form-label">
+                            관리자 휴대폰 번호 <span class="contacts-required">*</span>
+                        </label>
+                        <div class="sender-form-control">
+                            <div class="contacts-input-wrap">
+                                <input type="text" class="contacts-input"
+                                       v-model="form.phone"
+                                       maxlength="11"
+                                       inputmode="numeric"
+                                       placeholder="-없이 숫자 입력"
+                                       @input="onPhoneInput">
+                                <span class="contacts-input-counter">{{ form.phone.length }}/11</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 카테고리 -->
+                    <div class="sender-form-row">
+                        <label class="sender-form-label">
+                            카테고리 <span class="contacts-required">*</span>
+                        </label>
+                        <div class="sender-form-control">
+                            <div class="profiles-category-row">
+                                <HistoryDropdown v-model="form.categoryL1"
+                                                 :options="categoryL1Options"
+                                                 placeholder="대분류"></HistoryDropdown>
+                                <HistoryDropdown v-model="form.categoryL2"
+                                                 :options="categoryL2Options"
+                                                 :disabled="!form.categoryL1"
+                                                 placeholder="중분류"></HistoryDropdown>
+                                <HistoryDropdown v-model="form.categoryL3"
+                                                 :options="categoryL3Options"
+                                                 :disabled="!form.categoryL2"
+                                                 placeholder="소분류"></HistoryDropdown>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sender-form-divider"></div>
+
+                    <!-- 토큰 -->
+                    <div class="sender-form-row profiles-token-row">
+                        <label class="sender-form-label">토큰</label>
+                        <div class="sender-form-control">
+                            <div v-if="!tokenRequested" class="profiles-token-request">
+                                <button type="button" class="profiles-btn-token-request"
+                                        :disabled="!canRequestToken"
+                                        @click="requestToken">
+                                    토큰 요청
+                                </button>
+                            </div>
+                            <div v-else class="profiles-token-input-row">
+                                <input type="text" class="contacts-input profiles-token-input"
+                                       v-model="form.token"
+                                       maxlength="6"
+                                       inputmode="numeric"
+                                       placeholder="토큰 6자리 입력"
+                                       @input="onTokenInput">
+                                <button type="button" class="contacts-btn-ghost"
+                                        @click="requestToken">토큰 재요청</button>
+                                <span class="profiles-token-hint">관리자 휴대폰 번호로 발송된 토큰 번호를 입력하세요.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('register')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm"
+                            :disabled="!canSubmit"
+                            @click="submitRegister">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 발신 프로필 그룹 관리 모달 (W800) -->
+    <div class="modal fade" ref="groupModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('group')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sender-register-body">
+                    <h4 class="sms-modal-title">발신 프로필 그룹 관리</h4>
+                    <p class="sender-register-desc">
+                        여러 발신 프로필을 그룹으로 묶어 일괄 발송 시 활용할 수 있습니다.
+                    </p>
+
+                    <div class="profiles-group-toolbar">
+                        <input type="text" class="contacts-input profiles-group-input"
+                               v-model="groupForm.name"
+                               placeholder="그룹 이름 입력">
+                        <button type="button" class="contacts-btn-primary"
+                                :disabled="!groupForm.name.trim()"
+                                @click="addGroup">
+                            <i class="bi bi-plus-lg"></i> 그룹 추가
+                        </button>
+                    </div>
+
+                    <div class="contacts-table-wrap profiles-group-table-wrap">
+                        <table class="contacts-table">
+                            <thead>
+                                <tr>
+                                    <th>그룹 이름</th>
+                                    <th>포함된 프로필 수</th>
+                                    <th>등록 일시</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="g in groups" :key="g.id">
+                                    <td>{{ g.name }}</td>
+                                    <td>{{ g.profileCount }}</td>
+                                    <td>{{ g.createdAt }}</td>
+                                    <td>
+                                        <button type="button" class="contacts-btn-soft contacts-btn-soft-delete"
+                                                @click="removeGroup(g.id)">삭제</button>
+                                    </td>
+                                </tr>
+                                <tr v-if="groups.length === 0">
+                                    <td colspan="4" class="contacts-empty">등록된 그룹이 없습니다.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions-single">
+                    <button type="button" class="contacts-btn-modal-confirm" @click="closeModal('group')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 발신 프로필 삭제 컨펌 모달 (W480) -->
+    <div class="modal fade" ref="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('deleteConfirm')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        선택한 {{ selectedRowIds.length }}개의 발신 프로필을 삭제하시겠습니까?<br>
+                        삭제된 발신 프로필은 복구할 수 없습니다.
+                    </p>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('deleteConfirm')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="confirmDelete">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 토큰 발송 안내 모달 (W480) -->
+    <div class="modal fade" ref="tokenSentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('tokenSent')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        입력하신 관리자 휴대폰 번호로<br>
+                        토큰 번호 6자리를 전송했습니다.
+                    </p>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions-single">
+                    <button type="button" class="contacts-btn-modal-confirm" @click="closeModal('tokenSent')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

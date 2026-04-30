@@ -1,0 +1,122 @@
+<div class="history-page stats-page">
+    <div class="container py-5">
+        <h2 class="history-page-title">통계</h2>
+
+        <!-- 검색 카드 -->
+        <section class="history-card stats-search-card">
+            <div class="history-form-row">
+                <label class="history-form-label">메시지 채널</label>
+                <div class="history-form-control stats-channel-control">
+                    <HistoryDropdown v-model="search.channel" :options="channelOptions" placeholder="전체"></HistoryDropdown>
+                </div>
+            </div>
+
+            <div class="history-form-row">
+                <label class="history-form-label">조회 기간</label>
+                <div class="history-form-control">
+                    <div class="stats-period">
+                        <div class="stats-period-preset">
+                            <HistoryDropdown v-model="search.preset" :options="presetOptions" placeholder="지정"></HistoryDropdown>
+                        </div>
+                        <div class="stats-period-input">
+                            <input type="datetime-local" class="form-control history-input" v-model="search.from" :disabled="search.preset !== 'custom'">
+                        </div>
+                        <span class="history-daterange-sep">~</span>
+                        <div class="stats-period-input">
+                            <input type="datetime-local" class="form-control history-input" v-model="search.to" :disabled="search.preset !== 'custom'">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="history-form-row">
+                <label class="history-form-label">차트 유형</label>
+                <div class="history-form-control">
+                    <div class="history-radio-group">
+                        <label class="history-radio">
+                            <input type="radio" v-model="search.chartType" value="basic">
+                            <span>기본</span>
+                        </label>
+                        <label class="history-radio">
+                            <input type="radio" v-model="search.chartType" value="hourly">
+                            <span>시간별</span>
+                        </label>
+                        <label class="history-radio">
+                            <input type="radio" v-model="search.chartType" value="daily">
+                            <span>일별</span>
+                        </label>
+                        <label class="history-radio">
+                            <input type="radio" v-model="search.chartType" value="weekday">
+                            <span>요일별</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="history-form-row">
+                <label class="history-form-label">메시지 아이디</label>
+                <div class="history-form-control stats-message-id-control">
+                    <input type="text" class="form-control history-input" v-model="search.messageId" placeholder="메시지 아이디를 입력하세요">
+                </div>
+            </div>
+
+            <div class="history-actions">
+                <button type="button" class="history-btn-reset" @click="resetSearch">초기화</button>
+                <button type="button" class="history-btn-search" @click="runSearch">검색하기</button>
+            </div>
+        </section>
+
+        <!-- 차트 카드 -->
+        <section class="stats-chart-card">
+            <h3 class="stats-card-title">메시지</h3>
+            <div class="stats-chart-wrap">
+                <canvas ref="chart"></canvas>
+            </div>
+        </section>
+
+        <!-- 데이터 테이블 카드 -->
+        <section class="history-card stats-table-card">
+            <div class="stats-table-toolbar">
+                <button type="button" class="history-btn-outline" @click="downloadCsv">다운로드</button>
+            </div>
+            <div class="history-table-wrap">
+                <table class="history-table stats-table">
+                    <thead>
+                        <tr>
+                            <th>이벤트 일시</th>
+                            <th>요청</th>
+                            <th>요청 취소</th>
+                            <th>발송</th>
+                            <th>발송 실패</th>
+                            <th>수신</th>
+                            <th>수신 실패</th>
+                            <th>실발송</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in rows" :key="row.date">
+                            <td>{{ row.date }}</td>
+                            <td>{{ row.requested.toLocaleString() }}</td>
+                            <td>{{ row.cancelled.toLocaleString() }}</td>
+                            <td>{{ row.sent.toLocaleString() }}</td>
+                            <td>{{ row.sentFailed.toLocaleString() }}</td>
+                            <td>{{ row.received.toLocaleString() }}</td>
+                            <td>{{ row.receiveFailed.toLocaleString() }}</td>
+                            <td>{{ row.realSent.toLocaleString() }}</td>
+                        </tr>
+                        <tr class="stats-table-total">
+                            <td>합계</td>
+                            <td>{{ totals.requested.toLocaleString() }}</td>
+                            <td>{{ totals.cancelled.toLocaleString() }}</td>
+                            <td>{{ totals.sent.toLocaleString() }}</td>
+                            <td>{{ totals.sentFailed.toLocaleString() }}</td>
+                            <td>{{ totals.received.toLocaleString() }}</td>
+                            <td>{{ totals.receiveFailed.toLocaleString() }}</td>
+                            <td>{{ totals.realSent.toLocaleString() }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>

@@ -1,0 +1,557 @@
+<div class="sms-send-page kakao-send-page">
+    <div class="container py-5">
+        <h2 class="page-title text-center fw-bold mb-5">알림톡 발송</h2>
+
+        <!-- 템플릿 선택 -->
+        <section class="sms-card mb-3">
+            <div class="sms-card-header">
+                <h3 class="sms-card-title">템플릿 선택</h3>
+            </div>
+            <div class="sms-card-body">
+                <div class="sms-form-row">
+                    <label class="sms-form-label">발신 프로필 <span class="sms-required">*</span></label>
+                    <div class="sms-form-control">
+                        <div class="kakao-profile-select" :class="{ 'is-open': profileOpen }" v-click-outside="closeProfile">
+                            <button type="button" class="kakao-profile-toggle" @click="toggleProfile">
+                                <span :class="{ 'kakao-profile-placeholder': !selectedProfile }">{{ selectedProfile ? selectedProfile.name : '발신 프로필 선택해 주세요' }}</span>
+                                <i class="bi bi-chevron-down"></i>
+                            </button>
+                            <div class="kakao-profile-dropdown" v-show="profileOpen">
+                                <div class="kakao-profile-search">
+                                    <i class="bi bi-search"></i>
+                                    <input type="text" v-model="profileSearch" placeholder="검색">
+                                </div>
+                                <ul class="kakao-profile-options">
+                                    <li v-for="p in filteredProfiles" :key="p.id" class="kakao-profile-option" :class="{ 'is-selected': selectedProfile && selectedProfile.id === p.id }" @click="selectProfile(p)">
+                                        <span>{{ p.name }}</span>
+                                        <i v-if="selectedProfile && selectedProfile.id === p.id" class="bi bi-check-lg"></i>
+                                    </li>
+                                    <li v-if="filteredProfiles.length === 0" class="kakao-profile-empty">검색 결과가 없습니다.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-form-row">
+                    <label class="sms-form-label">템플릿 선택 <span class="sms-required">*</span></label>
+                    <div class="sms-form-control sms-form-control-inline">
+                        <span v-if="selectedTemplate" class="sms-template-name">{{ selectedTemplate.name }}</span>
+                        <button type="button" class="sms-btn-dark-sm" :disabled="!selectedProfile" @click="openTemplatePicker">선택</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 수신자 설정 -->
+        <section class="sms-card mb-3">
+            <div class="sms-card-header">
+                <h3 class="sms-card-title">수신자 설정
+                    <button type="button" class="sms-toggle-btn" @click="recipientOpen = !recipientOpen">
+                        {{ recipientOpen ? '닫기' : '열기' }}
+                        <i class="bi" :class="recipientOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+                </h3>
+            </div>
+            <div class="sms-card-body" v-show="recipientOpen">
+                <div v-if="!selectedProfile || !selectedTemplate" class="sms-empty-state">
+                    발신 프로필/템플릿 이름을 선택하세요.
+                </div>
+                <template v-else>
+                    <div class="sms-action-row">
+                        <button type="button" class="sms-btn-dark" @click="addRecipientManually">+ 직접입력</button>
+                        <button type="button" class="sms-btn-dark" @click="openAddressBook">+ 주소록에서 선택</button>
+                        <button type="button" class="sms-btn-disabled" :disabled="selectedRecipientIds.length !== 1" @click="editRecipient">수신자 정보 수정</button>
+                        <button type="button" class="sms-btn-danger" :disabled="selectedRecipientIds.length === 0" @click="deleteRecipients">수신자 정보 삭제</button>
+                    </div>
+
+                    <div class="sms-template-vars">
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">치환자 입력 방식</label>
+                            <div class="sms-form-control">
+                                <div class="sms-radio-group">
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="varInputMode" value="individual">
+                                        <span>개별</span>
+                                    </label>
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="varInputMode" value="common">
+                                        <span>공통</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="varInputMode === 'common'" class="sms-form-row">
+                            <label class="sms-form-label">공통 치환자</label>
+                            <div class="sms-form-control">
+                                <input type="text" class="form-control sms-input" v-model="commonVar" :placeholder="templateVarPlaceholder">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sms-recipient-table-wrap">
+                        <table class="sms-recipient-table" v-if="recipients.length > 0">
+                            <thead>
+                                <tr>
+                                    <th class="sms-th-check">
+                                        <input type="checkbox" :checked="isAllSelected" @change="toggleAllRecipients">
+                                    </th>
+                                    <th>수신자 별칭</th>
+                                    <th>휴대폰 번호</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="r in recipients" :key="r.id">
+                                    <td class="sms-th-check">
+                                        <input type="checkbox" :value="r.id" v-model="selectedRecipientIds">
+                                    </td>
+                                    <td>{{ r.name }}</td>
+                                    <td>{{ r.phone }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div v-else-if="submitted" class="sms-error-message">
+                            수신자가 설정되지 않았습니다. 다시 수신자 설정 후 메시지 발송을 해 주세요.
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+        <!-- 메시지 설정 -->
+        <section class="sms-card mb-3">
+            <div class="sms-card-header">
+                <h3 class="sms-card-title">메시지 설정</h3>
+            </div>
+            <div class="sms-card-body">
+                <div v-if="!selectedProfile || !selectedTemplate" class="sms-empty-state sms-empty-state-tall">
+                    발신 프로필/템플릿 이름을 선택하세요.
+                </div>
+                <div v-else class="content-2col">
+                    <div class="sms-message-fields">
+                        <div class="kakao-readonly-row">
+                            <span class="kakao-readonly-label">템플릿 코드</span>
+                            <span class="kakao-readonly-value">{{ selectedTemplate.templateCode }}</span>
+                        </div>
+                        <div class="kakao-readonly-row">
+                            <span class="kakao-readonly-label">카카오톡 템플릿 코드</span>
+                            <span class="kakao-readonly-value">{{ selectedTemplate.kakaoCode }}</span>
+                        </div>
+                        <div class="kakao-readonly-row">
+                            <span class="kakao-readonly-label">발송 목적</span>
+                            <span class="kakao-readonly-value">{{ purposeLabel }}</span>
+                        </div>
+                        <div class="kakao-readonly-row">
+                            <span class="kakao-readonly-label">메시지 유형</span>
+                            <span class="kakao-readonly-value">{{ messageTypeLabel }}</span>
+                        </div>
+                        <div class="kakao-readonly-row">
+                            <span class="kakao-readonly-label">메시지 강조 유형</span>
+                            <span class="kakao-readonly-value">{{ selectedTemplate.emphasisType || '선택 안함' }}</span>
+                        </div>
+
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">내용 <span class="sms-required">*</span></label>
+                            <div class="sms-form-control">
+                                <textarea class="form-control sms-textarea kakao-readonly-textarea" v-model="selectedTemplate.content" rows="10" readonly></textarea>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedTemplate.extraInfo" class="sms-form-row">
+                            <label class="sms-form-label">부가 정보</label>
+                            <div class="sms-form-control">
+                                <textarea class="form-control sms-textarea kakao-readonly-textarea kakao-readonly-textarea-sm" v-model="selectedTemplate.extraInfo" rows="3" readonly></textarea>
+                            </div>
+                        </div>
+
+                        <div class="kakao-readonly-row">
+                            <span class="kakao-readonly-label">보안 템플릿 여부</span>
+                            <span class="kakao-readonly-value">{{ selectedTemplate.secure ? '설정' : '미설정' }}</span>
+                        </div>
+
+                        <div v-if="selectedTemplate.links" class="sms-form-row">
+                            <label class="sms-form-label">대표 링크</label>
+                            <div class="sms-form-control">
+                                <table class="kakao-link-table">
+                                    <tbody>
+                                        <tr>
+                                            <td class="kakao-link-key">모바일</td>
+                                            <td class="kakao-link-val">{{ selectedTemplate.links.mobile }}</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="kakao-link-key">PC</td>
+                                            <td class="kakao-link-val">{{ selectedTemplate.links.pc }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div v-if="selectedTemplate.buttons && selectedTemplate.buttons.length > 0" class="sms-form-row">
+                            <label class="sms-form-label">버튼</label>
+                            <div class="sms-form-control">
+                                <table class="kakao-button-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="kakao-button-toggle-col"></th>
+                                            <th>버튼 유형</th>
+                                            <th>버튼 이름</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template v-for="(b, i) in selectedTemplate.buttons" :key="i">
+                                            <tr class="kakao-button-row" @click="toggleButton(i)">
+                                                <td class="kakao-button-toggle-col">
+                                                    <i class="bi" :class="expandedButtons.includes(i) ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                                                </td>
+                                                <td>{{ b.type }}</td>
+                                                <td>{{ b.icon }} {{ b.name }}</td>
+                                            </tr>
+                                            <tr v-if="expandedButtons.includes(i)" class="kakao-button-detail-row">
+                                                <td></td>
+                                                <td colspan="2">
+                                                    <div class="kakao-button-detail">
+                                                        <div class="kakao-button-detail-row-line">
+                                                            <span class="kakao-button-detail-key">모바일</span>
+                                                            <span>: {{ b.mobile }}</span>
+                                                        </div>
+                                                        <div class="kakao-button-detail-row-line">
+                                                            <span class="kakao-button-detail-key">PC</span>
+                                                            <span>: {{ b.pc }}</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 카카오톡 미리보기 -->
+                    <div class="content-2col-aside kakao-preview-col">
+                        <div class="kakao-phone">
+                            <div class="kakao-phone-header">
+                                <i class="bi bi-chevron-left"></i>
+                                <span class="kakao-phone-title">맑은소프트</span>
+                                <div class="kakao-phone-header-actions">
+                                    <i class="bi bi-search"></i>
+                                    <i class="bi bi-list"></i>
+                                </div>
+                            </div>
+                            <div class="kakao-phone-body">
+                                <div class="kakao-chat-row">
+                                    <div class="kakao-chat-avatar">
+                                        <i class="bi bi-chat-dots-fill"></i>
+                                    </div>
+                                    <div class="kakao-chat-content">
+                                        <div class="kakao-chat-name">맑은소프트</div>
+                                        <div class="kakao-chat-bubble">
+                                            <div class="kakao-bubble-header">알림톡 도착</div>
+                                            <div class="kakao-bubble-content">{{ previewContent }}</div>
+                                            <div v-if="selectedTemplate.extraInfo" class="kakao-bubble-extra">{{ selectedTemplate.extraInfo }}</div>
+                                            <div v-if="selectedTemplate.buttons && selectedTemplate.buttons.length > 0" class="kakao-bubble-buttons">
+                                                <button v-for="(b, i) in selectedTemplate.buttons" :key="i" type="button" class="kakao-bubble-btn">
+                                                    {{ b.icon }} {{ b.name }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="kakao-phone-footer">
+                                <i class="bi bi-plus"></i>
+                                <span class="kakao-phone-input-mock"></span>
+                                <i class="bi bi-emoji-smile"></i>
+                                <i class="bi bi-hash"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 발송 옵션 -->
+        <section v-if="selectedProfile && selectedTemplate" class="sms-card mb-4">
+            <div class="sms-card-header">
+                <h3 class="sms-card-title">발송 옵션</h3>
+            </div>
+            <div class="sms-card-body">
+                <div class="sms-form-row">
+                    <label class="sms-form-label">발송 시점 <span class="sms-required">*</span></label>
+                    <div class="sms-form-control">
+                        <div class="sms-radio-group">
+                            <label class="sms-radio">
+                                <input type="radio" v-model="form.sendTime" value="now">
+                                <span>즉시 발송</span>
+                            </label>
+                            <label class="sms-radio">
+                                <input type="radio" v-model="form.sendTime" value="reserve">
+                                <span>예약 발송</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="form.sendTime === 'reserve'" class="sms-form-row">
+                    <label class="sms-form-label">예약 일시</label>
+                    <div class="sms-form-control">
+                        <input type="datetime-local" class="form-control sms-input sms-input-datetime" v-model="form.reserveAt">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 액션 버튼 -->
+        <div class="sms-actions">
+            <button type="button" class="sms-btn-reset" @click="openResetConfirm">초기화</button>
+            <button type="button" class="sms-btn-submit kakao-btn-submit" @click="handleSubmit">발송하기</button>
+        </div>
+    </div>
+
+    <!-- 템플릿 선택 모달 (W800) -->
+    <div class="modal fade" ref="templateModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800 kakao-modal-template">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('template')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">템플릿 선택</h4>
+                    <div class="kakao-template-modal-grid">
+                        <div class="kakao-template-modal-list">
+                            <div class="sms-modal-search-row">
+                                <div class="sms-modal-search">
+                                    <input type="text" class="form-control" v-model="templateModal.search" placeholder="템플릿 이름을 입력하세요.">
+                                    <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                                </div>
+                            </div>
+                            <table class="sms-modal-table">
+                                <thead>
+                                    <tr>
+                                        <th>템플릿 이름</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="t in pagedTemplateList" :key="t.id" :class="{ 'is-active': templateModal.selectedId === t.id }" @click="templateModal.selectedId = t.id">
+                                        <td class="text-start">{{ t.name }}</td>
+                                    </tr>
+                                    <tr v-if="filteredTemplates.length === 0">
+                                        <td class="sms-modal-empty">검색 결과가 없습니다.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="sms-modal-pagination" v-if="templateTotalPages > 1">
+                                <button type="button" class="sms-page-btn" @click="templateModal.page = 1" :disabled="templateModal.page === 1">«</button>
+                                <button type="button" class="sms-page-btn" @click="templateModal.page > 1 && (templateModal.page -= 1)" :disabled="templateModal.page === 1">‹</button>
+                                <button v-for="p in templateTotalPages" :key="p" type="button" class="sms-page-btn" :class="{ active: p === templateModal.page }" @click="templateModal.page = p">{{ p }}</button>
+                                <button type="button" class="sms-page-btn" @click="templateModal.page < templateTotalPages && (templateModal.page += 1)" :disabled="templateModal.page === templateTotalPages">›</button>
+                                <button type="button" class="sms-page-btn" @click="templateModal.page = templateTotalPages" :disabled="templateModal.page === templateTotalPages">»</button>
+                            </div>
+                        </div>
+                        <div class="kakao-template-modal-preview">
+                            <div class="kakao-phone kakao-phone-modal">
+                                <div class="kakao-phone-header">
+                                    <i class="bi bi-chevron-left"></i>
+                                    <span class="kakao-phone-title">맑은소프트</span>
+                                    <div class="kakao-phone-header-actions">
+                                        <i class="bi bi-search"></i>
+                                        <i class="bi bi-list"></i>
+                                    </div>
+                                </div>
+                                <div class="kakao-phone-body">
+                                    <div v-if="modalPreviewTemplate" class="kakao-chat-row">
+                                        <div class="kakao-chat-avatar"><i class="bi bi-chat-dots-fill"></i></div>
+                                        <div class="kakao-chat-content">
+                                            <div class="kakao-chat-name">맑은소프트</div>
+                                            <div class="kakao-chat-bubble">
+                                                <div class="kakao-bubble-header">알림톡 도착</div>
+                                                <div class="kakao-bubble-content">{{ modalPreviewTemplate.content }}</div>
+                                                <div v-if="modalPreviewTemplate.extraInfo" class="kakao-bubble-extra">{{ modalPreviewTemplate.extraInfo }}</div>
+                                                <div v-if="modalPreviewTemplate.buttons && modalPreviewTemplate.buttons.length > 0" class="kakao-bubble-buttons">
+                                                    <button v-for="(b, i) in modalPreviewTemplate.buttons" :key="i" type="button" class="kakao-bubble-btn">
+                                                        {{ b.icon }} {{ b.name }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="kakao-phone-footer">
+                                    <i class="bi bi-plus"></i>
+                                    <span class="kakao-phone-input-mock"></span>
+                                    <i class="bi bi-emoji-smile"></i>
+                                    <i class="bi bi-hash"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('template')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmTemplate">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 수신자 정보 (직접입력) 모달 (W400) -->
+    <div class="modal fade" ref="recipientInputModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('recipientInput')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title sms-modal-title-sm">수신자 정보</h4>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">휴대폰 번호</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientInputModal.phone" placeholder="-없이 숫자 입력" maxlength="11">
+                    </div>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">템플릿 치환자</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientInputModal.varValue" :placeholder="templateVarPlaceholder">
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('recipientInput')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmRecipientInput">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 주소록(수신자 선택) 모달 (W800) -->
+    <div class="modal fade" ref="addressBookModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800 kakao-modal-recipient">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('addressBook')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">수신자 선택</h4>
+                    <div class="kakao-recipient-modal-grid">
+                        <div class="kakao-recipient-modal-list">
+                            <div class="sms-modal-search-row">
+                                <div class="sms-modal-search">
+                                    <input type="text" class="form-control" v-model="addressBookModal.search" @input="addressBookModal.page = 1" placeholder="수신자 별칭을 입력하세요.">
+                                    <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                                </div>
+                                <div class="sms-modal-count">총 <strong>{{ addressBookModal.selectedIds.length }}</strong>개 선택</div>
+                            </div>
+                            <table class="sms-modal-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sms-th-check">
+                                            <input type="checkbox" :checked="isAddressBookAllSelected" @change="toggleAddressBookAll">
+                                        </th>
+                                        <th>수신자 별칭</th>
+                                        <th>휴대폰 번호</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="c in pagedAddressBook" :key="c.id">
+                                        <td class="sms-th-check">
+                                            <input type="checkbox" :value="c.id" v-model="addressBookModal.selectedIds">
+                                        </td>
+                                        <td>{{ c.name }}</td>
+                                        <td>{{ c.phone }}</td>
+                                    </tr>
+                                    <tr v-if="pagedAddressBook.length === 0">
+                                        <td colspan="3" class="sms-modal-empty">검색 결과가 없습니다.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="sms-modal-pagination" v-if="addressBookTotalPages > 1">
+                                <button type="button" class="sms-page-btn" @click="addressBookModal.page = 1" :disabled="addressBookModal.page === 1">«</button>
+                                <button type="button" class="sms-page-btn" @click="addressBookModal.page > 1 && (addressBookModal.page -= 1)" :disabled="addressBookModal.page === 1">‹</button>
+                                <button v-for="p in addressBookTotalPages" :key="p" type="button" class="sms-page-btn" :class="{ active: p === addressBookModal.page }" @click="addressBookModal.page = p">{{ p }}</button>
+                                <button type="button" class="sms-page-btn" @click="addressBookModal.page < addressBookTotalPages && (addressBookModal.page += 1)" :disabled="addressBookModal.page === addressBookTotalPages">›</button>
+                                <button type="button" class="sms-page-btn" @click="addressBookModal.page = addressBookTotalPages" :disabled="addressBookModal.page === addressBookTotalPages">»</button>
+                            </div>
+                        </div>
+                        <div class="kakao-recipient-modal-edit">
+                            <div v-if="addressBookModal.selectedIds.length === 0" class="kakao-recipient-edit-empty">
+                                <i class="bi bi-info-circle"></i>
+                                <span>좌측에서 수신자를 선택해 주세요.</span>
+                            </div>
+                            <template v-else>
+                                <p class="kakao-recipient-edit-help">
+                                    <i class="bi bi-info-circle"></i>
+                                    선택한 연락처의 템플릿 치환자를 입력하세요.
+                                </p>
+                                <div class="kakao-recipient-edit-list">
+                                    <div v-for="c in selectedAddressBookContacts" :key="c.id" class="kakao-recipient-edit-item">
+                                        <div class="kakao-recipient-edit-name">{{ c.name }}</div>
+                                        <div class="kakao-recipient-edit-row">
+                                            <span class="kakao-recipient-edit-label">휴대폰 번호</span>
+                                            <span class="kakao-recipient-edit-value">{{ c.phone }}</span>
+                                        </div>
+                                        <div class="kakao-recipient-edit-row">
+                                            <span class="kakao-recipient-edit-label">템플릿 치환자</span>
+                                            <input type="text" class="form-control sms-modal-input" :class="{ 'is-error': addressBookModal.submitted && !addressBookModal.varMap[c.id] }" v-model="addressBookModal.varMap[c.id]" :placeholder="templateVarPlaceholder">
+                                        </div>
+                                        <div v-if="addressBookModal.submitted && !addressBookModal.varMap[c.id]" class="kakao-recipient-edit-error">
+                                            <i class="bi bi-exclamation-circle-fill"></i>
+                                            필수 입력 사항입니다. 입력 내용을 확인하세요.
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('addressBook')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmAddressBook">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 수신자 정보 수정 모달 (W400) -->
+    <div class="modal fade" ref="recipientEditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('recipientEdit')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title sms-modal-title-sm">수신자 정보 수정</h4>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">휴대폰 번호</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientEditModal.phone" placeholder="-없이 숫자 입력" maxlength="13">
+                    </div>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">템플릿 치환자</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientEditModal.varValue" :placeholder="templateVarPlaceholder">
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('recipientEdit')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmRecipientEdit">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 초기화 컨펌 모달 (W400) -->
+    <div class="modal fade" ref="resetModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('reset')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon">
+                        <i class="bi bi-exclamation"></i>
+                    </div>
+                    <p class="sms-modal-confirm-text">작성된 모든 내용이 초기화 됩니다.<br>초기화를 진행하시겠어요?</p>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('reset')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmReset">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

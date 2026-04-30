@@ -1,0 +1,90 @@
+<div class="auth-page">
+    <div class="auth-container">
+
+        <div class="auth-icon">
+            <i class="bi bi-info-lg"></i>
+        </div>
+
+        <h1 class="auth-title">새 비밀번호를 설정하세요</h1>
+        <p class="auth-desc">
+            보안을 위해 이전에 사용하지 않은<br>
+            새로운 비밀번호를 설정해 주세요.
+        </p>
+
+        <form class="auth-form auth-form-narrow" @submit.prevent="submitNewPassword" novalidate>
+            <!-- 새 비밀번호 -->
+            <div class="auth-form-row">
+                <label class="auth-form-label">새 비밀번호</label>
+                <div class="auth-input-with-icon auth-input-with-icon-both">
+                    <span class="auth-input-leading"><i class="bi bi-lock-fill"></i></span>
+                    <input :type="showPw ? 'text' : 'password'"
+                        class="auth-input auth-input-icon-both"
+                        :class="{ 'is-error': errors.pw }"
+                        placeholder="새 비밀번호를 입력하세요"
+                        v-model="form.password"
+                        maxlength="16"
+                        autocomplete="new-password">
+                    <button type="button" class="auth-input-toggle" @click="showPw = !showPw" tabindex="-1">
+                        <i class="bi" :class="showPw ? 'bi-eye' : 'bi-eye-slash'"></i>
+                    </button>
+                </div>
+                <div class="auth-pw-meter">
+                    <span v-for="i in 4" :key="i" class="auth-pw-meter-bar"
+                        :class="{ 'is-on': pwStrength >= i }"></span>
+                </div>
+                <div class="auth-help-text">8-16자, 영문 대소문자·숫자·특수문자 조합 필수</div>
+                <div v-if="errors.pw" class="auth-error-text">{{ errors.pw }}</div>
+            </div>
+
+            <!-- 새 비밀번호 확인 -->
+            <div class="auth-form-row">
+                <label class="auth-form-label">새 비밀번호 확인</label>
+                <div class="auth-input-with-icon auth-input-with-icon-both">
+                    <span class="auth-input-leading"><i class="bi bi-lock-fill"></i></span>
+                    <input :type="showPw2 ? 'text' : 'password'"
+                        class="auth-input auth-input-icon-both"
+                        :class="{ 'is-error': errors.pwConfirm }"
+                        placeholder="비밀번호를 한 번 더 입력하세요"
+                        v-model="form.passwordConfirm"
+                        maxlength="16"
+                        autocomplete="new-password">
+                    <button type="button" class="auth-input-toggle" @click="showPw2 = !showPw2" tabindex="-1">
+                        <i class="bi" :class="showPw2 ? 'bi-eye' : 'bi-eye-slash'"></i>
+                    </button>
+                </div>
+                <div v-if="errors.pwConfirm" class="auth-error-text">{{ errors.pwConfirm }}</div>
+            </div>
+
+            <button type="submit" class="auth-btn auth-btn-primary auth-btn-block auth-btn-mt-lg">
+                비밀번호 변경 완료하기
+            </button>
+
+            <div class="auth-link-row auth-link-row-back">
+                <a href="#/login" class="auth-link-back" @click.prevent="navigateTo('/login')">
+                    <i class="bi bi-arrow-left"></i> 로그인 화면으로 돌아가기
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- 비밀번호 재설정 완료 모달 -->
+    <div class="modal fade" tabindex="-1" ref="doneModal">
+        <div class="modal-dialog modal-dialog-centered auth-modal-w480">
+            <div class="modal-content auth-modal">
+                <button type="button" class="auth-modal-close" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="auth-modal-body-confirm">
+                    <div class="auth-modal-icon-success">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <h2 class="auth-modal-title">비밀번호가 재설정되었습니다</h2>
+                    <p class="auth-modal-confirm-text">새로운 비밀번호로 로그인하세요.</p>
+                </div>
+                <div class="auth-modal-actions-single">
+                    <button type="button" class="auth-btn auth-btn-primary auth-btn-block" @click="goLogin">로그인으로 이동하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

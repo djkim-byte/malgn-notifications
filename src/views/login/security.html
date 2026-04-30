@@ -1,0 +1,80 @@
+<div class="auth-page">
+    <div class="auth-container auth-container-wide">
+
+        <div class="auth-icon">
+            <i class="bi bi-shield-lock"></i>
+        </div>
+
+        <h1 class="auth-title">보안 로그인</h1>
+        <p class="auth-desc">
+            계정 보안을 위해 본인 휴대폰 인증을 진행해 주세요.<br>
+            인증 완료 시 로그인이 완료됩니다.
+        </p>
+
+        <form class="auth-form" @submit.prevent="completeVerify" novalidate>
+            <!-- 휴대폰 번호 -->
+            <div class="auth-form-row">
+                <label class="auth-form-label">휴대폰 번호 입력</label>
+                <div class="auth-row-with-action">
+                    <div class="auth-phone-row">
+                        <select class="auth-input auth-input-prefix" v-model="phone.prefix">
+                            <option>010</option>
+                            <option>011</option>
+                            <option>016</option>
+                            <option>017</option>
+                            <option>018</option>
+                            <option>019</option>
+                        </select>
+                        <span class="auth-phone-dash">-</span>
+                        <input type="text" maxlength="4" inputmode="numeric"
+                            class="auth-input auth-input-phone" v-model="phone.mid">
+                        <span class="auth-phone-dash">-</span>
+                        <input type="text" maxlength="4" inputmode="numeric"
+                            class="auth-input auth-input-phone" v-model="phone.last">
+                    </div>
+                    <button type="button" class="auth-btn auth-btn-dark" @click="sendCode">인증하기</button>
+                </div>
+                <div v-if="errors.phoneEmpty" class="auth-error-text">휴대폰 번호가 입력되지 않았어요. 다시 입력해 주세요.</div>
+            </div>
+
+            <!-- 인증번호 -->
+            <div class="auth-form-row">
+                <label class="auth-form-label">인증 번호 입력 (6자리)</label>
+                <input type="text" class="auth-input" maxlength="6" inputmode="numeric"
+                    placeholder="문자로 받은 6자리 인증번호를 입력해 주세요"
+                    v-model="phone.code"
+                    @input="onCodeInput">
+                <div v-if="errors.codeInvalid" class="auth-error-text">만료되었거나 유효하지 않은 인증코드입니다. 다시 새로운 인증코드를 입력해 주세요</div>
+            </div>
+
+            <button type="submit" class="auth-btn auth-btn-primary auth-btn-block"
+                :disabled="!canSubmit">로그인 완료</button>
+
+            <div class="auth-link-row auth-link-row-back">
+                <a href="#/login" class="auth-link-back" @click.prevent="navigateTo('/login')">
+                    <i class="bi bi-arrow-left"></i> 로그인 화면으로 돌아가기
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- 인증코드 발송 알림 모달 -->
+    <div class="modal fade" tabindex="-1" ref="codeAlertModal">
+        <div class="modal-dialog modal-dialog-centered auth-modal-w400">
+            <div class="modal-content auth-modal">
+                <div class="auth-modal-body-confirm">
+                    <div class="auth-modal-icon-info">
+                        <i class="bi bi-chat-dots-fill"></i>
+                    </div>
+                    <p class="auth-modal-confirm-text">
+                        문자메시지로 인증번호 6자리가 발송되었습니다.<br>
+                        3분내 인증번호를 입력해 주세요
+                    </p>
+                </div>
+                <div class="auth-modal-actions-single">
+                    <button type="button" class="auth-btn auth-btn-primary auth-btn-block" data-bs-dismiss="modal">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

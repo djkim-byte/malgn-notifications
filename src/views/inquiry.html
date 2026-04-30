@@ -1,0 +1,142 @@
+<div class="inquiry-page">
+    <div class="container py-5">
+
+        <!-- 헤더 -->
+        <header class="inquiry-header">
+            <h1 class="inquiry-title">문의하기</h1>
+            <p class="inquiry-subtitle">
+                궁금하신 사항이나 도움이 필요하신 경우 문의해 주세요.<br>
+                빠르고 정확하게 답변 드리겠습니다.
+            </p>
+        </header>
+
+        <!-- 폼 카드 -->
+        <section class="inquiry-card">
+            <form @submit.prevent="onSubmit" novalidate>
+
+                <!-- 문의 유형 -->
+                <div class="inquiry-field">
+                    <label class="inquiry-label inquiry-label-required">문의 유형</label>
+                    <div class="inquiry-radio-row">
+                        <label v-for="t in types" :key="t.value" class="inquiry-radio">
+                            <input type="radio" name="inquiryType" :value="t.value" v-model="form.type" @change="onTypeChange">
+                            <span class="inquiry-radio-mark"></span>
+                            <span class="inquiry-radio-text">{{ t.label }}</span>
+                        </label>
+                    </div>
+
+                    <!-- 메시지 상품 선택 시: 상품 유형 -->
+                    <div v-if="form.type === 'product'" class="inquiry-subtype">
+                        <div class="inquiry-subtype-label">상품 유형을 선택해 주세요</div>
+                        <div class="inquiry-chip-row">
+                            <button v-for="p in productTypes" :key="p.value"
+                                type="button"
+                                class="inquiry-chip"
+                                :class="{ 'is-active': form.productType === p.value }"
+                                @click="selectProductType(p.value)">
+                                {{ p.label }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 제목 -->
+                <div class="inquiry-field">
+                    <label class="inquiry-label inquiry-label-required">제목</label>
+                    <input type="text"
+                        class="inquiry-input"
+                        :class="{ 'is-error': errors.title }"
+                        placeholder="문의 제목을 입력해 주세요"
+                        maxlength="100"
+                        v-model="form.title">
+                    <p v-if="errors.title" class="inquiry-error-text">제목을 입력해 주세요</p>
+                </div>
+
+                <!-- 내용 -->
+                <div class="inquiry-field">
+                    <label class="inquiry-label inquiry-label-required">내용</label>
+                    <div class="inquiry-editor" :class="{ 'is-error': errors.content }">
+                        <div class="inquiry-editor-toolbar" aria-hidden="true">
+                            <div class="inquiry-editor-toolbar-group">
+                                <span class="inquiry-tool"><b>B</b></span>
+                                <span class="inquiry-tool"><i>i</i></span>
+                                <span class="inquiry-tool"><u>U</u></span>
+                                <span class="inquiry-tool"><span class="inquiry-tool-text">A:</span></span>
+                            </div>
+                            <div class="inquiry-editor-toolbar-divider"></div>
+                            <div class="inquiry-editor-toolbar-group">
+                                <span class="inquiry-tool"><i class="bi bi-text-left"></i></span>
+                                <span class="inquiry-tool"><i class="bi bi-text-center"></i></span>
+                                <span class="inquiry-tool"><i class="bi bi-text-right"></i></span>
+                                <span class="inquiry-tool"><i class="bi bi-list-ul"></i></span>
+                                <span class="inquiry-tool"><i class="bi bi-paragraph"></i></span>
+                            </div>
+                            <div class="inquiry-editor-toolbar-divider"></div>
+                            <div class="inquiry-editor-toolbar-group">
+                                <span class="inquiry-tool"><i class="bi bi-link-45deg"></i></span>
+                                <span class="inquiry-tool"><i class="bi bi-image"></i></span>
+                                <span class="inquiry-tool"><i class="bi bi-camera-video"></i></span>
+                                <span class="inquiry-tool"><i class="bi bi-plus-square"></i></span>
+                            </div>
+                            <div class="inquiry-editor-toolbar-spacer"></div>
+                            <div class="inquiry-editor-toolbar-group">
+                                <span class="inquiry-tool inquiry-tool-disabled"><i class="bi bi-arrow-counterclockwise"></i></span>
+                                <span class="inquiry-tool inquiry-tool-disabled"><i class="bi bi-arrow-clockwise"></i></span>
+                                <span class="inquiry-tool"><i class="bi bi-three-dots-vertical"></i></span>
+                            </div>
+                        </div>
+                        <textarea class="inquiry-editor-body"
+                            v-model="form.content"
+                            :placeholder="contentPlaceholder"
+                            rows="14"></textarea>
+                    </div>
+                    <p v-if="errors.content" class="inquiry-error-text">내용을 입력해 주세요</p>
+                </div>
+
+                <!-- 첨부파일 -->
+                <div class="inquiry-field">
+                    <label class="inquiry-label">첨부파일 <span class="inquiry-label-meta">(선택)</span></label>
+                    <div class="inquiry-file-row">
+                        <button type="button" class="inquiry-file-btn" @click="$refs.fileInput.click()">파일선택</button>
+                        <span class="inquiry-file-hint">최대 5개, 파일당 10MB 이하 (이미지, PDF, 문서, 압축파일)</span>
+                        <input ref="fileInput" type="file" multiple class="d-none"
+                            accept=".jpg,.jpeg,.png,.gif,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.rar,.7z"
+                            @change="onFileSelect">
+                    </div>
+                    <ul v-if="form.files.length" class="inquiry-file-list">
+                        <li v-for="(f, idx) in form.files" :key="f.uid" class="inquiry-file-item">
+                            <i class="bi bi-paperclip"></i>
+                            <span class="inquiry-file-name">{{ f.name }}</span>
+                            <button type="button" class="inquiry-file-remove" @click="removeFile(idx)" aria-label="파일 삭제">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- 제출 -->
+                <div class="inquiry-submit-row">
+                    <button type="submit" class="inquiry-submit-btn">
+                        <span class="inquiry-submit-icon"><i class="bi bi-info-lg"></i></span>
+                        <span>문의하기</span>
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <!-- 파일 용량 초과 모달 -->
+    <div class="modal fade" tabindex="-1" ref="fileErrorModal">
+        <div class="modal-dialog modal-dialog-centered inquiry-modal-w400">
+            <div class="modal-content inquiry-alert">
+                <div class="inquiry-alert-body">
+                    <div class="inquiry-alert-icon">
+                        <i class="bi bi-exclamation-lg"></i>
+                    </div>
+                    <p class="inquiry-alert-text">{{ fileErrorMessage }}</p>
+                </div>
+                <button type="button" class="inquiry-alert-btn" data-bs-dismiss="modal">확인</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" rx="16" fill="#ede9f6"/>
+  <!-- Calendar -->
+  <g transform="translate(130, 55)">
+    <rect x="0" y="10" width="140" height="120" rx="12" fill="white" stroke="#d4c8e8" stroke-width="2"/>
+    <rect x="0" y="10" width="140" height="32" rx="12" fill="#6366f1" opacity="0.15"/>
+    <rect x="0" y="30" width="140" height="12" fill="#6366f1" opacity="0.15"/>
+    <!-- Calendar pins -->
+    <rect x="35" y="2" width="8" height="20" rx="4" fill="#6366f1" opacity="0.4"/>
+    <rect x="97" y="2" width="8" height="20" rx="4" fill="#6366f1" opacity="0.4"/>
+    <!-- Calendar grid dots -->
+    <circle cx="35" cy="62" r="4" fill="#d4c8e8"/>
+    <circle cx="70" cy="62" r="4" fill="#d4c8e8"/>
+    <circle cx="105" cy="62" r="4" fill="#d4c8e8"/>
+    <circle cx="35" cy="85" r="4" fill="#d4c8e8"/>
+    <circle cx="70" cy="85" r="4" fill="#6366f1" opacity="0.5"/>
+    <circle cx="105" cy="85" r="4" fill="#d4c8e8"/>
+    <circle cx="35" cy="108" r="4" fill="#d4c8e8"/>
+    <circle cx="70" cy="108" r="4" fill="#d4c8e8"/>
+    <circle cx="105" cy="108" r="4" fill="#d4c8e8"/>
+    <!-- Highlight selected date -->
+    <circle cx="70" cy="85" r="10" fill="#6366f1" opacity="0.1"/>
+  </g>
+  <!-- Clock -->
+  <g transform="translate(310, 170)">
+    <circle cx="0" cy="0" r="35" fill="white" stroke="#d4c8e8" stroke-width="2"/>
+    <circle cx="0" cy="0" r="30" fill="#f3f0f9"/>
+    <!-- Clock hands -->
+    <line x1="0" y1="0" x2="0" y2="-18" stroke="#6366f1" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+    <line x1="0" y1="0" x2="12" y2="6" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+    <circle cx="0" cy="0" r="3" fill="#6366f1" opacity="0.5"/>
+    <!-- Clock ticks -->
+    <line x1="0" y1="-26" x2="0" y2="-22" stroke="#d4c8e8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="0" y1="22" x2="0" y2="26" stroke="#d4c8e8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="-26" y1="0" x2="-22" y2="0" stroke="#d4c8e8" stroke-width="2" stroke-linecap="round"/>
+    <line x1="22" y1="0" x2="26" y2="0" stroke="#d4c8e8" stroke-width="2" stroke-linecap="round"/>
+  </g>
+  <!-- Wrench small -->
+  <g transform="translate(85, 200) rotate(-30)">
+    <rect x="-3" y="-18" width="6" height="36" rx="3" fill="#6366f1" opacity="0.2"/>
+    <circle cx="0" cy="-18" r="8" fill="none" stroke="#6366f1" stroke-width="3" opacity="0.2"/>
+  </g>
+  <!-- Decorative -->
+  <circle cx="80" cy="100" r="5" fill="#6366f1" opacity="0.1"/>
+  <circle cx="340" cy="80" r="4" fill="#d4c8e8"/>
+  <circle cx="200" cy="250" r="6" fill="#6366f1" opacity="0.06"/>
+</svg>

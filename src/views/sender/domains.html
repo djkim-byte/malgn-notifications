@@ -1,0 +1,230 @@
+<div class="contacts-page sender-page domains-page">
+    <div class="container py-5">
+        <h2 class="contacts-page-title">발신 정보 관리</h2>
+
+        <!-- 결과 카드 -->
+        <section class="contacts-card">
+            <h3 class="contacts-card-title">도메인 관리</h3>
+
+            <ul class="sender-info-list">
+                <li>도메인 등록 후 도메인 소유권을 인증해야 합니다.</li>
+                <li>도메인 인증 성공 후 SPF 레코드 인증, DMARC 인증, DKIM 사용 설정을 할 수 있습니다.</li>
+            </ul>
+
+            <!-- 상단 툴바 -->
+            <div class="contacts-toolbar">
+                <div class="contacts-toolbar-left">
+                    <button type="button" class="contacts-btn-primary" @click="openRegister">
+                        <i class="bi bi-plus-lg"></i> 도메인 등록
+                    </button>
+                    <button type="button" class="contacts-btn-soft contacts-btn-soft-edit"
+                            :disabled="selectedRowIds.length !== 1" @click="openDkim">
+                        DKIM 설정
+                    </button>
+                    <button type="button" class="contacts-btn-soft contacts-btn-soft-delete"
+                            :disabled="selectedRowIds.length === 0" @click="openDeleteConfirm">
+                        도메인 삭제
+                    </button>
+                    <div class="contacts-search">
+                        <input type="text" class="contacts-search-input"
+                               v-model="keyword"
+                               @keyup.enter="search"
+                               placeholder="도메인을 입력하세요.">
+                        <button type="button" class="contacts-search-btn" @click="search" aria-label="검색">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="contacts-toolbar-right">
+                    <button type="button" class="contacts-btn-ghost" @click="refresh">
+                        <i class="bi bi-arrow-clockwise"></i> 새로고침
+                    </button>
+                    <button type="button" class="contacts-btn-ghost"
+                            :disabled="page === 1" @click="goPage(page - 1)">
+                        <i class="bi bi-chevron-left"></i> 이전
+                    </button>
+                    <button type="button" class="contacts-btn-ghost"
+                            :disabled="page === totalPages" @click="goPage(page + 1)">
+                        다음 <i class="bi bi-chevron-right"></i>
+                    </button>
+                    <span class="contacts-total">총 <strong>{{ totalCount }}</strong>개</span>
+                </div>
+            </div>
+
+            <!-- 결과 테이블 -->
+            <div class="contacts-table-wrap">
+                <table class="contacts-table domains-table">
+                    <thead>
+                        <tr>
+                            <th class="contacts-th-check">
+                                <input type="checkbox" :checked="isAllSelected" @change="toggleAllRows">
+                            </th>
+                            <th>도메인</th>
+                            <th>도메인 소유 인증 상태</th>
+                            <th>인증 일시</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in pagedRows" :key="row.id">
+                            <td class="contacts-th-check">
+                                <input type="checkbox" :value="row.id" v-model="selectedRowIds">
+                            </td>
+                            <td>{{ row.domain }}</td>
+                            <td>
+                                <span class="sender-status" :class="statusClass(row.status)">{{ row.statusLabel }}</span>
+                            </td>
+                            <td>{{ row.verifiedAt || '-' }}</td>
+                        </tr>
+                        <tr v-if="pagedRows.length === 0">
+                            <td colspan="4" class="contacts-empty">등록된 도메인이 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- 도메인 등록 모달 (W480) -->
+    <div class="modal fade" ref="registerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('register')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">도메인 등록</h4>
+                    <ul class="sms-modal-bullet">
+                        <li>루트 도메인만 입력할 수 있습니다.</li>
+                    </ul>
+
+                    <div class="domains-form-row">
+                        <label class="domains-form-label" for="domainInput">이메일 도메인</label>
+                        <div class="domains-form-control">
+                            <div class="domains-verify-row">
+                                <input id="domainInput" type="text"
+                                       class="contacts-input domains-verify-input"
+                                       v-model="form.domain"
+                                       @input="onDomainInput"
+                                       placeholder="example.com">
+                                <button type="button" class="domains-verify-btn"
+                                        :disabled="!form.domain.trim()"
+                                        @click="verifyDomain">검증</button>
+                            </div>
+                            <p class="domains-form-msg" :class="verifyMsgClass" v-if="verifyMsg">{{ verifyMsg }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('register')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm"
+                            :disabled="!form.verified" @click="submitRegister">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DKIM 설정 모달 (W800) -->
+    <div class="modal fade" ref="dkimModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('dkim')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body domains-dkim-body">
+                    <h4 class="sms-modal-title">DKIM 설정</h4>
+
+                    <div class="domains-dkim-card">
+                        <div class="domains-dkim-card-title">DKIM 레코드 인증</div>
+                        <p class="domains-dkim-desc">
+                            DKIM 레코드 인증을 통해 발신자 및 이메일 내용 등이 위변조되지 않았는지 수신자 측에서 검증할 수 있습니다.
+                        </p>
+
+                        <div class="domains-dkim-section-title">[인증 절차 안내]</div>
+                        <ol class="domains-dkim-steps">
+                            <li>TXT 레코드는 도메인의 추가 정보를 제공하는 DNS(도메인 이름 시스템) 내 항목입니다.</li>
+                            <li>아래의 DNS 구성에 다음 TXT 레코드를 추가합니다.</li>
+                        </ol>
+
+                        <div class="domains-dkim-field">
+                            <div class="domains-dkim-field-label">
+                                <span class="domains-dkim-bullet">•</span> DNS 호스트 이름(TXT 레코드 이름)
+                            </div>
+                            <div class="domains-dkim-value-box">
+                                <div class="domains-dkim-value">{{ dkim.host }}</div>
+                                <button type="button" class="domains-dkim-copy-btn"
+                                        @click="copyToClipboard(dkim.host, 'host')">복사</button>
+                            </div>
+                        </div>
+
+                        <div class="domains-dkim-field">
+                            <div class="domains-dkim-field-label">
+                                <span class="domains-dkim-bullet">•</span> TXT 레코드 값
+                            </div>
+                            <div class="domains-dkim-value-box">
+                                <div class="domains-dkim-value domains-dkim-value-long">{{ dkim.value }}</div>
+                                <button type="button" class="domains-dkim-copy-btn"
+                                        @click="copyToClipboard(dkim.value, 'value')">복사</button>
+                            </div>
+                        </div>
+
+                        <ol class="domains-dkim-steps" start="3">
+                            <li>{{ dkim.host }}에서 DNS TXT 레코드를 발견하면 DKIM 기능을 이용할 수 있습니다.</li>
+                            <li>등록을 확인한 뒤 콘솔에서 [인증]을 클릭하면 DKIM 레코드 인증이 완료됩니다.</li>
+                        </ol>
+
+                        <div class="domains-dkim-note">
+                            <i class="bi bi-info-circle"></i>
+                            <span>DNS 변경이 적용되려면 시간이 다소 걸릴 수 있습니다.</span>
+                        </div>
+                    </div>
+
+                    <div class="domains-dkim-verify-row">
+                        <span class="domains-dkim-verify-badge">인증</span>
+                        <i class="bi bi-check-lg domains-dkim-verify-check"
+                           v-if="dkim.verified"></i>
+                        <span class="domains-dkim-verify-text"
+                              :class="{ 'is-verified': dkim.verified }">
+                            {{ dkim.verified ? '인증에 성공했습니다.' : '인증을 진행해 주세요.' }}
+                        </span>
+                    </div>
+
+                    <div class="domains-dkim-enable-row">
+                        <span class="domains-dkim-enable-label">DKIM 사용 설정</span>
+                        <i class="bi bi-question-circle domains-dkim-help-icon"
+                           title="DKIM 레코드 인증이 완료된 후 사용을 설정할 수 있습니다."></i>
+                        <label class="push-cert-switch">
+                            <input type="checkbox" v-model="dkim.enabled" :disabled="!dkim.verified">
+                            <span class="push-cert-switch-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('dkim')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="saveDkim">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 도메인 삭제 컨펌 (W480) -->
+    <div class="modal fade" ref="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('deleteConfirm')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        선택한 {{ selectedRowIds.length }}개의 도메인을 삭제하시겠습니까?<br>
+                        삭제된 도메인은 복구할 수 없습니다.
+                    </p>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('deleteConfirm')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="confirmDelete">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

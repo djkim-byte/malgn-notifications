@@ -1,0 +1,244 @@
+<div class="charge-page">
+    <div class="container py-5">
+        <h1 class="charge-title">충전하기</h1>
+
+        <div class="charge-grid">
+            <!-- 좌측: 크레딧 충전 금액 선택 -->
+            <section class="charge-card">
+                <h2 class="charge-card-title">크레딧 충전 금액 선택</h2>
+
+                <!-- 보유 크레딧 -->
+                <div class="charge-balance">
+                    <div class="charge-balance-icon">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="charge-balance-label">보유 크레딧</div>
+                    <div class="charge-balance-amount">{{ formatNumber(currentCredit) }}</div>
+                    <div class="charge-balance-rate">
+                        <span class="charge-coin charge-coin-sm">C</span>
+                        = 1원 입니다
+                    </div>
+                </div>
+
+                <hr class="charge-divider">
+
+                <!-- 충전 금액 옵션 -->
+                <div class="charge-options">
+                    <label v-for="opt in chargeOptions" :key="opt.amount" class="charge-option">
+                        <input type="radio" v-model="selectedAmount" :value="opt.amount" name="chargeAmount">
+                        <span class="charge-option-amount">{{ formatNumber(opt.amount) }}</span>
+                        <span class="charge-coin charge-coin-md">C</span>
+                        <span v-if="opt.bonus > 0" class="charge-option-bonus">+ 보너스 {{ formatNumber(opt.bonus) }}</span>
+                    </label>
+                </div>
+
+                <!-- 결제 예정 금액 -->
+                <div class="charge-summary">
+                    <div class="charge-summary-label">결제 예정 금액</div>
+                    <div class="charge-summary-amount">
+                        {{ formatNumber(selectedAmount) }} <span class="charge-summary-unit">원</span>
+                    </div>
+                    <div class="charge-summary-vat">VAT 포함</div>
+                </div>
+            </section>
+
+            <!-- 우측: 결제하기 -->
+            <section class="charge-card">
+                <h2 class="charge-card-title">결제하기</h2>
+
+                <!-- 결제카드 등록 -->
+                <div class="charge-card-section">
+                    <div class="charge-section-label">결제카드 등록</div>
+
+                    <div v-if="cards.length === 0" class="charge-card-empty">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        등록된 카드가 없습니다
+                    </div>
+
+                    <div v-else class="charge-card-list">
+                        <label v-for="card in cards" :key="card.id" class="charge-card-item">
+                            <input type="radio" v-model="selectedCardId" :value="card.id" name="paymentCard">
+                            <span class="charge-card-thumb" :class="'charge-card-thumb-' + card.brand">
+                                <span class="charge-card-thumb-brand">{{ card.brand.toUpperCase() }}</span>
+                                <span class="charge-card-thumb-number">{{ card.thumbNumber }}</span>
+                            </span>
+                            <span class="charge-card-info">
+                                <span class="charge-card-info-brand">{{ card.brand.toUpperCase() }}</span>
+                                <span class="charge-card-info-number">{{ card.maskedNumber }}</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <button type="button" class="charge-add-card" @click="openAddCardModal">
+                        <i class="bi bi-plus-lg"></i> 카드 추가
+                    </button>
+
+                    <p v-if="errors.card" class="charge-error-text">결제 정보 등록은 필수입니다</p>
+                </div>
+
+                <!-- 결제 및 환불안내 -->
+                <div class="charge-info-box">
+                    <div class="charge-info-title">결제 및 환불안내</div>
+                    <ul class="charge-info-list">
+                        <li>크레딧 유효기간은 없습니다. 단, 보너스 지급 크레딧의 유효기간은 1년이며, 유효기간 만료될 경우 자동 소멸됩니다.</li>
+                        <li>크레딧 차감은 보너스로 주어진 크레딧부터 차감됩니다.</li>
+                        <li>크레딧 환불시 보너스를 제외한 충전금액(기준 금액)에서 보너스를 포함한 실 사용 크레딧을 차감한 후 환불됩니다.</li>
+                        <li>크레딧 충전 관련하여 문의나 요청이 있으실 경우 <a href="javascript:void(0)" class="charge-info-link">[문의하기]</a>로 연락주세요.</li>
+                    </ul>
+                </div>
+
+                <!-- 약관 동의 -->
+                <label class="charge-terms" :class="{ 'is-error': errors.terms }">
+                    <input type="checkbox" v-model="agreed">
+                    <span>구매 조건을 확인하였으며 결제 진행에 동의합니다</span>
+                </label>
+                <p v-if="errors.terms" class="charge-error-text">약관 동의는 필수입니다</p>
+
+                <!-- 결제하기 버튼 -->
+                <button type="button"
+                    class="charge-pay-btn"
+                    :class="{ 'is-disabled': !canPay }"
+                    @click="onPayClick">
+                    결제하기
+                </button>
+            </section>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 카드 추가 모달 -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="addCardModal">
+        <div class="modal-dialog modal-dialog-centered charge-modal-w480">
+            <div class="modal-content charge-modal">
+                <div class="charge-modal-header">
+                    <h2 class="charge-modal-title">카드 추가</h2>
+                    <button type="button" class="charge-modal-close" data-bs-dismiss="modal" aria-label="닫기">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <form class="charge-card-form" @submit.prevent="submitAddCard" novalidate>
+                    <!-- 카드 종류 -->
+                    <div class="charge-form-row">
+                        <label class="charge-form-label">카드 종류</label>
+                        <div class="charge-radio-group">
+                            <label class="charge-radio">
+                                <input type="radio" v-model="cardForm.type" value="personal" name="cardType">
+                                <span>개인카드</span>
+                            </label>
+                            <label class="charge-radio">
+                                <input type="radio" v-model="cardForm.type" value="corporate" name="cardType">
+                                <span>법인카드</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 카드번호 -->
+                    <div class="charge-form-row">
+                        <label class="charge-form-label">카드번호</label>
+                        <div class="charge-cardnum-row">
+                            <input type="text"
+                                v-for="(_, idx) in 4"
+                                :key="'cn-' + idx"
+                                class="charge-form-input charge-cardnum-input"
+                                :class="{ 'is-error': cardErrors.number }"
+                                :type="idx >= 2 ? 'password' : 'text'"
+                                inputmode="numeric"
+                                maxlength="4"
+                                :data-cardnum-idx="idx"
+                                v-model="cardForm.number[idx]"
+                                @input="onCardNumberInput(idx, $event)"
+                                @keydown="onCardNumberKeydown(idx, $event)"
+                                placeholder="0000">
+                        </div>
+                        <p v-if="cardErrors.number" class="charge-error-text">카드번호 16자리를 입력해 주세요</p>
+                    </div>
+
+                    <!-- 유효기간 + CVC -->
+                    <div class="charge-form-row charge-form-row-split">
+                        <div class="charge-form-col">
+                            <label class="charge-form-label">유효기간</label>
+                            <div class="charge-expiry-row">
+                                <input type="text"
+                                    class="charge-form-input charge-expiry-input"
+                                    :class="{ 'is-error': cardErrors.expiry }"
+                                    inputmode="numeric"
+                                    maxlength="2"
+                                    placeholder="MM"
+                                    v-model="cardForm.expiryMonth">
+                                <span class="charge-expiry-sep">/</span>
+                                <input type="text"
+                                    class="charge-form-input charge-expiry-input"
+                                    :class="{ 'is-error': cardErrors.expiry }"
+                                    inputmode="numeric"
+                                    maxlength="2"
+                                    placeholder="YY"
+                                    v-model="cardForm.expiryYear">
+                            </div>
+                            <p v-if="cardErrors.expiry" class="charge-error-text">유효기간을 확인해 주세요</p>
+                        </div>
+                        <div class="charge-form-col">
+                            <label class="charge-form-label">CVC</label>
+                            <input type="password"
+                                class="charge-form-input"
+                                :class="{ 'is-error': cardErrors.cvc }"
+                                inputmode="numeric"
+                                maxlength="3"
+                                placeholder="카드 뒷면 3자리"
+                                v-model="cardForm.cvc">
+                            <p v-if="cardErrors.cvc" class="charge-error-text">CVC 3자리를 입력해 주세요</p>
+                        </div>
+                    </div>
+
+                    <!-- 비밀번호 -->
+                    <div class="charge-form-row">
+                        <label class="charge-form-label">비밀번호 앞 2자리</label>
+                        <input type="password"
+                            class="charge-form-input charge-form-input-half"
+                            :class="{ 'is-error': cardErrors.password }"
+                            inputmode="numeric"
+                            maxlength="2"
+                            placeholder="••"
+                            v-model="cardForm.password">
+                        <p v-if="cardErrors.password" class="charge-error-text">비밀번호 앞 2자리를 입력해 주세요</p>
+                    </div>
+
+                    <!-- 카드 별명 (선택) -->
+                    <div class="charge-form-row">
+                        <label class="charge-form-label">카드 별명 <span class="charge-form-label-meta">(선택)</span></label>
+                        <input type="text"
+                            class="charge-form-input"
+                            placeholder="예) 회사 법인카드"
+                            maxlength="20"
+                            v-model="cardForm.alias">
+                    </div>
+
+                    <button type="submit" class="charge-modal-btn charge-modal-btn-primary charge-modal-btn-block">
+                        등록
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 충전 진행 컨펌 모달 -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="confirmModal">
+        <div class="modal-dialog modal-dialog-centered charge-modal-w400">
+            <div class="modal-content charge-modal">
+                <div class="charge-modal-body">
+                    <div class="charge-modal-icon-check">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <p class="charge-modal-text">크레딧 충전을 진행하시겠어요?</p>
+                </div>
+                <div class="charge-modal-actions-pair">
+                    <button type="button" class="charge-modal-btn charge-modal-btn-outline" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="charge-modal-btn charge-modal-btn-primary" @click="confirmCharge">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

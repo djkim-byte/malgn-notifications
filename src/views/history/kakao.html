@@ -1,0 +1,489 @@
+<div class="history-page">
+    <div class="container py-5">
+        <h2 class="history-page-title">{{ pageTitle }}</h2>
+
+        <!-- 검색 카드 -->
+        <section class="history-card history-search">
+            <div class="history-grid-2col">
+                <!-- 좌측 컬럼 -->
+                <div class="history-col">
+                    <div class="history-form-row">
+                        <label class="history-form-label">메시지 채널</label>
+                        <div class="history-form-control">
+                            <HistoryDropdown v-model="search.channel" :options="channelOptions" placeholder="전체"></HistoryDropdown>
+                        </div>
+                    </div>
+                    <div class="history-form-row">
+                        <label class="history-form-label">발송 시점</label>
+                        <div class="history-form-control">
+                            <div class="history-radio-group">
+                                <label class="history-radio">
+                                    <input type="radio" v-model="search.sendTiming" value="">
+                                    <span>전체</span>
+                                </label>
+                                <label class="history-radio">
+                                    <input type="radio" v-model="search.sendTiming" value="now">
+                                    <span>즉시</span>
+                                </label>
+                                <label class="history-radio">
+                                    <input type="radio" v-model="search.sendTiming" value="reserve">
+                                    <span>예약</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="history-form-row">
+                        <label class="history-form-label">발송 목적</label>
+                        <div class="history-form-control">
+                            <div class="history-radio-group">
+                                <label class="history-radio">
+                                    <input type="radio" v-model="search.purpose" value="">
+                                    <span>전체</span>
+                                </label>
+                                <label class="history-radio">
+                                    <input type="radio" v-model="search.purpose" value="general">
+                                    <span>일반용</span>
+                                </label>
+                                <label class="history-radio">
+                                    <input type="radio" v-model="search.purpose" value="auth">
+                                    <span>인증용</span>
+                                </label>
+                                <label v-if="!isKakaoChannel" class="history-radio">
+                                    <input type="radio" v-model="search.purpose" value="ad">
+                                    <span>광고용</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 우측 컬럼 -->
+                <div class="history-col">
+                    <div class="history-form-row">
+                        <label class="history-form-label">발송 상태</label>
+                        <div class="history-form-control">
+                            <HistoryDropdown v-model="search.sendStatus" :options="sendStatusOptions" placeholder="전체"></HistoryDropdown>
+                        </div>
+                    </div>
+                    <div class="history-form-row">
+                        <label class="history-form-label">수신 상태</label>
+                        <div class="history-form-control">
+                            <HistoryDropdown v-model="search.receiveStatus" :options="receiveStatusOptions" placeholder="전체" :disabled="search.sendStatus !== 'success'"></HistoryDropdown>
+                        </div>
+                    </div>
+                    <div class="history-form-row">
+                        <label class="history-form-label">요청 일시</label>
+                        <div class="history-form-control">
+                            <div class="history-daterange">
+                                <input type="datetime-local" class="form-control history-input" v-model="search.requestFrom">
+                                <span class="history-daterange-sep">~</span>
+                                <input type="datetime-local" class="form-control history-input" v-model="search.requestTo">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="history-divider"></div>
+
+            <div class="history-form-row history-form-row-full">
+                <label class="history-form-label">상세 조건</label>
+                <div class="history-form-control history-detail-control">
+                    <HistoryDropdown v-model="search.detailKey" :options="detailOptions" placeholder="선택 안 함"></HistoryDropdown>
+
+                    <label v-if="search.detailKey" class="history-form-label history-detail-label">{{ detailLabel }}</label>
+                    <div v-if="search.detailKey" class="history-detail-value">
+                        <!-- 메시지 아이디 / 수신자 정보: 텍스트 입력 -->
+                        <input v-if="['messageId','receiver'].includes(search.detailKey)"
+                            type="text" class="form-control history-input" v-model="search.detailValue">
+
+                        <!-- 템플릿 이름: 선택 버튼 -->
+                        <div v-else-if="search.detailKey === 'templateName'" class="history-detail-pick">
+                            <input type="text" class="form-control history-input" :value="search.detailValueLabel" placeholder="" readonly>
+                            <button type="button" class="history-btn-pick" @click="openTemplatePicker">선택</button>
+                        </div>
+
+                        <!-- 플로우 이름: 검색 가능 드롭다운 -->
+                        <HistoryDropdown v-else-if="search.detailKey === 'flowName'"
+                            v-model="search.detailValue"
+                            :options="flowOptions"
+                            placeholder="플로우 이름 선택"
+                            searchable></HistoryDropdown>
+
+                        <!-- 발신 정보: 검색 가능 드롭다운 -->
+                        <HistoryDropdown v-else-if="search.detailKey === 'sender'"
+                            v-model="search.detailValue"
+                            :options="senderOptions"
+                            placeholder="발신 번호 선택"
+                            searchable
+                            search-placeholder="Exact 검색"></HistoryDropdown>
+                    </div>
+                </div>
+            </div>
+
+            <div class="history-actions">
+                <button type="button" class="history-btn-reset" @click="resetSearch">초기화</button>
+                <button type="button" class="history-btn-search" @click="runSearch">검색하기</button>
+            </div>
+        </section>
+
+        <!-- 결과 카드 -->
+        <section class="history-card history-result">
+            <!-- 상단 툴바 -->
+            <div class="history-toolbar">
+                <div class="history-toolbar-left">
+                    <button type="button" class="history-btn-ghost" :disabled="selectedRowIds.length === 0" @click="cancelSelected">
+                        선택 취소 <i class="bi bi-question-circle history-help-icon" :title="cancelSelectedHelp"></i>
+                    </button>
+                    <button type="button" class="history-btn-ghost" @click="cancelAll">
+                        일괄 취소 <i class="bi bi-question-circle history-help-icon" :title="cancelAllHelp"></i>
+                    </button>
+                    <div class="history-extra-fields">
+                        <span class="history-extra-label">조회 필드 추가 설정 :</span>
+                        <HistoryMultiDropdown v-model="extraFields" :options="extraFieldOptions" empty-label="없음"></HistoryMultiDropdown>
+                    </div>
+                </div>
+                <div class="history-toolbar-right">
+                    <button type="button" class="history-btn-outline" @click="requestDownload">검색 결과 다운로드 요청</button>
+                    <button type="button" class="history-btn-outline" @click="openDownloadList">다운로드 요청 목록</button>
+                    <span class="history-total">총 {{ totalCount.toLocaleString() }}건</span>
+                </div>
+            </div>
+
+            <!-- 결과 테이블 -->
+            <div class="history-table-wrap">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th class="history-th-check">
+                                <input type="checkbox" :checked="isAllSelected" @change="toggleAllRows">
+                            </th>
+                            <th>메시지 아이디</th>
+                            <th>메시지 채널</th>
+                            <th>요청 일시</th>
+                            <th>발송 시점</th>
+                            <th v-if="extraFields.includes('reserveAt')">예약 일시</th>
+                            <th v-if="extraFields.includes('sendAt')">발송 일시</th>
+                            <th v-if="extraFields.includes('receiveAt')">수신 일시</th>
+                            <th>발신 정보</th>
+                            <th>발송 상태</th>
+                            <th>발송 목적</th>
+                            <th v-if="extraFields.includes('templateName')">템플릿 이름</th>
+                            <th v-if="extraFields.includes('flowName')">플로우 이름</th>
+                            <th>수신자 정보</th>
+                            <th>수신 상태</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in pagedRows" :key="row.id">
+                            <td class="history-th-check">
+                                <input type="checkbox" :value="row.id" v-model="selectedRowIds">
+                            </td>
+                            <td><a class="history-id-link" href="javascript:void(0)" @click="openDetail(row)">{{ row.id }}</a></td>
+                            <td>{{ row.channel }}</td>
+                            <td>{{ row.requestAt }}</td>
+                            <td>{{ formatTiming(row.timing) }}</td>
+                            <td v-if="extraFields.includes('reserveAt')">{{ row.reserveAt || '-' }}</td>
+                            <td v-if="extraFields.includes('sendAt')">{{ row.sendAt || '-' }}</td>
+                            <td v-if="extraFields.includes('receiveAt')">{{ row.receiveAt || '-' }}</td>
+                            <td class="history-truncate">{{ row.sender }}</td>
+                            <td>
+                                <span class="history-status" :class="getStatusClass(row.sendStatus)">{{ formatSendStatus(row.sendStatus) }}</span>
+                            </td>
+                            <td>{{ formatPurpose(row.purpose) }}</td>
+                            <td v-if="extraFields.includes('templateName')">{{ row.templateName || '-' }}</td>
+                            <td v-if="extraFields.includes('flowName')">{{ row.flowName || '-' }}</td>
+                            <td class="history-truncate">{{ row.receiver }}</td>
+                            <td>
+                                <span class="history-status" :class="getReceiveStatusClass(row.receiveStatus)">{{ formatReceiveStatus(row.receiveStatus) }}</span>
+                            </td>
+                        </tr>
+                        <tr v-if="pagedRows.length === 0">
+                            <td :colspan="totalColumns" class="history-empty">검색 결과가 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="history-pagination" v-if="totalPages > 1">
+                <button type="button" class="history-page-btn" @click="goPage(1)" :disabled="page === 1">«</button>
+                <button type="button" class="history-page-btn" @click="goPage(page - 1)" :disabled="page === 1">‹</button>
+                <button v-for="p in pageRange" :key="p" type="button"
+                    class="history-page-btn"
+                    :class="{ active: p === page }"
+                    @click="goPage(p)">{{ p }}</button>
+                <button type="button" class="history-page-btn" @click="goPage(page + 1)" :disabled="page === totalPages">›</button>
+                <button type="button" class="history-page-btn" @click="goPage(totalPages)" :disabled="page === totalPages">»</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- 일괄 취소 컨펌 모달 (W480) -->
+    <div class="modal fade" ref="cancelAllModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeHistoryModal('cancelAll')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        검색한 결과에서 발송 상태가 '발송 예약 또는 발송 대기'인 건을 일괄로 취소할 수 있습니다.<br>
+                        발송을 일괄 취소하시겠습니까?
+                    </p>
+                </div>
+                <div class="sms-modal-actions history-modal-actions">
+                    <button type="button" class="history-modal-btn-cancel" @click="closeHistoryModal('cancelAll')">취소</button>
+                    <button type="button" class="history-modal-btn-confirm" @click="confirmCancelAll">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 다운로드 요청 컨펌 모달 (W480) -->
+    <div class="modal fade" ref="downloadRequestModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeHistoryModal('downloadRequest')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        검색 결과 다운로드 요청 시 조회한 결과 목록이 다운로드됩니다.<br>
+                        다운로드를 진행하시겠습니까?
+                    </p>
+                    <p class="sms-modal-text history-modal-text-sub">
+                        다운로드 요청 후 진행 상태는 [다운로드 요청 목록]에서 확인 가능합니다.
+                    </p>
+                </div>
+                <div class="sms-modal-actions history-modal-actions">
+                    <button type="button" class="history-modal-btn-cancel" @click="closeHistoryModal('downloadRequest')">취소</button>
+                    <button type="button" class="history-modal-btn-confirm" @click="confirmDownloadRequest">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 채널 전체 + 템플릿 이름 선택 차단 알림 (W400) -->
+    <div class="modal fade" ref="channelAlertModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeHistoryModal('channelAlert')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title sms-modal-title-sm">알림</h4>
+                    <p class="sms-modal-text">
+                        메시지 채널이 '전체'로 선택된 경우 템플릿 이름을 선택할 수 없습니다.<br>
+                        다른 메시지 채널을 선택하세요.
+                    </p>
+                </div>
+                <div class="history-modal-actions-end">
+                    <button type="button" class="history-modal-btn-confirm" @click="closeHistoryModal('channelAlert')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 템플릿 선택 모달 — 채널별로 미리보기 영역이 달라짐 (각 발송 화면 팝업과 동일 레이아웃) -->
+    <div class="modal fade" ref="templatePickerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" :class="templateModalDialogClass">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeHistoryModal('templatePicker')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">템플릿 선택</h4>
+                    <div :class="templateModalGridClass">
+                        <div :class="templateModalListClass">
+                            <div class="sms-modal-search-row">
+                                <div class="sms-modal-search">
+                                    <input type="text" class="form-control" v-model="templatePicker.search" @input="templatePicker.page = 1" placeholder="템플릿 이름을 입력하세요.">
+                                    <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                                </div>
+                            </div>
+                            <table class="sms-modal-table">
+                                <thead>
+                                    <tr>
+                                        <th>템플릿 이름</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="t in pagedTemplateList" :key="t.id" :class="{ 'is-active': templatePicker.selectedId === t.id }" @click="templatePicker.selectedId = t.id">
+                                        <td :class="previewMode === 'sms' ? 'text-center' : 'text-start'">{{ t.name }}</td>
+                                    </tr>
+                                    <tr v-if="filteredTemplates.length === 0">
+                                        <td class="sms-modal-empty">검색 결과가 없습니다.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div class="sms-modal-pagination" v-if="templatePickerTotalPages > 1">
+                                <button type="button" class="sms-page-btn" @click="templatePicker.page = 1" :disabled="templatePicker.page === 1">«</button>
+                                <button type="button" class="sms-page-btn" @click="templatePicker.page > 1 && (templatePicker.page -= 1)" :disabled="templatePicker.page === 1">‹</button>
+                                <button v-for="p in templatePickerTotalPages" :key="p" type="button" class="sms-page-btn" :class="{ active: p === templatePicker.page }" @click="templatePicker.page = p">{{ p }}</button>
+                                <button type="button" class="sms-page-btn" @click="templatePicker.page < templatePickerTotalPages && (templatePicker.page += 1)" :disabled="templatePicker.page === templatePickerTotalPages">›</button>
+                                <button type="button" class="sms-page-btn" @click="templatePicker.page = templatePickerTotalPages" :disabled="templatePicker.page === templatePickerTotalPages">»</button>
+                            </div>
+                        </div>
+
+                        <!-- 미리보기 영역 — 채널별 분기 -->
+                        <div :class="templateModalPreviewClass">
+                            <!-- SMS: 휴대폰 SMS 미리보기 -->
+                            <template v-if="previewMode === 'sms'">
+                                <div class="sms-phone sms-phone-modal">
+                                    <div class="sms-phone-header">
+                                        <i class="bi bi-chevron-left sms-phone-back"></i>
+                                        <i class="bi bi-person-circle sms-phone-avatar"></i>
+                                        <span class="sms-phone-name">{{ modalPreviewTemplate && modalPreviewTemplate.senderNumber ? modalPreviewTemplate.senderNumber.replace(/-/g, '') : '' }}</span>
+                                        <i class="bi bi-three-dots-vertical sms-phone-more"></i>
+                                    </div>
+                                    <div class="sms-phone-body">
+                                        <div v-if="modalPreviewTemplate" class="sms-phone-bubble">
+                                            <div v-if="modalPreviewTemplate.title" class="sms-phone-title">{{ modalPreviewTemplate.title }}</div>
+                                            <div class="sms-phone-text">{{ modalPreviewTemplate.content }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="sms-phone-footer">
+                                        <i class="bi bi-plus"></i>
+                                        <span class="sms-phone-input-mock">메시지 입력</span>
+                                        <i class="bi bi-send-fill"></i>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- 알림톡/친구톡: 카카오톡 채팅 미리보기 -->
+                            <template v-else-if="previewMode === 'kakao'">
+                                <div class="kakao-phone kakao-phone-modal">
+                                    <div class="kakao-phone-header">
+                                        <i class="bi bi-chevron-left"></i>
+                                        <span class="kakao-phone-title">맑은소프트</span>
+                                        <div class="kakao-phone-header-actions">
+                                            <i class="bi bi-search"></i>
+                                            <i class="bi bi-list"></i>
+                                        </div>
+                                    </div>
+                                    <div class="kakao-phone-body">
+                                        <div v-if="modalPreviewTemplate" class="kakao-chat-row">
+                                            <div class="kakao-chat-avatar"><i class="bi bi-chat-dots-fill"></i></div>
+                                            <div class="kakao-chat-content">
+                                                <div class="kakao-chat-name">맑은소프트</div>
+                                                <div class="kakao-chat-bubble">
+                                                    <div class="kakao-bubble-header">{{ search.channel === '친구톡' ? '친구톡 도착' : '알림톡 도착' }}</div>
+                                                    <div class="kakao-bubble-content">{{ modalPreviewTemplate.content }}</div>
+                                                    <div v-if="modalPreviewTemplate.extraInfo" class="kakao-bubble-extra">{{ modalPreviewTemplate.extraInfo }}</div>
+                                                    <div v-if="modalPreviewTemplate.buttons && modalPreviewTemplate.buttons.length > 0" class="kakao-bubble-buttons">
+                                                        <button v-for="(b, i) in modalPreviewTemplate.buttons" :key="i" type="button" class="kakao-bubble-btn">
+                                                            {{ b.icon }} {{ b.name }}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="kakao-phone-footer">
+                                        <i class="bi bi-plus"></i>
+                                        <span class="kakao-phone-input-mock"></span>
+                                        <i class="bi bi-emoji-smile"></i>
+                                        <i class="bi bi-hash"></i>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- RCS: 미리보기 미지원 안내 -->
+                            <template v-else-if="previewMode === 'rcs'">
+                                <p class="rcs-template-modal-empty">RCS Biz Center 템플릿 유형은 미리보기를 지원하지 않습니다.</p>
+                            </template>
+
+                            <!-- Email: HTML 미리보기 카드 -->
+                            <template v-else-if="previewMode === 'email'">
+                                <div class="email-preview-card">
+                                    <div v-if="modalPreviewTemplate && modalPreviewTemplate.subject" class="email-preview-subject">{{ modalPreviewTemplate.subject }}</div>
+                                    <div class="email-preview-meta">
+                                        <div class="email-preview-meta-row">
+                                            <span class="email-preview-meta-label">보낸사람</span>
+                                            <span class="email-preview-meta-value">{{ modalPreviewTemplate ? modalPreviewTemplate.senderEmail : '' }}</span>
+                                        </div>
+                                        <div class="email-preview-meta-row">
+                                            <span class="email-preview-meta-label">첨부파일</span>
+                                            <span class="email-preview-meta-value"></span>
+                                        </div>
+                                    </div>
+                                    <div class="email-preview-body">
+                                        <iframe v-if="modalPreviewTemplate" class="email-preview-iframe" :srcdoc="modalPreviewTemplate.content" sandbox></iframe>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Push: 푸시 알림 미리보기 -->
+                            <template v-else-if="previewMode === 'push'">
+                                <div v-if="modalPreviewTemplate" class="push-modal-preview-info">
+                                    <div class="push-modal-preview-title">{{ modalPreviewTemplate.title }}</div>
+                                    <div class="push-modal-preview-text">{{ modalPreviewTemplate.content }}</div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeHistoryModal('templatePicker')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmTemplatePicker">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 다운로드 요청 목록 모달 (W800) -->
+    <div class="modal fade" ref="downloadListModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeHistoryModal('downloadList')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">다운로드 요청 목록</h4>
+                    <p class="history-modal-info">요청한 지 7일이 지난 파일은 만료 처리됩니다.</p>
+                    <table class="sms-modal-table history-modal-table">
+                        <thead>
+                            <tr>
+                                <th>요청 아이디</th>
+                                <th>요청 일시</th>
+                                <th>만료 일시</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="r in pagedDownloadRequests" :key="r.id">
+                                <td class="history-modal-id">{{ r.id }}</td>
+                                <td>{{ r.requestedAt }}</td>
+                                <td>{{ r.expireAt }}</td>
+                                <td>
+                                    <span v-if="r.status === 'expired'" class="history-modal-status-text">만료</span>
+                                    <span v-else-if="r.status === 'ready'">
+                                        <a href="javascript:void(0)" class="history-modal-link" @click="downloadFile(r)">다운로드</a>
+                                    </span>
+                                    <span v-else-if="r.status === 'processing'" class="history-modal-status-text">처리 중</span>
+                                    <span v-else-if="r.status === 'failed'" class="history-modal-status-text history-modal-status-failed">실패</span>
+                                </td>
+                            </tr>
+                            <tr v-if="pagedDownloadRequests.length === 0">
+                                <td colspan="4" class="sms-modal-empty">다운로드 요청 내역이 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="sms-modal-pagination" v-if="downloadRequestsTotalPages > 1">
+                        <button type="button" class="sms-page-btn" @click="goDownloadPage(1)" :disabled="downloadListPage === 1">«</button>
+                        <button type="button" class="sms-page-btn" @click="goDownloadPage(downloadListPage - 1)" :disabled="downloadListPage === 1">‹</button>
+                        <button v-for="p in downloadRequestsTotalPages" :key="p" type="button" class="sms-page-btn" :class="{ active: p === downloadListPage }" @click="goDownloadPage(p)">{{ p }}</button>
+                        <button type="button" class="sms-page-btn" @click="goDownloadPage(downloadListPage + 1)" :disabled="downloadListPage === downloadRequestsTotalPages">›</button>
+                        <button type="button" class="sms-page-btn" @click="goDownloadPage(downloadRequestsTotalPages)" :disabled="downloadListPage === downloadRequestsTotalPages">»</button>
+                    </div>
+                </div>
+                <div class="sms-modal-actions history-modal-actions-single">
+                    <button type="button" class="history-modal-btn-confirm" @click="closeHistoryModal('downloadList')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

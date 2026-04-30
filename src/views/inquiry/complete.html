@@ -1,0 +1,55 @@
+<div class="inquiry-page inquiry-complete-page">
+    <div class="container py-5">
+
+        <!-- 헤더 -->
+        <header class="inquiry-header">
+            <h1 class="inquiry-title">문의하기</h1>
+            <p class="inquiry-subtitle">
+                궁금하신 사항이나 도움이 필요하신 경우 문의해 주세요.<br>
+                빠르고 정확하게 답변 드리겠습니다.
+            </p>
+        </header>
+
+        <!-- 결과 카드 -->
+        <section class="inquiry-card inquiry-complete-card">
+
+            <div class="inquiry-complete-icon">
+                <i class="bi bi-check-lg"></i>
+            </div>
+
+            <h2 class="inquiry-complete-title">문의가 정상적으로 접수되었습니다</h2>
+            <p class="inquiry-complete-desc">빠르게 문의 내용 확인 후 답변드리겠습니다!</p>
+
+            <hr class="inquiry-complete-divider">
+
+            <!-- 문의 내용 박스 -->
+            <div class="inquiry-summary">
+                <div class="inquiry-summary-header">
+                    <span class="inquiry-summary-header-text">문의 내용</span>
+                </div>
+                <div class="inquiry-summary-body">
+                    <div class="inquiry-summary-row">
+                        <span class="inquiry-summary-label">문의유형</span>
+                        <span class="inquiry-summary-value">{{ submitted.typeLabel }}</span>
+                    </div>
+                    <div class="inquiry-summary-row inquiry-summary-row-title">
+                        <span class="inquiry-summary-title-text">{{ submitted.title }}</span>
+                    </div>
+                    <div class="inquiry-summary-content">{{ submitted.content }}</div>
+                    <div v-if="submitted.fileNames && submitted.fileNames.length" class="inquiry-summary-files">
+                        <div v-for="name in submitted.fileNames" :key="name" class="inquiry-summary-file">
+                            <i class="bi bi-paperclip"></i>{{ name }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="inquiry-complete-guide">답변은 마이페이지(이메일) > 문의내역에서 확인하실 수 있습니다.</p>
+
+            <button type="button" class="inquiry-complete-btn" @click="goHome">
+                <span class="inquiry-complete-btn-icon"><i class="bi bi-info-lg"></i></span>
+                <span>홈으로 바로가기</span>
+            </button>
+        </section>
+    </div>
+</div>

@@ -1,0 +1,124 @@
+<div class="inquiries-page" @click="closeMenus">
+    <div class="container py-5">
+
+        <!-- 헤더 -->
+        <header class="inquiry-header">
+            <h1 class="inquiry-title">문의 내역</h1>
+            <p class="inquiry-subtitle">내 문의내역에 대한 답변을 확인하실 수 있습니다</p>
+        </header>
+
+        <!-- 카드 -->
+        <section class="inquiry-card inquiries-card">
+
+            <!-- 빈 상태 -->
+            <div v-if="filteredItems.length === 0 && !searchQuery" class="inquiries-empty">
+                <h2 class="inquiries-empty-title">문의 내역이 하나도 없네요!&nbsp;<span class="inquiries-empty-emoji">😢</span></h2>
+                <p class="inquiries-empty-desc">
+                    아직 문의하신 내용이 없습니다.<br>
+                    궁금한 점이 있으시면 언제든 문의해 주세요!<br>
+                    친절하게 답변 드릴게요 <span class="inquiries-empty-emoji">😊</span>
+                </p>
+            </div>
+
+            <!-- 리스트 상태 -->
+            <template v-else>
+                <!-- 통계 -->
+                <div class="inquiries-stats">
+                    <div class="inquiries-stat">
+                        <div class="inquiries-stat-text">
+                            <span class="inquiries-stat-label">답변대기</span>
+                            <span class="inquiries-stat-value inquiries-stat-value-pending">{{ stats.pending }}</span>
+                        </div>
+                        <div class="inquiries-stat-icon inquiries-stat-icon-pending">
+                            <i class="bi bi-flag-fill"></i>
+                        </div>
+                    </div>
+                    <div class="inquiries-stat">
+                        <div class="inquiries-stat-text">
+                            <span class="inquiries-stat-label">답변중</span>
+                            <span class="inquiries-stat-value inquiries-stat-value-answering">{{ stats.answering }}</span>
+                        </div>
+                        <div class="inquiries-stat-icon inquiries-stat-icon-answering">
+                            <i class="bi bi-chat-fill"></i>
+                        </div>
+                    </div>
+                    <div class="inquiries-stat">
+                        <div class="inquiries-stat-text">
+                            <span class="inquiries-stat-label">답변완료</span>
+                            <span class="inquiries-stat-value inquiries-stat-value-complete">{{ stats.complete }}</span>
+                        </div>
+                        <div class="inquiries-stat-icon inquiries-stat-icon-complete">
+                            <i class="bi bi-chat-left-text-fill"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 검색 -->
+                <div class="inquiries-search-row">
+                    <div class="inquiries-search">
+                        <input type="text" class="inquiries-search-input" placeholder="제목 및 내용 검색" v-model="searchQuery">
+                        <i class="bi bi-search inquiries-search-icon"></i>
+                    </div>
+                </div>
+
+                <!-- 검색 결과 없음 -->
+                <div v-if="filteredItems.length === 0" class="inquiries-no-result">
+                    검색 결과가 없습니다.
+                </div>
+
+                <!-- 리스트 -->
+                <ul v-else class="inquiries-list">
+                    <li v-for="item in visibleItems" :key="item.id" class="inquiries-item" @click="goDetail(item.id)">
+                        <div class="inquiries-item-top">
+                            <span class="inq-status-badge" :class="'inq-status-' + item.status">{{ statusLabels[item.status] }}</span>
+                            <div class="inq-menu-wrap" @click.stop>
+                                <button type="button" class="inq-menu-btn" @click="toggleMenu(item.id)" aria-label="메뉴">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <div v-if="openMenuId === item.id" class="inq-menu-dropdown">
+                                    <button type="button" class="inq-menu-item inq-menu-item-danger" @click="deleteItem(item.id)">삭제</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="inquiries-item-title-row">
+                            <span class="inquiries-category">{{ categoryLabels[item.category] }}</span>
+                            <span class="inquiries-item-title">{{ item.title }}</span>
+                        </div>
+
+                        <p class="inquiries-item-preview">{{ item.preview }}</p>
+
+                        <div class="inquiries-item-meta">
+                            <span class="inquiries-meta-item"><i class="bi bi-clock"></i>{{ item.time }}</span>
+                            <span class="inquiries-meta-item"><i class="bi bi-chat-left"></i>{{ item.commentCount }}</span>
+                        </div>
+                    </li>
+                </ul>
+
+                <!-- 더보기 -->
+                <button v-if="filteredItems.length > visibleCount" type="button" class="inquiries-more-btn" @click="loadMore">
+                    더보기 <i class="bi bi-chevron-down"></i>
+                </button>
+            </template>
+
+        </section>
+    </div>
+
+    <!-- 삭제 확인 모달 -->
+    <div class="modal fade" tabindex="-1" ref="deleteModal">
+        <div class="modal-dialog modal-dialog-centered inquiry-modal-w400">
+            <div class="modal-content inquiry-alert">
+                <div class="inquiry-alert-body">
+                    <div class="inquiry-alert-icon inquiry-alert-icon-danger">
+                        <i class="bi bi-exclamation-lg"></i>
+                    </div>
+                    <p class="inquiry-alert-text">선택하신 문의 내역을 삭제하시겠습니까?</p>
+                </div>
+                <div class="inq-confirm-actions">
+                    <button type="button" class="inq-btn inq-btn-outline" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="inq-btn inq-btn-primary" @click="confirmDelete">삭제</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

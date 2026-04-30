@@ -1,0 +1,597 @@
+<div class="account-page">
+    <div class="container py-5">
+
+        <!-- ============================== -->
+        <!-- 헤더 -->
+        <!-- ============================== -->
+        <header class="account-header">
+            <h1 class="account-title">계정 관리</h1>
+            <p class="account-subtitle">내 계정 정보를 관리할 수 있어요</p>
+        </header>
+
+        <!-- ============================== -->
+        <!-- 메인 카드 -->
+        <!-- ============================== -->
+        <section class="account-card">
+
+            <!-- 메인 뷰: 탭 네비게이션 + 콘텐츠 -->
+            <template v-if="view === 'main'">
+                <!-- 탭 네비게이션 -->
+                <div class="account-tabs">
+                    <button v-for="tab in tabs"
+                            :key="tab.value"
+                            type="button"
+                            class="account-tab"
+                            :class="{ 'is-active': activeTab === tab.value }"
+                            @click="activeTab = tab.value">
+                        {{ tab.label }}
+                    </button>
+                </div>
+
+                <!-- =============== 회원 정보 변경 =============== -->
+                <div v-show="activeTab === 'profile'" class="account-tab-pane">
+
+                    <!-- 가입 정보 -->
+                    <div class="account-section">
+                        <div class="account-section-head">
+                            <h2 class="account-section-title">가입 정보</h2>
+                            <button type="button" class="account-btn-dark account-btn-dark-sm">사업자등록증 변경</button>
+                        </div>
+
+                        <div class="account-info-list">
+                            <div class="account-info-row">
+                                <div class="account-info-label">아이디(이메일)</div>
+                                <div class="account-info-value">{{ profile.email }}</div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">회사명</div>
+                                <div class="account-info-value">{{ profile.companyName }}</div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">사업자등록번호</div>
+                                <div class="account-info-value">{{ profile.bizNo }}</div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">대표자명</div>
+                                <div class="account-info-value">{{ profile.ceoName }}</div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">사업자 종류</div>
+                                <div class="account-info-value">{{ profile.bizType }}</div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">업태</div>
+                                <div class="account-info-value">{{ profile.industryType }}</div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">업종</div>
+                                <div class="account-info-value">{{ profile.industryItem }}</div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">회사 주소</div>
+                                <div class="account-info-value">{{ profile.address }}</div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">광고성 메일 수신</div>
+                                <div class="account-info-value account-info-value-flex">
+                                    <div class="account-toggle-group">
+                                        <button type="button"
+                                                class="account-toggle"
+                                                :class="{ 'is-active': profile.marketingOptIn === false }"
+                                                @click="profile.marketingOptIn = false">수신거부</button>
+                                        <button type="button"
+                                                class="account-toggle"
+                                                :class="{ 'is-active': profile.marketingOptIn === true }"
+                                                @click="profile.marketingOptIn = true">수신동의</button>
+                                    </div>
+                                    <span class="account-info-help">• 중요 공지 및 서비스와 관련한 필수 안내 등은 수신 설정과 관계없이 발송될 수 있습니다.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 서비스 담당자 -->
+                    <div class="account-section">
+                        <div class="account-section-head">
+                            <h2 class="account-section-title">서비스 담당자 <span class="account-section-required">(필수)</span></h2>
+                        </div>
+
+                        <div class="account-info-list account-info-list-form">
+                            <div class="account-info-row">
+                                <div class="account-info-label">이름 <span class="account-required">*</span></div>
+                                <div class="account-info-value">{{ contact.name }}</div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">회사 전화번호</div>
+                                <div class="account-info-value">
+                                    <input type="text"
+                                           class="account-form-input account-form-input-md"
+                                           v-model="contact.companyPhone"
+                                           placeholder="회사 전화번호를 입력해 주세요">
+                                </div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">이메일 <span class="account-required">*</span></div>
+                                <div class="account-info-value account-info-value-flex">
+                                    <span class="account-info-text-muted">{{ contact.email }}</span>
+                                    <button type="button" class="account-btn-dark account-btn-dark-sm">이메일 변경</button>
+                                </div>
+                            </div>
+                            <div class="account-info-row">
+                                <div class="account-info-label">휴대전화번호 <span class="account-required">*</span></div>
+                                <div class="account-info-value account-info-value-flex">
+                                    <div class="account-phone-row">
+                                        <input type="text" class="account-form-input account-form-input-xs" v-model="contact.phone1" maxlength="3">
+                                        <input type="text" class="account-form-input account-form-input-xs" v-model="contact.phone2" maxlength="4">
+                                        <input type="text" class="account-form-input account-form-input-xs" v-model="contact.phone3" maxlength="4">
+                                    </div>
+                                    <button type="button" class="account-btn-dark account-btn-dark-sm">휴대폰 인증</button>
+                                    <span class="account-info-help">서비스 담당자를 수정하시려면 휴대폰 인증이 필요합니다.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 결제 이메일 정보 -->
+                    <div class="account-section">
+                        <div class="account-section-head">
+                            <h2 class="account-section-title">결제 이메일 정보 <span class="account-section-required account-section-required-soft">(선택)</span></h2>
+                        </div>
+
+                        <div class="account-info-list account-info-list-form">
+                            <div class="account-info-row">
+                                <div class="account-info-label">결제 이메일 <span class="account-required">*</span></div>
+                                <div class="account-info-value account-info-value-flex">
+                                    <span class="account-info-text-muted">{{ payment.email }}</span>
+                                    <button type="button" class="account-btn-dark account-btn-dark-sm" @click="openPaymentEmailChange">이메일 변경</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="account-actions">
+                        <button type="button" class="account-btn-primary" @click="saveProfile">저장하기</button>
+                        <a href="javascript:void(0)" class="account-link-delete" @click="askDeleteAccount">계정삭제</a>
+                    </div>
+                </div>
+
+                <!-- =============== 결제 카드 관리 =============== -->
+                <div v-show="activeTab === 'cards'" class="account-tab-pane">
+                    <div class="account-cards-wrap">
+                        <ul class="account-card-list">
+                            <li v-for="card in cards" :key="card.id" class="account-card-row">
+                                <label class="account-card-radio">
+                                    <input type="radio"
+                                           name="primary-card"
+                                           :value="card.id"
+                                           v-model="primaryCardId"
+                                           @change="askPrimaryCard(card)">
+                                    <span class="account-card-radio-dot"></span>
+                                </label>
+                                <div class="account-card-image" :class="card.brand === 'VISA' ? 'is-visa' : 'is-master'">
+                                    <span class="account-card-image-num">{{ card.imageNum }}</span>
+                                    <span class="account-card-image-brand">{{ card.brand }}</span>
+                                    <span v-if="card.brand === 'MASTER'" class="account-card-image-badge"></span>
+                                </div>
+                                <div class="account-card-info">
+                                    <div class="account-card-brand">{{ card.brand }}</div>
+                                    <div class="account-card-num">{{ card.number }}</div>
+                                </div>
+                                <button type="button" class="account-card-delete" @click="askDeleteCard(card)">삭제</button>
+                            </li>
+                        </ul>
+
+                        <button type="button" class="account-card-add" @click="addCard">
+                            <i class="bi bi-plus-lg"></i> 카드 추가
+                        </button>
+                    </div>
+
+                    <div class="account-actions account-actions-center">
+                        <button type="button" class="account-btn-primary account-btn-primary-md" @click="saveCards">저장하기</button>
+                    </div>
+                </div>
+
+                <!-- =============== 비밀번호 변경 =============== -->
+                <div v-show="activeTab === 'password'" class="account-tab-pane">
+                    <div class="account-password-form">
+                        <div class="account-form-row">
+                            <label class="account-form-label">현재 비밀번호</label>
+                            <div class="account-form-input-row">
+                                <input type="password"
+                                       class="account-form-input"
+                                       :class="{ 'is-error': errors.currentPassword }"
+                                       v-model="passwordForm.current"
+                                       placeholder="현재 비밀번호를 입력해 주세요">
+                                <a href="javascript:void(0)" class="account-form-aside" @click="goResetPassword">
+                                    <span class="account-form-aside-help">비밀번호가 생각나지 않으신다면</span>
+                                    <span class="account-form-aside-link">비밀번호 재설정</span>
+                                </a>
+                            </div>
+                            <p v-if="errors.currentPassword" class="account-form-error">{{ errors.currentPassword }}</p>
+                        </div>
+
+                        <div class="account-form-row">
+                            <label class="account-form-label">새 비밀번호</label>
+                            <input type="password"
+                                   class="account-form-input"
+                                   :class="{ 'is-error': errors.newPassword }"
+                                   v-model="passwordForm.next"
+                                   placeholder="최소 8자 이상 특수문자 기호를 포함해 주세요.">
+                            <p v-if="errors.newPassword" class="account-form-error">{{ errors.newPassword }}</p>
+                        </div>
+
+                        <div class="account-form-row">
+                            <label class="account-form-label">새 비밀번호 확인</label>
+                            <input type="password"
+                                   class="account-form-input"
+                                   :class="{ 'is-error': errors.confirmPassword }"
+                                   v-model="passwordForm.confirm"
+                                   placeholder="새로운 비밀번호를 다시 입력해 주세요.">
+                            <p v-if="errors.confirmPassword" class="account-form-error">{{ errors.confirmPassword }}</p>
+                        </div>
+
+                        <div class="account-actions account-actions-tight">
+                            <button type="button" class="account-btn-primary account-btn-primary-md" @click="savePassword">저장하기</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =============== 보안로그인 설정 =============== -->
+                <div v-show="activeTab === 'security'" class="account-tab-pane">
+                    <div class="account-security">
+
+                        <!-- 보안로그인 사용 -->
+                        <div class="account-section">
+                            <div class="account-section-head">
+                                <h2 class="account-section-title">보안로그인 사용</h2>
+                            </div>
+                            <div class="account-security-row">
+                                <div class="account-security-row-label">
+                                    <div class="account-security-row-title">보안로그인 사용 여부</div>
+                                    <div class="account-security-row-desc">로그인 시 추가 인증을 요구하여 계정 보안을 강화합니다.</div>
+                                </div>
+                                <div class="account-toggle-group">
+                                    <button type="button"
+                                            class="account-toggle"
+                                            :class="{ 'is-active': !security.enabled }"
+                                            @click="security.enabled = false">사용안함</button>
+                                    <button type="button"
+                                            class="account-toggle"
+                                            :class="{ 'is-active': security.enabled }"
+                                            @click="security.enabled = true">사용</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 보안 인증 방식 -->
+                        <div class="account-section" v-if="security.enabled">
+                            <div class="account-section-head">
+                                <h2 class="account-section-title">인증 방식 선택</h2>
+                            </div>
+                            <div class="account-security-method-list">
+                                <label class="account-security-method"
+                                       :class="{ 'is-active': security.method === 'email' }">
+                                    <input type="radio" v-model="security.method" value="email">
+                                    <span class="account-security-method-radio"></span>
+                                    <div class="account-security-method-body">
+                                        <div class="account-security-method-title">
+                                            <i class="bi bi-envelope"></i> 이메일 인증
+                                        </div>
+                                        <div class="account-security-method-desc">로그인 시 등록된 이메일로 인증코드가 발송됩니다.</div>
+                                        <div class="account-security-method-target" v-if="security.method === 'email'">
+                                            <span class="account-security-method-target-text">{{ security.emailVerified ? security.emailTarget : '인증된 이메일이 없습니다' }}</span>
+                                            <button type="button"
+                                                    class="account-btn-dark account-btn-dark-sm"
+                                                    @click.prevent="verifySecurityEmail">{{ security.emailVerified ? '재인증' : '이메일 인증' }}</button>
+                                            <span v-if="security.emailVerified" class="account-security-verified-badge">
+                                                <i class="bi bi-check-circle-fill"></i> 인증 완료
+                                            </span>
+                                        </div>
+                                    </div>
+                                </label>
+
+                                <label class="account-security-method"
+                                       :class="{ 'is-active': security.method === 'phone' }">
+                                    <input type="radio" v-model="security.method" value="phone">
+                                    <span class="account-security-method-radio"></span>
+                                    <div class="account-security-method-body">
+                                        <div class="account-security-method-title">
+                                            <i class="bi bi-phone"></i> 휴대폰 인증
+                                        </div>
+                                        <div class="account-security-method-desc">로그인 시 등록된 휴대폰으로 인증번호가 전송됩니다.</div>
+                                        <div class="account-security-method-target" v-if="security.method === 'phone'">
+                                            <span class="account-security-method-target-text">{{ security.phoneVerified ? security.phoneTarget : '인증된 휴대폰이 없습니다' }}</span>
+                                            <button type="button"
+                                                    class="account-btn-dark account-btn-dark-sm"
+                                                    @click.prevent="verifySecurityPhone">{{ security.phoneVerified ? '재인증' : '휴대폰 인증' }}</button>
+                                            <span v-if="security.phoneVerified" class="account-security-verified-badge">
+                                                <i class="bi bi-check-circle-fill"></i> 인증 완료
+                                            </span>
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- 도메인 및 IP 설정 (옵션) -->
+                        <div class="account-section" v-if="security.enabled">
+                            <div class="account-section-head">
+                                <h2 class="account-section-title">도메인 및 IP 설정 <span class="account-section-required account-section-required-soft">(선택)</span></h2>
+                                <div class="account-section-help">로그인 가능한 도메인/IP를 제한합니다. 비워두면 모든 곳에서 접근 가능합니다.</div>
+                            </div>
+
+                            <!-- 허용 도메인 -->
+                            <div class="account-acl-block">
+                                <div class="account-acl-label">허용 도메인</div>
+                                <div class="account-acl-add">
+                                    <input type="text"
+                                           class="account-form-input"
+                                           v-model="security.domainInput"
+                                           @keydown.enter.prevent="addDomain"
+                                           placeholder="example.com">
+                                    <button type="button" class="account-btn-dark account-btn-dark-sm" @click="addDomain">추가</button>
+                                </div>
+                                <ul class="account-acl-list" v-if="security.domains.length">
+                                    <li v-for="(d, i) in security.domains" :key="'d-'+i" class="account-acl-item">
+                                        <i class="bi bi-globe2"></i>
+                                        <span class="account-acl-text">{{ d }}</span>
+                                        <button type="button" class="account-acl-remove" @click="removeDomain(i)" aria-label="삭제">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                                <p v-else class="account-acl-empty">등록된 도메인이 없습니다.</p>
+                            </div>
+
+                            <!-- 허용 IP -->
+                            <div class="account-acl-block">
+                                <div class="account-acl-label">허용 IP</div>
+                                <div class="account-acl-add">
+                                    <input type="text"
+                                           class="account-form-input"
+                                           v-model="security.ipInput"
+                                           @keydown.enter.prevent="addIp"
+                                           placeholder="예: 192.168.0.1 또는 192.168.0.0/24">
+                                    <button type="button" class="account-btn-dark account-btn-dark-sm" @click="addIp">추가</button>
+                                </div>
+                                <ul class="account-acl-list" v-if="security.ips.length">
+                                    <li v-for="(ip, i) in security.ips" :key="'ip-'+i" class="account-acl-item">
+                                        <i class="bi bi-hdd-network"></i>
+                                        <span class="account-acl-text">{{ ip }}</span>
+                                        <button type="button" class="account-acl-remove" @click="removeIp(i)" aria-label="삭제">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                                <p v-else class="account-acl-empty">등록된 IP가 없습니다.</p>
+                            </div>
+                        </div>
+
+                        <div class="account-actions account-actions-tight">
+                            <button type="button" class="account-btn-primary account-btn-primary-md" @click="saveSecurity">저장하기</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =============== 계약 관리 =============== -->
+                <div v-show="activeTab === 'contract'" class="account-tab-pane">
+                    <div class="account-contract">
+
+                        <!-- 이용계약서 -->
+                        <div class="account-section">
+                            <div class="account-section-head">
+                                <h2 class="account-section-title">이용계약서</h2>
+                                <div class="account-section-help">전자계약서를 확인 후 공인인증서로 전자서명을 진행해 주세요.</div>
+                            </div>
+
+                            <div class="account-contract-card">
+                                <div class="account-contract-card-row">
+                                    <div class="account-contract-card-icon">
+                                        <i class="bi bi-file-earmark-text"></i>
+                                    </div>
+                                    <div class="account-contract-card-body">
+                                        <div class="account-contract-card-title">이용계약서</div>
+                                        <div class="account-contract-card-meta">
+                                            <span v-if="contract.agreement.signed" class="account-status-badge is-success">
+                                                <i class="bi bi-patch-check-fill"></i> 서명 완료
+                                            </span>
+                                            <span v-else class="account-status-badge is-pending">
+                                                <i class="bi bi-clock"></i> 서명 대기
+                                            </span>
+                                            <span class="account-contract-card-name" v-if="contract.agreement.signed">서명자: {{ contract.agreement.signer }} · {{ contract.agreement.signedAt }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="account-contract-card-actions">
+                                        <button type="button" class="account-btn-outline account-btn-outline-sm" @click="viewContract">계약서 확인</button>
+                                        <button type="button"
+                                                class="account-btn-primary account-btn-primary-sm"
+                                                :disabled="!contract.agreement.viewed && !contract.agreement.signed"
+                                                @click="signContract">
+                                            <i class="bi bi-shield-check"></i>
+                                            {{ contract.agreement.signed ? '재서명' : '전자서명(공인인증서)' }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p class="account-contract-card-hint" v-if="!contract.agreement.viewed && !contract.agreement.signed">
+                                    <i class="bi bi-info-circle"></i>
+                                    계약서 확인 후 전자서명을 진행할 수 있습니다.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- 사업자등록증 -->
+                        <div class="account-section">
+                            <div class="account-section-head">
+                                <h2 class="account-section-title">사업자등록증</h2>
+                                <div class="account-section-help">JPG, PNG, PDF · 최대 10MB</div>
+                            </div>
+
+                            <div class="account-contract-card">
+                                <div class="account-contract-card-row" v-if="contract.bizCert.file">
+                                    <div class="account-contract-card-icon">
+                                        <i class="bi bi-file-earmark-pdf"></i>
+                                    </div>
+                                    <div class="account-contract-card-body">
+                                        <div class="account-contract-card-title">{{ contract.bizCert.file.name }}</div>
+                                        <div class="account-contract-card-meta">
+                                            <span class="account-status-badge is-success">
+                                                <i class="bi bi-check-circle-fill"></i> 업로드 완료
+                                            </span>
+                                            <span class="account-contract-card-name">{{ formatFileSize(contract.bizCert.file.size) }} · {{ contract.bizCert.uploadedAt }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="account-contract-card-actions">
+                                        <button type="button" class="account-btn-outline account-btn-outline-sm" @click="triggerBizCertUpload">파일 변경</button>
+                                        <button type="button" class="account-btn-outline account-btn-outline-sm account-btn-danger" @click="removeBizCert">삭제</button>
+                                    </div>
+                                </div>
+
+                                <div v-else class="account-upload-area" @click="triggerBizCertUpload" @dragover.prevent @drop.prevent="onBizCertDrop">
+                                    <i class="bi bi-cloud-arrow-up"></i>
+                                    <div class="account-upload-text">사업자등록증 파일을 여기에 끌어 놓거나 <span class="account-upload-link">파일 선택</span></div>
+                                    <div class="account-upload-help">JPG, PNG, PDF · 최대 10MB</div>
+                                </div>
+
+                                <input ref="bizCertInput" type="file" hidden accept=".jpg,.jpeg,.png,.pdf" @change="onBizCertChange">
+                            </div>
+                        </div>
+
+                        <div class="account-actions account-actions-tight">
+                            <button type="button" class="account-btn-primary account-btn-primary-md" @click="saveContract">저장하기</button>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <!-- 결제 이메일 변경 폼 -->
+            <template v-if="view === 'change-payment-email'">
+                <div class="account-subpage">
+                    <div class="account-subpage-head">
+                        <h2 class="account-subpage-title">결제 이메일 변경</h2>
+                        <p class="account-subpage-desc">다음 결제 이메일부터 변경된 이메일로 결제 이메일이 발송됩니다.</p>
+                    </div>
+
+                    <div class="account-subpage-body">
+                        <div class="account-form-row">
+                            <label class="account-form-label">현재 이메일 주소 <span class="account-required">*</span></label>
+                            <input type="text" class="account-form-input" :value="payment.email" disabled>
+                        </div>
+
+                        <div class="account-form-row">
+                            <label class="account-form-label">변경할 이메일 주소 <span class="account-required">*</span></label>
+                            <div class="account-form-input-row">
+                                <input type="email"
+                                       class="account-form-input"
+                                       :class="{ 'is-error': peErrors.email }"
+                                       v-model="paymentEmailForm.email"
+                                       placeholder="이메일을 입력해 주세요">
+                                <button type="button"
+                                        class="account-inline-btn"
+                                        :disabled="paymentEmailForm.codeRequested"
+                                        @click="sendPaymentEmailCode">
+                                    {{ paymentEmailForm.codeRequested ? '인증코드 재발송' : '인증코드 발송' }}
+                                </button>
+                            </div>
+                            <p v-if="peErrors.email" class="account-form-error">{{ peErrors.email }}</p>
+                        </div>
+
+                        <div class="account-form-row">
+                            <label class="account-form-label">인증코드 <span class="account-required">*</span></label>
+                            <div class="account-form-input-row">
+                                <div class="account-code-row">
+                                    <input v-for="(_, i) in 6"
+                                           :key="'code-'+i"
+                                           type="text"
+                                           class="account-code-input"
+                                           maxlength="1"
+                                           v-model="paymentEmailForm.code[i]"
+                                           @input="onCodeInput(i)"
+                                           ref="codeInputs">
+                                </div>
+                                <button type="button"
+                                        class="account-inline-btn account-inline-btn-muted"
+                                        :disabled="!isCodeFilled"
+                                        @click="verifyPaymentEmailCode">확인</button>
+                            </div>
+                            <p v-if="peErrors.code" class="account-form-error">{{ peErrors.code }}</p>
+                            <p v-else-if="paymentEmailForm.codeRequested && !paymentEmailForm.codeVerified" class="account-form-help">
+                                이메일로 보내 드린 인증코드를 입력해 주세요. ({{ formatTimer(paymentEmailForm.timer) }} 남음)
+                            </p>
+                        </div>
+
+                        <div class="account-form-row">
+                            <label class="account-form-label">비밀번호 <span class="account-required">*</span></label>
+                            <input type="password"
+                                   class="account-form-input"
+                                   :class="{ 'is-error': peErrors.password }"
+                                   v-model="paymentEmailForm.password"
+                                   placeholder="로그인 비밀번호를 입력해 주세요.">
+                            <p v-if="peErrors.password" class="account-form-error">{{ peErrors.password }}</p>
+                        </div>
+                    </div>
+
+                    <div class="account-subpage-actions">
+                        <button type="button"
+                                class="account-btn-primary account-btn-primary-block"
+                                @click="submitPaymentEmail">결제 이메일 변경하기</button>
+                    </div>
+                </div>
+            </template>
+
+            <!-- 결제 이메일 변경 완료 -->
+            <template v-if="view === 'change-payment-email-done'">
+                <div class="account-success">
+                    <div class="account-success-icon">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <h2 class="account-success-title">결제 이메일 변경이 완료되었습니다</h2>
+                    <p class="account-success-desc">다음 결제 이메일부터 변경된 이메일로 결제 이메일이 발송됩니다.</p>
+                    <button type="button" class="account-btn-primary account-btn-primary-block account-success-btn" @click="backToMain">확인</button>
+                </div>
+            </template>
+        </section>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 단순 알림 다이얼로그 (W400) -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="alertModal">
+        <div class="modal-dialog modal-dialog-centered charge-modal-w400">
+            <div class="modal-content charge-modal account-alert">
+                <div class="account-alert-body">
+                    <div class="account-alert-icon" :class="alertState.iconClass">
+                        <i :class="alertState.iconName"></i>
+                    </div>
+                    <p class="account-alert-text">{{ alertState.text }}</p>
+                    <p v-if="alertState.desc" class="account-alert-desc">{{ alertState.desc }}</p>
+                </div>
+                <div class="account-alert-actions">
+                    <button type="button" class="charge-modal-btn charge-modal-btn-primary account-alert-btn" data-bs-dismiss="modal">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 컨펌 다이얼로그 (W400) -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="confirmModal">
+        <div class="modal-dialog modal-dialog-centered charge-modal-w400">
+            <div class="modal-content charge-modal account-alert">
+                <div class="account-alert-body">
+                    <div class="account-alert-icon" :class="confirmState.iconClass">
+                        <i :class="confirmState.iconName"></i>
+                    </div>
+                    <p class="account-alert-text">{{ confirmState.text }}</p>
+                    <p v-if="confirmState.desc" class="account-alert-desc">{{ confirmState.desc }}</p>
+                </div>
+                <div class="charge-modal-actions-pair account-alert-actions-pair">
+                    <button type="button" class="charge-modal-btn charge-modal-btn-outline account-alert-btn-cancel" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="charge-modal-btn charge-modal-btn-primary account-alert-btn-confirm" @click="confirmActionRun">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>

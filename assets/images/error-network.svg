@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" fill="none">
+  <rect width="400" height="300" rx="16" fill="#ede9f6"/>
+  <!-- Cloud body -->
+  <path d="M148 170c-22 0-40-18-40-40 0-20 15-37 34-39 6-22 26-38 50-38 24 0 44 16 50 38 19 2 34 19 34 39 0 22-18 40-40 40H148z" fill="#d4c8e8" opacity="0.6"/>
+  <!-- Wifi slash -->
+  <g stroke="#6366f1" stroke-width="5" stroke-linecap="round" fill="none">
+    <path d="M168 200c10-8 24-12 32-12s22 4 32 12" opacity="0.35"/>
+    <path d="M178 212c7-5 16-8 22-8s15 3 22 8" opacity="0.55"/>
+    <circle cx="200" cy="228" r="4" fill="#6366f1"/>
+  </g>
+  <!-- Slash line -->
+  <line x1="160" y1="240" x2="240" y2="190" stroke="#e05252" stroke-width="4" stroke-linecap="round"/>
+  <!-- X mark -->
+  <g transform="translate(280, 80)">
+    <circle cx="0" cy="0" r="20" fill="#e05252" opacity="0.15"/>
+    <line x1="-8" y1="-8" x2="8" y2="8" stroke="#e05252" stroke-width="3" stroke-linecap="round"/>
+    <line x1="8" y1="-8" x2="-8" y2="8" stroke="#e05252" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <!-- Small decorative dots -->
+  <circle cx="100" cy="100" r="4" fill="#6366f1" opacity="0.15"/>
+  <circle cx="310" cy="200" r="6" fill="#6366f1" opacity="0.1"/>
+  <circle cx="120" cy="230" r="3" fill="#d4c8e8"/>
+</svg>

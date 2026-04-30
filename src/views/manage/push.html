@@ -1,0 +1,810 @@
+<div class="tpl-sms-page tpl-push-page">
+    <div class="container py-5">
+        <h2 class="page-title text-center fw-bold mb-5">PUSH 템플릿</h2>
+
+        <!-- ===================== 목록 모드 ===================== -->
+        <section v-if="mode === 'list'" class="sms-card mb-3">
+            <div class="sms-card-header tpl-card-header">
+                <h3 class="sms-card-title">템플릿 관리</h3>
+                <button type="button" class="tpl-btn-sample" @click="openSampleModal">샘플 템플릿 보기</button>
+            </div>
+            <div class="sms-card-body">
+                <!-- 툴바 -->
+                <div class="tpl-toolbar">
+                    <button type="button" class="tpl-btn tpl-btn-primary" @click="openAddCategory">
+                        <i class="bi bi-plus-lg"></i> 카테고리 추가
+                    </button>
+                    <button type="button" class="tpl-btn tpl-btn-light" :disabled="!canEditCategory" @click="openEditCategory">
+                        카테고리 이름 수정
+                    </button>
+                    <span class="tpl-toolbar-divider"></span>
+                    <button type="button" class="tpl-btn tpl-btn-primary" :disabled="!canRegister" @click="goRegister">
+                        <i class="bi bi-plus-lg"></i> 템플릿 등록
+                    </button>
+                    <button type="button" class="tpl-btn tpl-btn-dark" :disabled="!canEditTemplate" @click="goEdit">
+                        템플릿 수정
+                    </button>
+                    <button type="button" class="tpl-btn tpl-btn-danger" :disabled="!canDelete" @click="openDeleteConfirm">
+                        삭제
+                    </button>
+                    <span class="tpl-toolbar-divider"></span>
+                    <div class="tpl-search">
+                        <input type="text" class="form-control" placeholder="카테고리/템플릿 이름을 입력하세요." v-model="searchKeyword" @keyup.enter="onSearch">
+                        <button type="button" class="tpl-search-btn" @click="onSearch" aria-label="검색"><i class="bi bi-search"></i></button>
+                    </div>
+                </div>
+
+                <!-- 트리 + 상세 -->
+                <div class="tpl-explorer">
+                    <!-- 트리 -->
+                    <div class="tpl-tree">
+                        <ul class="tpl-tree-root">
+                            <li>
+                                <div class="tpl-tree-node" :class="{ active: selectedType === 'root' }">
+                                    <button type="button" class="tpl-tree-toggle" @click="rootExpanded = !rootExpanded" aria-label="토글">
+                                        <i class="bi" :class="rootExpanded ? 'bi-dash-square' : 'bi-plus-square'"></i>
+                                    </button>
+                                    <span class="tpl-tree-icon"><i class="bi" :class="selectedType === 'root' ? 'bi-folder-fill text-primary' : 'bi-folder-fill'"></i></span>
+                                    <span class="tpl-tree-label tpl-tree-label-root" :class="{ active: selectedType === 'root' }" @click="selectRoot">Root Category</span>
+                                </div>
+                                <ul v-if="rootExpanded" class="tpl-tree-children">
+                                    <li v-for="cat in filteredCategories" :key="cat.id">
+                                        <div class="tpl-tree-node" :class="{ active: selectedType === 'category' && selectedCategoryId === cat.id }">
+                                            <button type="button" class="tpl-tree-toggle" @click="cat.expanded = !cat.expanded" aria-label="토글">
+                                                <i class="bi" :class="cat.expanded ? 'bi-dash-square' : 'bi-plus-square'"></i>
+                                            </button>
+                                            <span class="tpl-tree-icon"><i class="bi bi-folder-fill"></i></span>
+                                            <span class="tpl-tree-label" @click="selectCategory(cat)">{{ cat.name }}</span>
+                                        </div>
+                                        <ul v-if="cat.expanded" class="tpl-tree-children">
+                                            <li v-for="tpl in cat.templates" :key="tpl.id">
+                                                <div class="tpl-tree-node tpl-tree-leaf" :class="{ active: selectedType === 'template' && selectedTemplateId === tpl.id }" @click="selectTemplate(cat, tpl)">
+                                                    <span class="tpl-tree-spacer"></span>
+                                                    <span class="tpl-tree-icon">
+                                                        <i class="bi" :class="selectedType === 'template' && selectedTemplateId === tpl.id ? 'bi-file-earmark-fill text-primary' : 'bi-file-earmark'"></i>
+                                                    </span>
+                                                    <span class="tpl-tree-label" :class="{ 'tpl-tree-label-active': selectedType === 'template' && selectedTemplateId === tpl.id }">{{ tpl.name }}</span>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- 상세 -->
+                    <div class="tpl-detail">
+                        <div v-if="!hasAnyTemplate && !selectedTemplate" class="tpl-push-empty">
+                            템플릿 미등록 상태입니다.<br>
+                            템플릿을 등록하세요.
+                        </div>
+                        <div v-else-if="!selectedTemplate" class="tpl-detail-empty">
+                            템플릿 이름을 선택하세요.
+                        </div>
+                        <div v-else>
+                            <h4 class="tpl-detail-title">{{ selectedTemplate.name }}</h4>
+                            <div class="tpl-detail-tabs">
+                                <button type="button" class="tpl-detail-tab active">기본 정보</button>
+                            </div>
+                            <dl class="tpl-detail-info">
+                                <div class="tpl-detail-row">
+                                    <dt class="tpl-detail-label">템플릿 이름</dt>
+                                    <dd class="tpl-detail-value">: {{ selectedTemplate.name }}</dd>
+                                </div>
+                                <div class="tpl-detail-row">
+                                    <dt class="tpl-detail-label">템플릿 아이디</dt>
+                                    <dd class="tpl-detail-value">: {{ selectedTemplate.id }}</dd>
+                                </div>
+                                <div class="tpl-detail-row">
+                                    <dt class="tpl-detail-label">발송 목적</dt>
+                                    <dd class="tpl-detail-value">: {{ purposeLabel(selectedTemplate.purpose) }}</dd>
+                                </div>
+                                <div class="tpl-detail-row">
+                                    <dt class="tpl-detail-label">입력 유형</dt>
+                                    <dd class="tpl-detail-value">: {{ selectedTemplate.inputType === 'json' ? 'JSON' : '기본' }}</dd>
+                                </div>
+                                <div class="tpl-detail-row">
+                                    <dt class="tpl-detail-label">템플릿 상세 보기</dt>
+                                    <dd class="tpl-detail-value">
+                                        : <button type="button" class="tpl-btn-detail-confirm" @click="openTemplateDetailModal">확인</button>
+                                    </dd>
+                                </div>
+                                <div class="tpl-detail-row">
+                                    <dt class="tpl-detail-label">등록 일시</dt>
+                                    <dd class="tpl-detail-value">: {{ selectedTemplate.createdAt }}</dd>
+                                </div>
+                                <div class="tpl-detail-row">
+                                    <dt class="tpl-detail-label">수정 일시</dt>
+                                    <dd class="tpl-detail-value">: {{ selectedTemplate.updatedAt }}</dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===================== 등록/수정 모드 ===================== -->
+        <section v-else class="sms-card mb-3">
+            <div class="sms-card-header tpl-card-header">
+                <h3 class="sms-card-title">{{ mode === 'register' ? '템플릿 등록' : '템플릿 수정' }}</h3>
+                <button type="button" class="tpl-btn-sample" @click="openSampleModal">샘플 템플릿 선택</button>
+            </div>
+            <div class="sms-card-body">
+                <div class="content-2col tpl-push-2col">
+                    <div class="sms-message-fields">
+                        <!-- 템플릿 이름 -->
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">템플릿 이름 <span class="sms-required">*</span></label>
+                            <div class="sms-form-control">
+                                <div class="sms-input-with-counter">
+                                    <input type="text" class="form-control sms-input" v-model="form.name" maxlength="50" placeholder="템플릿 이름을 입력하세요.">
+                                    <span class="sms-byte-counter">{{ form.name.length }}/50</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 발송 목적 (PUSH는 일반/광고만) -->
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">발송 목적 <span class="sms-required">*</span></label>
+                            <div class="sms-form-control">
+                                <div class="sms-radio-group tpl-push-radio-fixed">
+                                    <label class="sms-radio">
+                                        <input type="radio" name="purpose" value="general" :checked="form.purpose === 'general'" @change="onPurposeSelect('general')">
+                                        <span>일반용</span>
+                                    </label>
+                                    <label class="sms-radio">
+                                        <input type="radio" name="purpose" value="ad" :checked="form.purpose === 'ad'" @change="onPurposeSelect('ad')">
+                                        <span>광고용</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 입력 유형 -->
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">입력 유형
+                                <i class="bi bi-question-circle tpl-push-help-icon" title="기본: 폼 입력 / JSON: 직접 작성"></i>
+                            </label>
+                            <div class="sms-form-control">
+                                <div class="sms-radio-group tpl-push-radio-fixed">
+                                    <label class="sms-radio">
+                                        <input type="radio" name="inputType" value="basic" v-model="form.inputType">
+                                        <span>기본</span>
+                                    </label>
+                                    <label class="sms-radio">
+                                        <input type="radio" name="inputType" value="json" v-model="form.inputType">
+                                        <span>JSON</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ===== 기본 입력 유형 ===== -->
+                        <div v-if="form.inputType === 'basic'" class="tpl-push-subrow">
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">HTML스타일
+                                    <i class="bi bi-question-circle tpl-push-help-icon" title="제목/내용에 HTML 스타일 사용 여부"></i>
+                                </label>
+                                <div class="sms-form-control">
+                                    <div class="sms-radio-group tpl-push-radio-fixed">
+                                        <label class="sms-radio">
+                                            <input type="radio" name="htmlStyle" value="enabled" v-model="form.basic.htmlStyle">
+                                            <span>사용</span>
+                                        </label>
+                                        <label class="sms-radio">
+                                            <input type="radio" name="htmlStyle" value="disabled" v-model="form.basic.htmlStyle">
+                                            <span>사용 안 함</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">제목</label>
+                                <div class="sms-form-control">
+                                    <input type="text" class="form-control sms-input" v-model="form.basic.title" placeholder="">
+                                </div>
+                            </div>
+
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">내용</label>
+                                <div class="sms-form-control">
+                                    <textarea class="form-control sms-textarea" v-model="form.basic.content" rows="8" placeholder=""></textarea>
+                                </div>
+                            </div>
+
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">배지</label>
+                                <div class="sms-form-control">
+                                    <input type="number" class="form-control sms-input" v-model.number="form.basic.badge" min="0" placeholder="숫자만 입력">
+                                </div>
+                            </div>
+
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">버튼</label>
+                                <div class="sms-form-control">
+                                    <button type="button" class="tpl-push-add-btn" @click="openItemModal('button')">
+                                        <i class="bi bi-plus-lg"></i> 추가
+                                    </button>
+                                    <div v-if="form.basic.buttons.length" class="tpl-push-item-list">
+                                        <span v-for="(b, i) in form.basic.buttons" :key="'b'+i" class="tpl-push-item-chip">
+                                            {{ buttonTypeLabel(b.type) }}
+                                            <button type="button" class="tpl-push-item-chip-remove" @click="removeItem('buttons', i)" aria-label="삭제">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">미디어</label>
+                                <div class="sms-form-control">
+                                    <button type="button" class="tpl-push-add-btn" @click="openItemModal('media')">
+                                        <i class="bi bi-plus-lg"></i> 추가
+                                    </button>
+                                    <div v-if="form.basic.media" class="tpl-push-item-list">
+                                        <span class="tpl-push-item-chip">
+                                            {{ form.basic.media.type || '미디어' }}
+                                            <button type="button" class="tpl-push-item-chip-remove" @click="form.basic.media = null" aria-label="삭제">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">Android 미디어</label>
+                                <div class="sms-form-control">
+                                    <button type="button" class="tpl-push-add-btn" @click="openItemModal('androidMedia')">
+                                        <i class="bi bi-plus-lg"></i> 추가
+                                    </button>
+                                    <div v-if="form.basic.androidMedia" class="tpl-push-item-list">
+                                        <span class="tpl-push-item-chip">
+                                            {{ form.basic.androidMedia.type || 'Android 미디어' }}
+                                            <button type="button" class="tpl-push-item-chip-remove" @click="form.basic.androidMedia = null" aria-label="삭제">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">iOS 미디어</label>
+                                <div class="sms-form-control">
+                                    <button type="button" class="tpl-push-add-btn" @click="openItemModal('iosMedia')">
+                                        <i class="bi bi-plus-lg"></i> 추가
+                                    </button>
+                                    <div v-if="form.basic.iosMedia" class="tpl-push-item-list">
+                                        <span class="tpl-push-item-chip">
+                                            {{ form.basic.iosMedia.type || 'iOS 미디어' }}
+                                            <button type="button" class="tpl-push-item-chip-remove" @click="form.basic.iosMedia = null" aria-label="삭제">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">Android 큰 아이콘</label>
+                                <div class="sms-form-control">
+                                    <button type="button" class="tpl-push-add-btn" @click="openItemModal('androidLargeIcon')">
+                                        <i class="bi bi-plus-lg"></i> 추가
+                                    </button>
+                                    <div v-if="form.basic.androidLargeIcon" class="tpl-push-item-list">
+                                        <span class="tpl-push-item-chip">
+                                            큰 아이콘
+                                            <button type="button" class="tpl-push-item-chip-remove" @click="form.basic.androidLargeIcon = null" aria-label="삭제">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">그룹</label>
+                                <div class="sms-form-control">
+                                    <button type="button" class="tpl-push-add-btn" @click="openItemModal('group')">
+                                        <i class="bi bi-plus-lg"></i> 추가
+                                    </button>
+                                    <div v-if="form.basic.group" class="tpl-push-item-list">
+                                        <span class="tpl-push-item-chip">
+                                            {{ form.basic.group.key }}
+                                            <button type="button" class="tpl-push-item-chip-remove" @click="form.basic.group = null" aria-label="삭제">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ===== JSON 입력 유형 ===== -->
+                        <div v-else class="tpl-push-subrow">
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">HTML스타일
+                                    <i class="bi bi-question-circle tpl-push-help-icon" title="제목/내용에 HTML 스타일 사용 여부"></i>
+                                </label>
+                                <div class="sms-form-control">
+                                    <select class="form-select sms-input" v-model="form.json.htmlStyle">
+                                        <option value="enabled">사용</option>
+                                        <option value="disabled">사용 안 함</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">JSON</label>
+                                <div class="sms-form-control">
+                                    <textarea class="form-control sms-textarea" v-model="form.json.body" rows="14" placeholder='{ "title": "", "body": "" }'></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== 미리보기 (Android + iOS) ===== -->
+                    <div class="content-2col-aside tpl-push-preview-col">
+                        <div class="tpl-push-preview-row">
+                            <!-- Android -->
+                            <div class="tpl-push-phone">
+                                <span class="tpl-push-phone-label">Android</span>
+                                <div class="tpl-push-phone-statusbar">
+                                    <span>9:41</span>
+                                    <span><i class="bi bi-wifi"></i> <i class="bi bi-battery"></i></span>
+                                </div>
+                                <div class="tpl-push-phone-time">9:41</div>
+                                <div class="tpl-push-phone-time-sub">Time to leave for Kumquat coffee</div>
+                                <div class="tpl-push-phone-notif">
+                                    <div class="tpl-push-phone-notif-app">Android System</div>
+                                    <div class="tpl-push-phone-notif-title">{{ previewTitle || '제목' }}</div>
+                                    <div class="tpl-push-phone-notif-content" :class="{ 'tpl-push-phone-notif-empty': !previewContent }">
+                                        {{ previewContent || '내용 미리보기' }}
+                                    </div>
+                                </div>
+                                <div class="tpl-push-phone-bottom">
+                                    <i class="bi bi-telephone-fill"></i>
+                                    <span>Swipe up to unlock</span>
+                                    <i class="bi bi-camera-fill"></i>
+                                </div>
+                            </div>
+
+                            <!-- iOS -->
+                            <div class="tpl-push-phone">
+                                <span class="tpl-push-phone-label">iOS</span>
+                                <div class="tpl-push-phone-statusbar">
+                                    <span>Monday, June 6</span>
+                                    <span><i class="bi bi-wifi"></i> <i class="bi bi-battery"></i></span>
+                                </div>
+                                <div class="tpl-push-phone-time">9:41</div>
+                                <div class="tpl-push-phone-notif">
+                                    <div class="tpl-push-phone-notif-app">맑은 메시징</div>
+                                    <div class="tpl-push-phone-notif-title">{{ previewTitle || '제목' }}</div>
+                                    <div class="tpl-push-phone-notif-content" :class="{ 'tpl-push-phone-notif-empty': !previewContent }">
+                                        {{ previewContent || '내용 미리보기' }}
+                                    </div>
+                                </div>
+                                <div class="tpl-push-phone-bottom">
+                                    <i class="bi bi-flashlight"></i>
+                                    <span></span>
+                                    <i class="bi bi-camera-fill"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <p class="tpl-push-preview-help">
+                            ⓘ 디바이스에 따라 실제 메시지 수신 화면과 미리보기 화면이 다를 수 있으며, 일부 기능(애니메이션, 사운드 등)은 미리보기에서 지원되지 않을 수 있습니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 등록/수정 액션 -->
+        <div v-if="mode !== 'list'" class="tpl-form-actions">
+            <button type="button" class="tpl-btn-cancel" @click="cancelForm">취소</button>
+            <button type="button" class="tpl-btn-save" @click="saveTemplate">저장하기</button>
+        </div>
+    </div>
+
+    <!-- ===================== 모달들 ===================== -->
+
+    <!-- 카테고리 추가 모달 (W480) -->
+    <div class="modal fade" ref="addCategoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('addCategory')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">카테고리 추가</h4>
+                    <div class="tpl-modal-form-row">
+                        <label class="tpl-modal-form-label">상위 카테고리</label>
+                        <div class="tpl-modal-form-value">{{ addCategoryModal.parentName }}</div>
+                    </div>
+                    <div class="tpl-modal-form-row">
+                        <label class="tpl-modal-form-label">카테고리 이름</label>
+                        <div class="sms-input-with-counter tpl-modal-input-wrap">
+                            <input type="text" class="form-control sms-input" v-model="addCategoryModal.name" maxlength="50">
+                            <span class="sms-byte-counter">{{ addCategoryModal.name.length }}/50</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('addCategory')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmAddCategory">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 카테고리 이름 수정 모달 (W480) -->
+    <div class="modal fade" ref="editCategoryModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('editCategory')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">카테고리 이름 수정</h4>
+                    <div class="tpl-modal-form-row">
+                        <label class="tpl-modal-form-label">카테고리 아이디</label>
+                        <div class="tpl-modal-form-value">{{ editCategoryModal.id }}</div>
+                    </div>
+                    <div class="tpl-modal-form-row">
+                        <label class="tpl-modal-form-label">카테고리 이름</label>
+                        <div class="sms-input-with-counter tpl-modal-input-wrap">
+                            <input type="text" class="form-control sms-input" v-model="editCategoryModal.name" maxlength="50">
+                            <span class="sms-byte-counter">{{ editCategoryModal.name.length }}/50</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('editCategory')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmEditCategory">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 버튼 추가 모달 (W480) -->
+    <div class="modal fade" ref="buttonModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('button')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">버튼</h4>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">버튼 유형</label>
+                        <div class="tpl-push-modal-value">
+                            <select class="form-select" v-model="itemModal.button.type">
+                                <option value="">유형 선택</option>
+                                <option value="reply">응답</option>
+                                <option value="open_app">앱 열기</option>
+                                <option value="open_url">URL 열기</option>
+                                <option value="close">닫기</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('button')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmAddButton">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 미디어 추가 모달 (W480) -->
+    <div class="modal fade" ref="mediaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('media')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">미디어</h4>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">URL</label>
+                        <div class="tpl-push-modal-value">
+                            <input type="text" class="form-control" v-model="itemModal.media.url" placeholder="https://~">
+                        </div>
+                    </div>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">유형</label>
+                        <div class="tpl-push-modal-value">
+                            <select class="form-select" v-model="itemModal.media.type">
+                                <option value="">유형 선택</option>
+                                <option value="이미지">이미지</option>
+                                <option value="GIF">GIF</option>
+                                <option value="동영상">동영상</option>
+                                <option value="소리">소리</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">펼치기</label>
+                        <div class="tpl-push-modal-value">
+                            <select class="form-select" v-model="itemModal.media.expand">
+                                <option value="">선택</option>
+                                <option value="enabled">사용</option>
+                                <option value="disabled">사용 안 함</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('media')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmMedia">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Android 미디어 모달 (W480) -->
+    <div class="modal fade" ref="androidMediaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('androidMedia')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">미디어</h4>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">URL</label>
+                        <div class="tpl-push-modal-value">
+                            <input type="text" class="form-control" v-model="itemModal.androidMedia.url" placeholder="https://~">
+                        </div>
+                    </div>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">유형</label>
+                        <div class="tpl-push-modal-value">
+                            <select class="form-select" v-model="itemModal.androidMedia.type">
+                                <option value="">유형 선택</option>
+                                <option value="이미지">이미지</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">펼치기</label>
+                        <div class="tpl-push-modal-value">
+                            <select class="form-select" v-model="itemModal.androidMedia.expand">
+                                <option value="">선택</option>
+                                <option value="enabled">사용</option>
+                                <option value="disabled">사용 안 함</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('androidMedia')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmAndroidMedia">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- iOS 미디어 모달 (W480) -->
+    <div class="modal fade" ref="iosMediaModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('iosMedia')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">미디어</h4>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">URL</label>
+                        <div class="tpl-push-modal-value">
+                            <input type="text" class="form-control" v-model="itemModal.iosMedia.url" placeholder="https://~">
+                        </div>
+                    </div>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">유형</label>
+                        <div class="tpl-push-modal-value">
+                            <select class="form-select" v-model="itemModal.iosMedia.type">
+                                <option value="">유형 선택</option>
+                                <option value="이미지">이미지</option>
+                                <option value="GIF">GIF</option>
+                                <option value="동영상">동영상</option>
+                                <option value="소리">소리</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('iosMedia')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmIosMedia">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Android 큰 아이콘 모달 (W480) -->
+    <div class="modal fade" ref="largeIconModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('androidLargeIcon')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">Android 큰 아이콘</h4>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">URL</label>
+                        <div class="tpl-push-modal-value">
+                            <input type="text" class="form-control" v-model="itemModal.androidLargeIcon.url" placeholder="https://~">
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('androidLargeIcon')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmLargeIcon">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 그룹 추가 모달 (W480) -->
+    <div class="modal fade" ref="groupModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('group')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">그룹</h4>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">키</label>
+                        <div class="tpl-push-modal-value">
+                            <input type="text" class="form-control" v-model="itemModal.group.key">
+                        </div>
+                    </div>
+                    <div class="tpl-push-modal-row">
+                        <label class="tpl-push-modal-label">설명</label>
+                        <div class="tpl-push-modal-value">
+                            <input type="text" class="form-control" v-model="itemModal.group.description">
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('group')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmGroup">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 템플릿 상세 보기 모달 (W800) -->
+    <div class="modal fade" ref="templateDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('templateDetail')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">템플릿 상세 보기</h4>
+                    <dl v-if="selectedTemplate" class="tpl-detail-modal-info">
+                        <div class="tpl-detail-modal-row">
+                            <dt>템플릿 이름</dt>
+                            <dd>{{ selectedTemplate.name }}</dd>
+                        </div>
+                        <div class="tpl-detail-modal-row">
+                            <dt>발송 목적</dt>
+                            <dd>{{ purposeLabel(selectedTemplate.purpose) }}</dd>
+                        </div>
+                        <div class="tpl-detail-modal-row">
+                            <dt>입력 유형</dt>
+                            <dd>{{ selectedTemplate.inputType === 'json' ? 'JSON' : '기본' }}</dd>
+                        </div>
+                        <div class="tpl-detail-modal-row">
+                            <dt>제목</dt>
+                            <dd>
+                                <div class="tpl-detail-modal-box">{{ selectedTemplate.inputType === 'json' ? '-' : (selectedTemplate.basic && selectedTemplate.basic.title) }}</div>
+                            </dd>
+                        </div>
+                        <div class="tpl-detail-modal-row">
+                            <dt>내용</dt>
+                            <dd>
+                                <div class="tpl-detail-modal-box tpl-detail-modal-box-content">{{ selectedTemplate.inputType === 'json' ? (selectedTemplate.json && selectedTemplate.json.body) : (selectedTemplate.basic && selectedTemplate.basic.content) }}</div>
+                            </dd>
+                        </div>
+                    </dl>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-confirm tpl-modal-confirm-only" @click="closeModal('templateDetail')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 샘플 템플릿 모달 (W800) -->
+    <div class="modal fade" ref="sampleModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('sample')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">샘플 템플릿 {{ mode === 'list' ? '보기' : '선택' }}</h4>
+                    <div class="sms-modal-search-row">
+                        <div class="sms-modal-search">
+                            <input type="text" class="form-control" v-model="sampleModal.search" placeholder="샘플 템플릿명을 입력하세요.">
+                            <button type="button" class="sms-modal-search-btn" aria-label="검색"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <table class="sms-modal-table">
+                        <thead>
+                            <tr>
+                                <th v-if="mode !== 'list'" class="sms-th-radio"></th>
+                                <th>샘플 템플릿명</th>
+                                <th>입력 유형</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="t in filteredSamples" :key="t.id" @click="onSampleRowClick(t)">
+                                <td v-if="mode !== 'list'" class="sms-th-radio">
+                                    <input type="radio" :value="t.id" v-model="sampleModal.selectedId">
+                                </td>
+                                <td>{{ t.name }}</td>
+                                <td>{{ t.inputType === 'json' ? 'JSON' : '기본' }}</td>
+                            </tr>
+                            <tr v-if="filteredSamples.length === 0">
+                                <td :colspan="mode !== 'list' ? 3 : 2" class="sms-modal-empty">검색 결과가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('sample')">{{ mode === 'list' ? '닫기' : '취소' }}</button>
+                    <button v-if="mode !== 'list'" type="button" class="sms-btn-modal-confirm" @click="confirmSample">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 삭제 확인 모달 (W400) -->
+    <div class="modal fade" ref="deleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('delete')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon">
+                        <i class="bi bi-exclamation"></i>
+                    </div>
+                    <p class="sms-modal-confirm-text">선택한 {{ selectedType === 'category' ? '카테고리' : '템플릿' }}를 삭제하시겠습니까?<br><span class="tpl-delete-sub">삭제된 항목은 복구할 수 없습니다.</span></p>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('delete')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmDelete">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 알림 모달 (W400) -->
+    <div class="modal fade" ref="alertModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('alert')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon tpl-alert-icon-info">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <p class="sms-modal-confirm-text">{{ alertText }}</p>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-confirm tpl-modal-confirm-only" @click="closeModal('alert')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,433 @@
+<div class="signup-page">
+    <div class="container py-5">
+        <h1 class="signup-title text-center fw-bold mb-4">회원가입</h1>
+
+        <!-- 스텝 인디케이터 -->
+        <ol class="signup-stepper">
+            <li v-for="(step, idx) in steps" :key="step.key"
+                class="signup-step"
+                :class="{ active: currentStep === idx + 1 }">
+                <div class="signup-step-num">Step {{ idx + 1 }}</div>
+                <div class="signup-step-label">{{ step.label }}</div>
+            </li>
+        </ol>
+
+        <!-- ============================== -->
+        <!-- Step 1: 회원 가입 안내 -->
+        <!-- ============================== -->
+        <section v-if="currentStep === 1" class="signup-section">
+            <h2 class="signup-section-title">서비스 이용 절차</h2>
+            <ol class="signup-flow">
+                <li v-for="(item, idx) in serviceFlow" :key="item.key" class="signup-flow-item">
+                    <div class="signup-flow-card">
+                        <div class="signup-flow-cap">{{ item.cap }}</div>
+                        <div class="signup-flow-name">{{ item.name }}</div>
+                    </div>
+                    <i v-if="idx < serviceFlow.length - 1" class="bi bi-chevron-right signup-flow-arrow"></i>
+                </li>
+            </ol>
+
+            <h2 class="signup-section-title mt-5">서비스 신청 서류</h2>
+            <div class="signup-doc-table">
+                <div class="signup-doc-head">
+                    <div class="signup-doc-col">사업자</div>
+                    <div class="signup-doc-col">가입 서류</div>
+                    <div class="signup-doc-col">이용 방식</div>
+                </div>
+                <div class="signup-doc-row">
+                    <div class="signup-doc-col">
+                        <div>법인 사업자</div>
+                        <div>개인 사업자</div>
+                    </div>
+                    <div class="signup-doc-col">
+                        <div>사업자 등록증</div>
+                        <div>대부업등록증(해당업체)</div>
+                        <div>가입신청서(계약서)</div>
+                    </div>
+                    <div class="signup-doc-col">
+                        <div>카드 등록 후 충전 이용방식</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signup-actions">
+                <button type="button" class="signup-btn signup-btn-primary" @click="goToStep(2)">다음</button>
+            </div>
+        </section>
+
+        <!-- ============================== -->
+        <!-- Step 2: 기업 정보 확인 -->
+        <!-- ============================== -->
+        <section v-if="currentStep === 2" class="signup-section">
+            <h2 class="signup-form-title">기업 정보 확인</h2>
+            <p class="signup-form-desc">
+                사업자등록번호 입력 후 기업 정보를 확인해 주세요. (비영리 단체일 경우는 고유번호 입력)<br>
+                <strong>증빙서류와 동일한 사업자등록번호(고유번호)를 입력해 주세요.</strong>
+            </p>
+            <hr class="signup-divider">
+
+            <!-- 이미 가입 상태 -->
+            <div v-if="company.alreadyRegistered" class="signup-form-block">
+                <div class="signup-form-row">
+                    <label class="signup-form-label">사업자 유형</label>
+                    <div class="signup-form-value">{{ company.type === 'corp' ? '법인사업자' : '개인사업자' }}</div>
+                </div>
+                <div class="signup-form-row">
+                    <label class="signup-form-label">사업자 등록 번호</label>
+                    <div class="signup-form-value">{{ formattedBizNo }}</div>
+                </div>
+                <div class="signup-form-row">
+                    <label class="signup-form-label">회사명</label>
+                    <div class="signup-form-value">{{ company.name }}</div>
+                </div>
+                <div class="signup-form-row">
+                    <label class="signup-form-label">대표자명</label>
+                    <div class="signup-form-value">{{ company.ceo }}</div>
+                </div>
+                <div class="signup-actions">
+                    <button type="button" class="signup-btn signup-btn-link-vivid" @click="goLogin">
+                        <i class="bi bi-info-circle-fill me-2"></i>로그인 하기
+                    </button>
+                </div>
+            </div>
+
+            <!-- 입력 폼 -->
+            <form v-else class="signup-form-block" @submit.prevent="submitCompany">
+                <div class="signup-form-row">
+                    <label class="signup-form-label">사업자 유형</label>
+                    <div class="signup-form-control">
+                        <div class="signup-radio-group">
+                            <label class="signup-radio">
+                                <input type="radio" v-model="company.type" value="corp">
+                                <span>법인사업자</span>
+                            </label>
+                            <label class="signup-radio">
+                                <input type="radio" v-model="company.type" value="indiv">
+                                <span>개인사업자</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="signup-form-row">
+                    <label class="signup-form-label">사업자 등록 번호</label>
+                    <div class="signup-form-control">
+                        <div class="signup-bizno-row">
+                            <input type="text" maxlength="3" inputmode="numeric"
+                                class="signup-input signup-input-bizno"
+                                v-model="company.bizNo1">
+                            <span class="signup-bizno-dash">-</span>
+                            <input type="text" maxlength="2" inputmode="numeric"
+                                class="signup-input signup-input-bizno"
+                                v-model="company.bizNo2">
+                            <span class="signup-bizno-dash">-</span>
+                            <input type="text" maxlength="5" inputmode="numeric"
+                                class="signup-input signup-input-bizno-last"
+                                v-model="company.bizNo3">
+                        </div>
+                        <div v-if="errors.bizNo" class="signup-error-text">사업자 등록번호가 맞지 않네요. 다시 입력해 주세요</div>
+                    </div>
+                </div>
+
+                <div class="signup-form-row">
+                    <label class="signup-form-label">회사명</label>
+                    <div class="signup-form-control">
+                        <input type="text" class="signup-input signup-input-wide" v-model="company.name">
+                        <div v-if="errors.name" class="signup-error-text">회사명이 입력되지 않았네요. 다시 입력해 주세요</div>
+                    </div>
+                </div>
+
+                <div class="signup-form-row">
+                    <label class="signup-form-label">대표자명</label>
+                    <div class="signup-form-control">
+                        <input type="text" class="signup-input signup-input-wide" v-model="company.ceo">
+                        <div v-if="errors.ceo" class="signup-error-text">대표자명이 입력되지 않았네요. 다시 입력해 주세요</div>
+                    </div>
+                </div>
+
+                <div class="signup-actions">
+                    <button type="submit" class="signup-btn"
+                        :class="hasCompanyError ? 'signup-btn-disabled' : 'signup-btn-primary'"
+                        :disabled="hasCompanyError">다음</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- ============================== -->
+        <!-- Step 3: 아이디 등록 및 약관 동의 -->
+        <!-- ============================== -->
+        <section v-if="currentStep === 3" class="signup-section">
+            <h2 class="signup-form-title">아이디 등록 및 약관 동의</h2>
+            <hr class="signup-divider">
+
+            <form class="signup-form-block" @submit.prevent="submitAccount">
+                <!-- 아이디 (이메일) -->
+                <div class="signup-form-row signup-form-row-stack">
+                    <label class="signup-form-label-block">아이디</label>
+                    <div class="signup-form-control">
+                        <div class="signup-row-with-action">
+                            <input type="email" class="signup-input signup-input-wide"
+                                placeholder="이메일 주소를 입력해 주세요." v-model="account.email">
+                            <button type="button" class="signup-btn-dark"
+                                :disabled="!account.email" @click="sendVerifyCode">인증코드 발송</button>
+                        </div>
+                        <div v-if="errors.email" class="signup-error-text">이메일 주소를 입력해 주세요</div>
+                    </div>
+                </div>
+
+                <!-- 인증코드 -->
+                <div class="signup-form-row signup-form-row-stack">
+                    <label class="signup-form-label-block">인증코드</label>
+                    <div class="signup-form-control">
+                        <div class="signup-row-with-action">
+                            <div class="signup-otp-row">
+                                <input v-for="(d, i) in 6" :key="i"
+                                    type="text" maxlength="1" inputmode="numeric"
+                                    class="signup-input signup-input-otp"
+                                    :ref="el => otpRefs[i] = el"
+                                    v-model="account.otp[i]"
+                                    @input="onOtpInput(i, $event)"
+                                    @keydown="onOtpKeydown(i, $event)">
+                            </div>
+                            <button type="button" class="signup-btn-otp-confirm"
+                                :class="canVerifyOtp ? 'is-active' : 'is-disabled'"
+                                :disabled="!canVerifyOtp" @click="verifyOtp">확인</button>
+                        </div>
+                        <div v-if="errors.otpEmpty" class="signup-error-text">이메일로 보내 드린 인증코드를 입력해 주세요</div>
+                        <div v-if="errors.otpInvalid" class="signup-error-text">만료되었거나 유효하지 않은 인증코드입니다.&nbsp; 인증코드 재발송으로 새로운 인증코드를 입력해 주세요</div>
+                    </div>
+                </div>
+
+                <!-- 비밀번호 -->
+                <div class="signup-form-row signup-form-row-stack">
+                    <label class="signup-form-label-block">비밀번호</label>
+                    <div class="signup-form-control">
+                        <input type="password" class="signup-input signup-input-medium"
+                            placeholder="최소 8자 이상 특수문자 기호를 포함해 주세요." v-model="account.password">
+                    </div>
+                </div>
+
+                <!-- 비밀번호 확인 -->
+                <div class="signup-form-row signup-form-row-stack">
+                    <label class="signup-form-label-block">비밀번호 확인</label>
+                    <div class="signup-form-control">
+                        <div class="signup-pw-confirm-row">
+                            <input type="password" class="signup-input signup-input-medium"
+                                placeholder="비밀번호를 다시 입력해 주세요." v-model="account.passwordConfirm">
+                            <span class="signup-pw-match" :class="passwordMatchClass" v-if="account.passwordConfirm">
+                                <i class="bi" :class="passwordMatches ? 'bi-check-lg' : 'bi-x-lg'"></i>
+                            </span>
+                        </div>
+                        <div v-if="errors.passwordMismatch" class="signup-error-text">비밀번호가 맞지 않네요. 다시 입력해 주세요</div>
+                    </div>
+                </div>
+
+                <!-- 약관 동의 -->
+                <div class="signup-agree-box">
+                    <label class="signup-agree-all">
+                        <input type="checkbox" v-model="agreeAll" @change="toggleAgreeAll">
+                        <span class="signup-agree-all-text">전체 동의</span>
+                    </label>
+                    <ul class="signup-agree-list">
+                        <li v-for="(t, i) in terms" :key="t.key">
+                            <label class="signup-agree-check">
+                                <input type="checkbox" v-model="t.checked" @change="syncAgreeAll">
+                            </label>
+                            <button type="button" class="signup-agree-trigger" @click="openTerms(t.key)">
+                                <span class="signup-agree-required" :class="t.required ? 'is-required' : 'is-optional'">
+                                    {{ t.required ? '필수' : '선택' }}
+                                </span>
+                                <span class="signup-agree-text">{{ t.label }}</span>
+                                <i class="bi bi-chevron-right signup-agree-chevron-icon"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div v-if="errors.terms" class="signup-error-text mt-2 text-center">필수 동의를 체크해 주세요</div>
+
+                <div class="signup-actions">
+                    <button type="submit" class="signup-btn"
+                        :class="hasAccountError ? 'signup-btn-disabled' : 'signup-btn-primary'"
+                        :disabled="hasAccountError">다음</button>
+                </div>
+            </form>
+        </section>
+
+        <!-- ============================== -->
+        <!-- Step 4: 본인 인증 -->
+        <!-- ============================== -->
+        <section v-if="currentStep === 4" class="signup-section">
+            <div v-if="!phone.verified">
+                <h2 class="signup-form-title">본인 휴대폰 인증</h2>
+                <p class="signup-form-desc">
+                    휴대폰 인증된 번호로 향후 아이디/비밀번호 변경 등에 이용하실 수 있습니다.<br>
+                    허위 정보 입력하실 경우, 이용 제한 또는 법적 처벌이 있을 수 있습니다.
+                </p>
+                <hr class="signup-divider">
+
+                <h3 class="signup-form-subtitle">휴대폰 정보로 본인 인증하기</h3>
+
+                <form class="signup-form-block signup-form-block-narrow" @submit.prevent="completePhoneVerify">
+                    <div class="signup-form-row signup-form-row-stack">
+                        <label class="signup-form-label-block">휴대폰 번호 입력</label>
+                        <div class="signup-form-control">
+                            <div class="signup-row-with-action">
+                                <div class="signup-phone-row">
+                                    <select class="signup-input signup-input-prefix" v-model="phone.prefix">
+                                        <option>010</option>
+                                        <option>011</option>
+                                        <option>016</option>
+                                        <option>017</option>
+                                        <option>018</option>
+                                        <option>019</option>
+                                    </select>
+                                    <span class="signup-bizno-dash">-</span>
+                                    <input type="text" maxlength="4" inputmode="numeric"
+                                        class="signup-input signup-input-phone" v-model="phone.mid">
+                                    <span class="signup-bizno-dash">-</span>
+                                    <input type="text" maxlength="4" inputmode="numeric"
+                                        class="signup-input signup-input-phone" v-model="phone.last">
+                                </div>
+                                <button type="button" class="signup-btn-dark"
+                                    @click="sendPhoneCode">인증하기</button>
+                            </div>
+                            <div v-if="errors.phoneEmpty" class="signup-error-text">휴대폰 번호가 입력되지 않았어요. 다시 입력해 주세요.</div>
+                        </div>
+                    </div>
+
+                    <div class="signup-form-row signup-form-row-stack">
+                        <label class="signup-form-label-block">인증 번호 입력</label>
+                        <div class="signup-form-control">
+                            <input type="text" class="signup-input signup-input-wide"
+                                inputmode="numeric" v-model="phone.code">
+                            <div v-if="errors.phoneCodeEmpty" class="signup-error-text">보내 드린 인증코드를 입력해 주세요</div>
+                            <div v-if="errors.phoneCodeInvalid" class="signup-error-text">만료되었거나 유효하지 않은 인증코드입니다.&nbsp; 다시 새로운 인증코드를 입력해 주세요</div>
+                        </div>
+                    </div>
+
+                    <div class="signup-actions signup-actions-center">
+                        <button type="submit"
+                            class="signup-btn signup-btn-lg"
+                            :class="hasPhoneError ? 'signup-btn-disabled' : 'signup-btn-dark-solid'"
+                            :disabled="hasPhoneError">인증 완료</button>
+                    </div>
+                </form>
+            </div>
+
+            <div v-else class="signup-phone-done">
+                <h2 class="signup-form-title">본인 휴대폰 인증</h2>
+                <p class="signup-form-desc">
+                    휴대폰 인증된 번호로 향후 아이디/비밀번호 변경 등에 이용하실 수 있습니다.<br>
+                    허위 정보 입력하실 경우, 이용 제한 또는 법적 처벌이 있을 수 있습니다.
+                </p>
+                <hr class="signup-divider">
+
+                <div class="signup-phone-done-box">
+                    <div class="signup-phone-done-label">인증된 번호</div>
+                    <div class="signup-phone-done-value">{{ phone.formatted }}</div>
+                </div>
+
+                <div class="signup-actions">
+                    <button type="button" class="signup-btn signup-btn-primary" @click="finishSignup">회원 가입 완료</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================== -->
+        <!-- Step 5: 가입 완료 -->
+        <!-- ============================== -->
+        <section v-if="currentStep === 5" class="signup-section signup-section-welcome">
+            <h2 class="signup-welcome-title">환영합니다!</h2>
+            <p class="signup-welcome-desc">맑은 메시징 회원가입이 완료되었습니다.</p>
+
+            <div class="signup-summary">
+                <div class="signup-summary-row">
+                    <div class="signup-summary-label">아이디</div>
+                    <div class="signup-summary-value">{{ account.email || 'user@example.com' }}</div>
+                </div>
+                <div class="signup-summary-row">
+                    <div class="signup-summary-label">사업자등록번호</div>
+                    <div class="signup-summary-value">{{ formattedBizNo }}</div>
+                </div>
+                <div class="signup-summary-row">
+                    <div class="signup-summary-label">회사명</div>
+                    <div class="signup-summary-value">{{ company.name }}</div>
+                </div>
+                <div class="signup-summary-row">
+                    <div class="signup-summary-label">대표자명</div>
+                    <div class="signup-summary-value">{{ company.ceo }}</div>
+                </div>
+            </div>
+
+            <p class="signup-welcome-note">최초 로그인 시 사업자등록증 업로드와 가입신청서를 작성하신 후 사용하실 수 있습니다</p>
+
+            <div class="signup-actions">
+                <button type="button" class="signup-btn signup-btn-link-vivid" @click="goLogin">
+                    <i class="bi bi-info-circle-fill me-2"></i>로그인 하기
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 인증코드 발송 알림 모달 -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="otpAlertModal">
+        <div class="modal-dialog modal-dialog-centered signup-modal-w400">
+            <div class="modal-content signup-modal">
+                <div class="signup-modal-body-confirm">
+                    <div class="signup-modal-icon-check">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <p class="signup-modal-confirm-text">
+                        이메일로 인증코드가 발송되었습니다.<br>
+                        10분내 인증코드를 등록해 주세요
+                    </p>
+                </div>
+                <div class="signup-modal-actions-single">
+                    <button type="button" class="signup-btn signup-btn-primary signup-btn-block" @click="confirmOtpSent">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 휴대폰 인증코드 발송 알림 모달 -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="phoneAlertModal">
+        <div class="modal-dialog modal-dialog-centered signup-modal-w400">
+            <div class="modal-content signup-modal">
+                <div class="signup-modal-body-confirm">
+                    <div class="signup-modal-icon-check">
+                        <i class="bi bi-chat-dots-fill"></i>
+                    </div>
+                    <p class="signup-modal-confirm-text">
+                        문자메시지로 인증번호 6자리가 발송되었습니다.<br>
+                        3분내 인증번호를 입력해 주세요
+                    </p>
+                </div>
+                <div class="signup-modal-actions-single">
+                    <button type="button" class="signup-btn signup-btn-primary signup-btn-block" data-bs-dismiss="modal">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 약관 모달 -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="termsModal">
+        <div class="modal-dialog modal-dialog-centered signup-modal-w800">
+            <div class="modal-content signup-modal">
+                <div class="signup-terms-modal-body">
+                    <h2 class="signup-terms-title">{{ activeTermTitle }}</h2>
+                    <div class="signup-terms-content" v-html="activeTermContent"></div>
+                </div>
+                <div class="signup-modal-actions-pair">
+                    <button type="button" class="signup-btn signup-btn-outline signup-btn-terms" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="signup-btn signup-btn-navy" @click="agreeActiveTerm">동의하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

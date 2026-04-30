@@ -1,0 +1,259 @@
+<div class="contacts-page sender-page">
+    <div class="container py-5">
+        <h2 class="contacts-page-title">발신 정보 관리</h2>
+
+        <!-- 결과 카드 -->
+        <section class="contacts-card">
+            <h3 class="contacts-card-title">발신 번호 관리</h3>
+
+            <ul class="sender-info-list">
+                <li>전기통신사업법 관련 고시 준수를 위해 발신 번호 등록 시 발신 번호에 대한 명의자 인증이 필요합니다.</li>
+                <li>명의자 인증 시 회원 및 발신 번호 유형에 따라 인증 방법과 필요한 서류가 결정됩니다.</li>
+            </ul>
+
+            <!-- 상단 툴바 -->
+            <div class="contacts-toolbar">
+                <div class="contacts-toolbar-left">
+                    <button type="button" class="contacts-btn-primary" @click="openRegisterFlow">
+                        <i class="bi bi-plus-lg"></i> 발신 번호 등록
+                    </button>
+                    <button type="button" class="contacts-btn-soft contacts-btn-soft-delete"
+                            :disabled="selectedRowIds.length === 0" @click="openDeleteConfirm">
+                        발신 번호 삭제
+                    </button>
+                    <button type="button" class="contacts-btn-ghost" @click="openGuide">
+                        발신 번호 등록 안내
+                    </button>
+                </div>
+                <div class="contacts-toolbar-right">
+                    <button type="button" class="contacts-btn-ghost" @click="refresh">
+                        <i class="bi bi-arrow-clockwise"></i> 새로고침
+                    </button>
+                    <span class="contacts-total">총 <strong>{{ totalCount }}</strong>개</span>
+                </div>
+            </div>
+
+            <!-- 결과 테이블 -->
+            <div class="contacts-table-wrap">
+                <table class="contacts-table sender-table">
+                    <thead>
+                        <tr>
+                            <th class="contacts-th-check">
+                                <input type="checkbox" :checked="isAllSelected" @change="toggleAllRows">
+                            </th>
+                            <th>발신 번호 유형</th>
+                            <th>발신 번호</th>
+                            <th>승인 상태</th>
+                            <th>요청 일시</th>
+                            <th>승인 일시</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in pagedRows" :key="row.id">
+                            <td class="contacts-th-check">
+                                <input type="checkbox" :value="row.id" v-model="selectedRowIds">
+                            </td>
+                            <td>{{ row.typeLabel }}</td>
+                            <td>{{ row.number }}</td>
+                            <td>
+                                <span class="sender-status" :class="statusClass(row.status)">{{ row.statusLabel }}</span>
+                            </td>
+                            <td>{{ row.requestedAt }}</td>
+                            <td>{{ row.approvedAt || '-' }}</td>
+                        </tr>
+                        <tr v-if="pagedRows.length === 0">
+                            <td colspan="6" class="contacts-empty">등록된 발신 번호가 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="sms-modal-pagination sender-pagination" v-if="totalPages >= 1">
+                <button type="button" class="sms-page-btn" @click="goPage(1)" :disabled="page === 1">«</button>
+                <button type="button" class="sms-page-btn" @click="goPage(page - 1)" :disabled="page === 1">‹</button>
+                <button v-for="p in pageRange" :key="p"
+                        type="button"
+                        class="sms-page-btn"
+                        :class="{ active: p === page }"
+                        @click="goPage(p)">{{ p }}</button>
+                <button type="button" class="sms-page-btn" @click="goPage(page + 1)" :disabled="page === totalPages">›</button>
+                <button type="button" class="sms-page-btn" @click="goPage(totalPages)" :disabled="page === totalPages">»</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- 1단계: 개인정보 수집 이용 동의 (W800) -->
+    <div class="modal fade" ref="agreeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('agree')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sender-agree-body">
+                    <h4 class="sms-modal-title">[필수] 개인정보 수집 이용 동의</h4>
+
+                    <div class="sender-agree-box">
+                        <div class="sender-agree-box-title">개인정보 수집 이용 동의서(발신 번호 등록)</div>
+                        <p class="sender-agree-text">
+                            회사는 귀하의 개인정보를 아래와 같이 수집 및 이용하고자 하오니, 동의하여 주시기 바랍니다.
+                        </p>
+                        <ol class="sender-agree-list">
+                            <li>수집 항목: 이름, 생년월일, 성별, 내외국인 정보, 휴대폰 번호, 중복가입확인정보(DI), 암호화된 식별정보(CI), 재직증명서, 사업자등록증, 통신서비스 이용증명원, 기타 발신 번호 명의자가 사전승낙여부를 확인하기 위한 문서</li>
+                            <li>수집 목적: 발신 번호 등록, 본인 확인</li>
+                            <li>보유 기간: 관련 법령에 따라 보관 후 삭제</li>
+                        </ol>
+                        <p class="sender-agree-text sender-agree-text-foot">
+                            귀하는 상기 개인정보 수집을 거부하실 권리가 있으며, 거부하시는 경우 서비스 이용이 불가합니다.
+                        </p>
+                    </div>
+
+                    <div class="sender-agree-foot">
+                        <label class="sender-agree-check">
+                            <input type="checkbox" v-model="agreed">
+                            <span>동의</span>
+                        </label>
+                        <button type="button" class="sender-btn-next"
+                                :disabled="!agreed" @click="goRegisterStep">다음</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2단계: 발신 정보 등록 및 서류 인증 (W800) -->
+    <div class="modal fade" ref="registerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('register')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sender-register-body">
+                    <h4 class="sms-modal-title">발신 정보 등록 및 서류 인증</h4>
+                    <p class="sender-register-desc">
+                        발신 번호와 필요 서류 심사 후 승인이 완료되면 발신 번호가 등록됩니다. 심사는 영업일 기준 3~5일 소요됩니다.
+                    </p>
+
+                    <!-- 발신 번호 -->
+                    <div class="sender-form-row">
+                        <label class="sender-form-label">
+                            발신 번호 <span class="contacts-required">*</span>
+                        </label>
+                        <div class="sender-form-control">
+                            <div class="sender-num-row">
+                                <div class="sender-num-type">
+                                    <HistoryDropdown v-model="form.type"
+                                                     :options="typeOptions"
+                                                     placeholder="유형 선택"></HistoryDropdown>
+                                </div>
+                                <input type="text" class="contacts-input sender-num-input"
+                                       v-model="form.number" placeholder="-없이 숫자 입력">
+                            </div>
+                            <ul class="sender-hint-list">
+                                <li>등록할 발신 번호의 유형과 발신 번호를 입력하세요.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="sender-form-divider"></div>
+
+                    <!-- 필요 서류 -->
+                    <div class="sender-form-row sender-form-row-docs">
+                        <label class="sender-form-label">
+                            필요 서류 <span class="contacts-required">*</span>
+                        </label>
+                        <div class="sender-form-control">
+                            <div v-for="(doc, idx) in requiredDocs" :key="doc.key"
+                                 class="sender-doc-block"
+                                 :class="{ 'sender-doc-block-first': idx === 0 }">
+                                <div class="sender-doc-title">{{ doc.label }}</div>
+                                <div class="sender-file-row">
+                                    <input type="text" class="contacts-input sender-file-name"
+                                           :value="form.files[doc.key] ? form.files[doc.key].name : ''"
+                                           placeholder="" readonly>
+                                    <button type="button" class="contacts-btn-file"
+                                            @click="pickFile(doc.key)">
+                                        <i class="bi bi-upload"></i> 파일 선택
+                                    </button>
+                                    <input type="file" class="contacts-file-hidden"
+                                           :ref="'file_' + doc.key"
+                                           accept=".png,.jpg,.jpeg,.pdf,.tif,.tiff,.zip"
+                                           @change="handleFileChange($event, doc.key)">
+                                </div>
+                                <p class="sender-file-hint">.png, .jpg, .jpeg, .pdf, .tif, .tiff, .zip 형식만 지원합니다. (최대 용량: 10MB)</p>
+                                <ul class="sender-hint-list" v-if="doc.notes && doc.notes.length">
+                                    <li v-for="(n, i) in doc.notes" :key="i" v-html="n"></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('register')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="submitRegister">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 발신 번호 삭제 컨펌 (W480) -->
+    <div class="modal fade" ref="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('deleteConfirm')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        선택한 {{ selectedRowIds.length }}개의 발신 번호를 삭제하시겠습니까?<br>
+                        삭제된 발신 번호는 복구할 수 없습니다.
+                    </p>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('deleteConfirm')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="confirmDelete">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 발신 번호 등록 안내 (W800) -->
+    <div class="modal fade" ref="guideModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('guide')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">발신 번호 등록 안내</h4>
+                    <p class="sms-modal-text">
+                        전기통신사업법 관련 고시 준수를 위해, 발신 번호 등록 시 회원 및 발신 번호 유형에 따라
+                        다음과 같이 인증 방법과 필요 서류가 결정됩니다.
+                    </p>
+                    <table class="sms-modal-table sender-guide-table">
+                        <thead>
+                            <tr>
+                                <th>발신 번호 유형</th>
+                                <th>필요 서류</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="t in typeOptions" :key="t.value">
+                                <td>{{ t.label }}</td>
+                                <td class="sender-guide-docs">
+                                    <span v-for="(d, di) in docsByType[t.value]" :key="d.key">
+                                        {{ d.label }}<span v-if="di < docsByType[t.value].length - 1">, </span>
+                                    </span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions-single">
+                    <button type="button" class="contacts-btn-modal-confirm" @click="closeModal('guide')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

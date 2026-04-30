@@ -1,0 +1,313 @@
+<div class="credit-page">
+    <div class="container py-5">
+
+        <!-- 헤더 -->
+        <header class="credit-header">
+            <h1 class="credit-title">크레딧 관리</h1>
+        </header>
+
+        <!-- 요약 카드 -->
+        <section class="credit-summary-card">
+            <div class="credit-summary-left">
+                <div class="credit-summary-avatar">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div class="credit-summary-balance">
+                    <div class="credit-summary-balance-label">보유 크레딧</div>
+                    <div class="credit-summary-balance-amount">
+                        <span>{{ formatNumber(summary.balance) }}</span>
+                        <span class="charge-coin charge-coin-md">C</span>
+                    </div>
+                </div>
+                <button type="button" class="credit-charge-btn" @click="goCharge">크레딧 충전</button>
+            </div>
+
+            <div class="credit-summary-right">
+                <div class="credit-summary-row">
+                    <span class="credit-summary-row-label">총 충전한 크레딧</span>
+                    <span class="credit-summary-row-value">
+                        {{ formatNumber(summary.totalCharged) }}
+                        <span class="charge-coin charge-coin-sm">C</span>
+                    </span>
+                </div>
+                <div class="credit-summary-row">
+                    <span class="credit-summary-row-label">보너스 크레딧</span>
+                    <span class="credit-summary-row-value">
+                        {{ formatNumber(summary.bonus) }}
+                        <span class="charge-coin charge-coin-sm">C</span>
+                    </span>
+                </div>
+                <div class="credit-summary-row">
+                    <span class="credit-summary-row-label">이번 달 사용 크레딧</span>
+                    <span class="credit-summary-row-value">
+                        {{ formatNumber(summary.monthlyUsed) }}
+                        <span class="charge-coin charge-coin-sm">C</span>
+                    </span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 필터 영역 -->
+        <section class="credit-filter">
+            <div class="credit-filter-row">
+                <div class="credit-period-group">
+                    <button v-for="opt in periodOptions"
+                            :key="opt.value"
+                            type="button"
+                            class="credit-period-btn"
+                            :class="{ 'is-active': period === opt.value }"
+                            @click="setPeriod(opt.value)">
+                        {{ opt.label }}
+                    </button>
+                </div>
+
+                <div class="credit-date-range">
+                    <div class="credit-date-input">
+                        <input type="text" class="credit-form-input" v-model="dateFrom" placeholder="YYYY.MM.DD">
+                        <i class="bi bi-calendar3 credit-date-icon"></i>
+                    </div>
+                    <span class="credit-date-sep">-</span>
+                    <div class="credit-date-input">
+                        <input type="text" class="credit-form-input" v-model="dateTo" placeholder="YYYY.MM.DD">
+                        <i class="bi bi-calendar3 credit-date-icon"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="credit-filter-row credit-filter-row-2nd">
+                <div class="credit-search">
+                    <i class="bi bi-search credit-search-icon"></i>
+                    <input type="text" class="credit-search-input" placeholder="내용 입력" v-model="searchQuery">
+                </div>
+
+                <div class="credit-select-wrap">
+                    <select class="credit-select" v-model="typeFilter">
+                        <option value="all">전체구분</option>
+                        <option v-for="opt in typeFilterOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- 충전 및 사용 내역 -->
+        <section class="credit-history-card">
+            <div class="credit-history-header">
+                <h2 class="credit-history-title">충전 및 사용 내역</h2>
+                <div class="credit-select-wrap credit-select-wrap-sm">
+                    <select class="credit-select credit-select-sm" v-model.number="pageSize">
+                        <option :value="10">10개씩</option>
+                        <option :value="20">20개씩</option>
+                        <option :value="30">30개씩</option>
+                        <option :value="50">50개씩</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="credit-table-wrap">
+                <table class="credit-table">
+                    <colgroup>
+                        <col style="width: 22%;">
+                        <col style="width: 12%;">
+                        <col style="width: 28%;">
+                        <col style="width: 16%;">
+                        <col style="width: 22%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>일시</th>
+                            <th>구분</th>
+                            <th>내용</th>
+                            <th>크레딧</th>
+                            <th>소멸일시</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in pagedItems" :key="row.id" class="credit-row" @click="openDetail(row)">
+                            <td>{{ row.datetime }}</td>
+                            <td>{{ typeLabels[row.type] }}</td>
+                            <td>
+                                <span class="credit-content-text">{{ row.content }}</span>
+                                <button v-if="row.hasReceipt"
+                                        type="button"
+                                        class="credit-receipt-btn"
+                                        @click.stop="openReceipt(row)">영수증</button>
+                            </td>
+                            <td>
+                                <span class="credit-amount" :class="amountClass(row)">
+                                    <span class="credit-amount-icon">
+                                        <i :class="amountIconClass(row)"></i>
+                                    </span>
+                                    {{ formatNumber(row.credit) }}
+                                </span>
+                            </td>
+                            <td>{{ row.expireDate || '-' }}</td>
+                        </tr>
+                        <tr v-if="pagedItems.length === 0">
+                            <td colspan="5" class="credit-empty">조회된 내역이 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 페이지네이션 -->
+            <nav v-if="totalPages > 1" class="credit-pagination" aria-label="페이지 이동">
+                <button type="button" class="credit-page-btn" :disabled="currentPage === 1" @click="goPage(1)" aria-label="첫 페이지">
+                    <i class="bi bi-chevron-double-left"></i>
+                </button>
+                <button type="button" class="credit-page-btn" :disabled="currentPage === 1" @click="goPage(currentPage - 1)" aria-label="이전 페이지">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <button v-for="p in pageNumbers"
+                        :key="p"
+                        type="button"
+                        class="credit-page-btn"
+                        :class="{ 'is-active': p === currentPage }"
+                        @click="goPage(p)">{{ p }}</button>
+                <button type="button" class="credit-page-btn" :disabled="currentPage === totalPages" @click="goPage(currentPage + 1)" aria-label="다음 페이지">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+                <button type="button" class="credit-page-btn" :disabled="currentPage === totalPages" @click="goPage(totalPages)" aria-label="마지막 페이지">
+                    <i class="bi bi-chevron-double-right"></i>
+                </button>
+            </nav>
+        </section>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 영수증 모달 (W400) -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="receiptModal">
+        <div class="modal-dialog modal-dialog-centered charge-modal-w400">
+            <div class="modal-content charge-modal">
+                <div class="charge-modal-header">
+                    <h2 class="charge-modal-title">영수증</h2>
+                    <button type="button" class="charge-modal-close" data-bs-dismiss="modal" aria-label="닫기">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <div class="credit-receipt-body">
+                    <div class="credit-receipt-placeholder"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 크레딧 상세내용 모달 (W480) -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="detailModal">
+        <div class="modal-dialog modal-dialog-centered charge-modal-w480">
+            <div class="modal-content charge-modal">
+                <div class="charge-modal-header">
+                    <h2 class="charge-modal-title">크레딧 상세내용</h2>
+                    <button type="button" class="charge-modal-close" data-bs-dismiss="modal" aria-label="닫기">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div class="credit-detail-body">
+                    <div class="credit-detail-notice">
+                        <i class="bi bi-info-circle"></i>
+                        <span>크레딧 취소 및 환불 방법은 <a href="javascript:void(0)" @click="goGuide">이용가이드</a>를 참고해 주세요.</span>
+                    </div>
+
+                    <dl class="credit-detail-list" v-if="detailRow">
+                        <div class="credit-detail-row">
+                            <dt>일시</dt>
+                            <dd>{{ detailRow.datetime }}</dd>
+                        </div>
+                        <div class="credit-detail-row">
+                            <dt>구분</dt>
+                            <dd>{{ typeLabels[detailRow.type] }}</dd>
+                        </div>
+                        <div class="credit-detail-row">
+                            <dt>내용</dt>
+                            <dd>{{ detailRow.content }}</dd>
+                        </div>
+                        <div class="credit-detail-row">
+                            <dt>크레딧</dt>
+                            <dd>
+                                <span :class="amountClass(detailRow)" class="credit-detail-credit">
+                                    {{ amountSign(detailRow) }}{{ formatNumber(detailRow.credit) }}
+                                </span>
+                            </dd>
+                        </div>
+                        <div class="credit-detail-row" v-if="detailRow.validUntil">
+                            <dt>유효기간</dt>
+                            <dd>{{ detailRow.validUntil }} 까지</dd>
+                        </div>
+                        <div class="credit-detail-row" v-if="detailRow.orderNo">
+                            <dt>주문번호</dt>
+                            <dd>{{ detailRow.orderNo }}</dd>
+                        </div>
+                        <div class="credit-detail-row" v-if="detailRow.orderStatus">
+                            <dt>주문상태</dt>
+                            <dd>
+                                <span class="credit-detail-status">{{ detailRow.orderStatus }}</span>
+                                <button v-if="canCancelPayment"
+                                        type="button"
+                                        class="credit-detail-cancel-link"
+                                        @click="askCancelPayment">결제취소</button>
+                            </dd>
+                        </div>
+                        <div class="credit-detail-row" v-if="detailRow.paymentAmount != null">
+                            <dt>결제금액</dt>
+                            <dd>{{ formatNumber(detailRow.paymentAmount) }}원</dd>
+                        </div>
+                        <div class="credit-detail-row" v-if="detailRow.paymentInfo">
+                            <dt>결제정보</dt>
+                            <dd>{{ detailRow.paymentInfo }}</dd>
+                        </div>
+                    </dl>
+                </div>
+
+                <div class="credit-detail-footer">
+                    <button type="button" class="charge-modal-btn charge-modal-btn-primary credit-detail-confirm" data-bs-dismiss="modal">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 결제 취소 확인 다이얼로그 -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="cancelConfirmModal">
+        <div class="modal-dialog modal-dialog-centered charge-modal-w400">
+            <div class="modal-content charge-modal credit-alert">
+                <div class="credit-alert-body">
+                    <div class="credit-alert-icon">
+                        <i class="bi bi-exclamation-lg"></i>
+                    </div>
+                    <p class="credit-alert-text">결제를 취소하시겠습니까?</p>
+                    <p class="credit-alert-desc">
+                        취소 완료 시 전액 환불 처리되며,<br>
+                        카드사 정책에 따라 영업일 기준 3~7일 내 반영됩니다.
+                    </p>
+                </div>
+                <div class="charge-modal-actions-pair">
+                    <button type="button" class="charge-modal-btn charge-modal-btn-outline" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="charge-modal-btn charge-modal-btn-primary" @click="confirmCancelPayment">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 결제 취소 완료 알림 다이얼로그 -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="cancelDoneModal">
+        <div class="modal-dialog modal-dialog-centered charge-modal-w400">
+            <div class="modal-content charge-modal credit-alert">
+                <div class="credit-alert-body">
+                    <div class="credit-alert-icon">
+                        <i class="bi bi-exclamation-lg"></i>
+                    </div>
+                    <p class="credit-alert-text">결제 취소가 완료되었습니다.</p>
+                </div>
+                <div class="credit-alert-actions">
+                    <button type="button" class="charge-modal-btn charge-modal-btn-primary credit-alert-btn" data-bs-dismiss="modal">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

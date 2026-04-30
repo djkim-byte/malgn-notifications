@@ -1,0 +1,722 @@
+<div class="sms-send-page flow-send-page">
+    <div class="container py-5">
+        <h2 class="page-title text-center fw-bold mb-5">복합(플로우) 발송</h2>
+
+        <!-- 안내 -->
+        <section class="sms-card flow-info-card mb-3">
+            <ul class="flow-info-list">
+                <li>복합(플로우) 발송을 이용하시면 두 개 이상의 메시지를 발송할 수 있습니다.</li>
+                <li>선택된 메시지를 동시에 발송하거나 1순위로 발송 설정한 메시지가 실패할 경우 순차적으로 다른 메시지 유형으로 발송할 수 있습니다.</li>
+            </ul>
+        </section>
+
+        <!-- 플로우 선택 -->
+        <section class="sms-card mb-3">
+            <div class="sms-card-header">
+                <h3 class="sms-card-title">플로우 선택</h3>
+            </div>
+            <div class="sms-card-body">
+                <div class="sms-form-row">
+                    <label class="sms-form-label">플로우 이름 <span class="sms-required">*</span></label>
+                    <div class="sms-form-control sms-form-control-inline">
+                        <div class="kakao-profile-select flow-flow-select" :class="{ 'is-open': flowOpen }" v-click-outside="closeFlow">
+                            <button type="button" class="kakao-profile-toggle" @click="toggleFlow">
+                                <span :class="{ 'kakao-profile-placeholder': !selectedFlow }">{{ selectedFlow ? selectedFlow.name : '플로우 이름 선택' }}</span>
+                                <i class="bi" :class="flowOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                            </button>
+                            <div class="kakao-profile-dropdown" v-show="flowOpen">
+                                <div class="kakao-profile-search">
+                                    <i class="bi bi-search"></i>
+                                    <input type="text" v-model="flowSearch" placeholder="검색">
+                                </div>
+                                <ul class="kakao-profile-options">
+                                    <li v-for="f in filteredFlows" :key="f.id" class="kakao-profile-option" :class="{ 'is-selected': selectedFlow && selectedFlow.id === f.id }" @click="selectFlow(f)">
+                                        <span>{{ f.name }}</span>
+                                        <i v-if="selectedFlow && selectedFlow.id === f.id" class="bi bi-check-lg"></i>
+                                    </li>
+                                    <li v-if="filteredFlows.length === 0" class="kakao-profile-empty">검색 결과가 없습니다.</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <button type="button" class="sms-btn-dark-sm" @click="openFlowManager">플로우 생성 관리</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 수신자 설정 -->
+        <section class="sms-card mb-3">
+            <div class="sms-card-header">
+                <h3 class="sms-card-title">수신자 설정
+                    <button type="button" class="sms-toggle-btn" @click="recipientOpen = !recipientOpen">
+                        {{ recipientOpen ? '닫기' : '열기' }}
+                        <i class="bi" :class="recipientOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+                </h3>
+            </div>
+            <div class="sms-card-body" v-show="recipientOpen">
+                <div v-if="!selectedFlow" class="sms-empty-state">
+                    복합(플로우) 이름을 선택하세요.
+                </div>
+                <template v-else>
+                    <div class="sms-action-row">
+                        <button type="button" class="sms-btn-dark" @click="addRecipientManually">+ 직접입력</button>
+                        <button type="button" class="sms-btn-dark" @click="openAddressBook">+ 주소록에서 선택</button>
+                        <button type="button" class="sms-btn-disabled" :disabled="selectedRecipientIds.length !== 1" @click="editRecipient">수신자 정보 수정</button>
+                        <button type="button" class="sms-btn-danger" :disabled="selectedRecipientIds.length === 0" @click="deleteRecipients">수신자 정보 삭제</button>
+                    </div>
+
+                    <div class="sms-template-vars">
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">치환자 입력 방식</label>
+                            <div class="sms-form-control">
+                                <div class="sms-radio-group">
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="varInputMode" value="individual">
+                                        <span>개별</span>
+                                    </label>
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="varInputMode" value="common">
+                                        <span>공통</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="varInputMode === 'common'" class="sms-form-row">
+                            <label class="sms-form-label">공통 치환자</label>
+                            <div class="sms-form-control">
+                                <input type="text" class="form-control sms-input" v-model="commonVar" placeholder="{{name}}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sms-recipient-table-wrap">
+                        <table class="sms-recipient-table" v-if="recipients.length > 0">
+                            <thead>
+                                <tr>
+                                    <th class="sms-th-check">
+                                        <input type="checkbox" :checked="isAllSelected" @change="toggleAllRecipients">
+                                    </th>
+                                    <th>수신자 별칭</th>
+                                    <th>휴대폰 번호</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="r in recipients" :key="r.id">
+                                    <td class="sms-th-check">
+                                        <input type="checkbox" :value="r.id" v-model="selectedRecipientIds">
+                                    </td>
+                                    <td>{{ r.name }}</td>
+                                    <td>{{ r.phone }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div v-else-if="submitted" class="sms-error-message">
+                            수신자가 설정되지 않았습니다. 다시 수신자 설정 후 메시지 발송을 해 주세요.
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+        <!-- 메시지 설정 -->
+        <section class="sms-card mb-3">
+            <div class="sms-card-header">
+                <h3 class="sms-card-title">메시지 설정</h3>
+            </div>
+            <div class="sms-card-body">
+                <div v-if="!selectedFlow" class="sms-empty-state sms-empty-state-tall">
+                    복합(플로우) 이름을 선택하세요.
+                </div>
+                <template v-else>
+                    <div class="sms-form-row">
+                        <label class="sms-form-label">발송 순서 <span class="sms-required">*</span></label>
+                        <div class="sms-form-control sms-form-control-inline">
+                            <div class="flow-channel-order">
+                                <template v-for="(step, i) in selectedFlow.steps" :key="i">
+                                    <span class="flow-channel-chip" :class="['flow-channel-' + step.channel]">
+                                        <i class="bi" :class="channelIcon(step.channel)"></i>
+                                        {{ channelLabel(step.channel) }}
+                                    </span>
+                                    <i v-if="i < selectedFlow.steps.length - 1" class="bi bi-chevron-right flow-channel-sep"></i>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="sms-form-row">
+                        <label class="sms-form-label">메시지 채널 <span class="sms-required">*</span></label>
+                        <div class="sms-form-control sms-form-control-inline">
+                            <select class="form-select sms-input sms-input-select" v-model="activeChannel">
+                                <option v-for="step in selectedFlow.steps" :key="step.channel" :value="step.channel">
+                                    {{ channelLabel(step.channel) }}
+                                </option>
+                            </select>
+                            <button type="button" class="sms-btn-dark-sm" @click="openFlowManager">플로우 생성 관리</button>
+                        </div>
+                    </div>
+
+                    <div class="flow-divider"></div>
+
+                    <div class="content-2col">
+                        <!-- SMS 채널 -->
+                        <div v-if="activeChannel === 'sms' && smsTemplate" class="sms-message-fields">
+                            <div class="kakao-readonly-row">
+                                <span class="kakao-readonly-label">발신 번호</span>
+                                <span class="kakao-readonly-value">{{ smsTemplate.senderNumber }}</span>
+                            </div>
+                            <div class="kakao-readonly-row">
+                                <span class="kakao-readonly-label">발송 목적</span>
+                                <span class="kakao-readonly-value">{{ purposeLabel(smsTemplate.purpose) }}</span>
+                            </div>
+                            <div class="kakao-readonly-row">
+                                <span class="kakao-readonly-label">발송 유형</span>
+                                <span class="kakao-readonly-value">{{ smsTemplate.messageType }}</span>
+                            </div>
+                            <div v-if="smsTemplate.messageType !== 'SMS'" class="sms-form-row">
+                                <label class="sms-form-label">제목</label>
+                                <div class="sms-form-control">
+                                    <input type="text" class="form-control sms-input kakao-readonly-textarea" :value="smsTemplate.title" readonly>
+                                </div>
+                            </div>
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">내용</label>
+                                <div class="sms-form-control">
+                                    <textarea class="form-control sms-textarea kakao-readonly-textarea" :value="smsTemplate.content" rows="10" readonly></textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 알림톡 채널 -->
+                        <div v-else-if="activeChannel === 'kakao' && kakaoTemplate" class="sms-message-fields">
+                            <div class="kakao-readonly-row">
+                                <span class="kakao-readonly-label">템플릿 코드</span>
+                                <span class="kakao-readonly-value">{{ kakaoTemplate.templateCode }}</span>
+                            </div>
+                            <div class="kakao-readonly-row">
+                                <span class="kakao-readonly-label">카카오톡 템플릿 코드</span>
+                                <span class="kakao-readonly-value">{{ kakaoTemplate.kakaoCode }}</span>
+                            </div>
+                            <div class="kakao-readonly-row">
+                                <span class="kakao-readonly-label">발송 목적</span>
+                                <span class="kakao-readonly-value">{{ purposeLabel(kakaoTemplate.purpose) }}</span>
+                            </div>
+                            <div class="kakao-readonly-row">
+                                <span class="kakao-readonly-label">메시지 유형</span>
+                                <span class="kakao-readonly-value">{{ kakaoMessageTypeLabel(kakaoTemplate.messageType) }}</span>
+                            </div>
+                            <div class="kakao-readonly-row">
+                                <span class="kakao-readonly-label">메시지 강조 유형</span>
+                                <span class="kakao-readonly-value">{{ kakaoTemplate.emphasisType || '선택 안 함' }}</span>
+                            </div>
+                            <div class="sms-form-row">
+                                <label class="sms-form-label">내용</label>
+                                <div class="sms-form-control">
+                                    <textarea class="form-control sms-textarea kakao-readonly-textarea" :value="kakaoTemplate.content" rows="10" readonly></textarea>
+                                </div>
+                            </div>
+                            <div v-if="kakaoTemplate.extraInfo" class="sms-form-row">
+                                <label class="sms-form-label">부가 정보</label>
+                                <div class="sms-form-control">
+                                    <textarea class="form-control sms-textarea kakao-readonly-textarea kakao-readonly-textarea-sm" :value="kakaoTemplate.extraInfo" rows="3" readonly></textarea>
+                                </div>
+                            </div>
+                            <div class="kakao-readonly-row">
+                                <span class="kakao-readonly-label">보안 템플릿 여부</span>
+                                <span class="kakao-readonly-value">{{ kakaoTemplate.secure ? '설정' : '미설정' }}</span>
+                            </div>
+                            <div v-if="kakaoTemplate.links" class="sms-form-row">
+                                <label class="sms-form-label">대표 링크</label>
+                                <div class="sms-form-control">
+                                    <table class="kakao-link-table">
+                                        <tbody>
+                                            <tr>
+                                                <td class="kakao-link-key">모바일</td>
+                                                <td class="kakao-link-val">{{ kakaoTemplate.links.mobile }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="kakao-link-key">PC</td>
+                                                <td class="kakao-link-val">{{ kakaoTemplate.links.pc }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div v-if="kakaoTemplate.buttons && kakaoTemplate.buttons.length > 0" class="sms-form-row">
+                                <label class="sms-form-label">버튼</label>
+                                <div class="sms-form-control">
+                                    <table class="kakao-button-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="kakao-button-toggle-col"></th>
+                                                <th>버튼 유형</th>
+                                                <th>버튼 이름</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="(b, i) in kakaoTemplate.buttons" :key="i" class="kakao-button-row">
+                                                <td class="kakao-button-toggle-col">
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </td>
+                                                <td>{{ b.type }}</td>
+                                                <td>{{ b.icon }} {{ b.name }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 미리보기 -->
+                        <div v-if="activeChannel === 'sms' && smsTemplate" class="content-2col-aside sms-preview-col">
+                            <div class="sms-phone">
+                                <div class="sms-phone-header">
+                                    <i class="bi bi-chevron-left sms-phone-back"></i>
+                                    <i class="bi bi-person-circle sms-phone-avatar"></i>
+                                    <span class="sms-phone-name">{{ smsTemplate.senderNumber ? smsTemplate.senderNumber.replace(/-/g, '') : '' }}</span>
+                                    <i class="bi bi-three-dots-vertical sms-phone-more"></i>
+                                </div>
+                                <div class="sms-phone-body">
+                                    <div class="sms-phone-bubble">
+                                        <div v-if="smsTemplate.messageType !== 'SMS' && smsTemplate.title" class="sms-phone-title">[{{ smsTemplate.title }}]</div>
+                                        <div class="sms-phone-text">{{ smsPreviewContent }}</div>
+                                    </div>
+                                </div>
+                                <div class="sms-phone-footer">
+                                    <i class="bi bi-plus"></i>
+                                    <span class="sms-phone-input-mock">메시지 입력</span>
+                                    <i class="bi bi-send-fill"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-else-if="activeChannel === 'kakao' && kakaoTemplate" class="content-2col-aside kakao-preview-col">
+                            <div class="kakao-phone">
+                                <div class="kakao-phone-header">
+                                    <i class="bi bi-chevron-left"></i>
+                                    <span class="kakao-phone-title">맑은소프트</span>
+                                    <div class="kakao-phone-header-actions">
+                                        <i class="bi bi-search"></i>
+                                        <i class="bi bi-list"></i>
+                                    </div>
+                                </div>
+                                <div class="kakao-phone-body">
+                                    <div class="kakao-chat-row">
+                                        <div class="kakao-chat-avatar">
+                                            <i class="bi bi-chat-dots-fill"></i>
+                                        </div>
+                                        <div class="kakao-chat-content">
+                                            <div class="kakao-chat-name">맑은소프트</div>
+                                            <div class="kakao-chat-bubble">
+                                                <div class="kakao-bubble-header">알림톡 도착</div>
+                                                <div class="kakao-bubble-content">{{ kakaoPreviewContent }}</div>
+                                                <div v-if="kakaoTemplate.extraInfo" class="kakao-bubble-extra">{{ kakaoTemplate.extraInfo }}</div>
+                                                <div v-if="kakaoTemplate.buttons && kakaoTemplate.buttons.length > 0" class="kakao-bubble-buttons">
+                                                    <button v-for="(b, i) in kakaoTemplate.buttons" :key="i" type="button" class="kakao-bubble-btn">
+                                                        {{ b.icon }} {{ b.name }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="kakao-phone-footer">
+                                    <i class="bi bi-plus"></i>
+                                    <span class="kakao-phone-input-mock"></span>
+                                    <i class="bi bi-emoji-smile"></i>
+                                    <i class="bi bi-hash"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </section>
+
+        <!-- 발송 옵션 -->
+        <section v-if="selectedFlow" class="sms-card mb-4">
+            <div class="sms-card-header">
+                <h3 class="sms-card-title">발송 옵션</h3>
+            </div>
+            <div class="sms-card-body">
+                <div class="sms-form-row">
+                    <label class="sms-form-label">발송 시점 <span class="sms-required">*</span></label>
+                    <div class="sms-form-control">
+                        <div class="sms-radio-group">
+                            <label class="sms-radio">
+                                <input type="radio" v-model="form.sendTime" value="now">
+                                <span>즉시 발송</span>
+                            </label>
+                            <label class="sms-radio">
+                                <input type="radio" v-model="form.sendTime" value="reserve">
+                                <span>예약 발송</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div v-if="form.sendTime === 'reserve'" class="sms-form-row">
+                    <label class="sms-form-label">예약 일시</label>
+                    <div class="sms-form-control">
+                        <input type="datetime-local" class="form-control sms-input sms-input-datetime" v-model="form.reserveAt">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 액션 버튼 -->
+        <div class="sms-actions">
+            <button type="button" class="sms-btn-reset" @click="openResetConfirm">초기화</button>
+            <button type="button" class="sms-btn-submit kakao-btn-submit" @click="handleSubmit">발송하기</button>
+        </div>
+    </div>
+
+    <!-- 복합(플로우) 생성 관리 (목록 / 생성·수정 통합 페이지형 팝업) -->
+    <div class="modal fade flow-mgr-backdrop" ref="flowMgrModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered flow-mgr-modal">
+            <div class="modal-content flow-mgr-modal-content">
+                <button type="button" class="flow-mgr-close" @click="closeModal('flowMgr')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <h4 class="flow-mgr-title">복합(플로우) 생성 관리</h4>
+
+                <!-- 목록 모드 -->
+                <div v-if="mgrMode === 'list'" class="flow-mgr-body">
+                    <section class="sms-card flow-mgr-info-card">
+                        <ul class="flow-info-list">
+                            <li>플로우 발송을 하려면 플로우를 먼저 생성해야 합니다.</li>
+                            <li>발송할 메시지 채널과 템플릿을 선택하고 발송 순서를 지정한 플로우를 생성하세요.</li>
+                        </ul>
+                    </section>
+
+                    <section class="sms-card flow-mgr-list-card">
+                        <div class="flow-manager-toolbar">
+                            <div class="flow-manager-toolbar-left">
+                                <button type="button" class="flow-manager-btn flow-manager-btn-primary" @click="openFlowEditor()">+ 플로우 생성</button>
+                                <button type="button" class="flow-manager-btn flow-manager-btn-soft" :disabled="managerSelectedIds.length !== 1" @click="editFlowFromManager">플로우 수정</button>
+                                <button type="button" class="flow-manager-btn flow-manager-btn-danger" :disabled="managerSelectedIds.length === 0" @click="deleteFlowsFromManager">플로우 삭제</button>
+                                <div class="flow-manager-search">
+                                    <input type="text" class="form-control" v-model="managerSearch" placeholder="플로우 이름을 입력하세요.">
+                                    <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                                </div>
+                            </div>
+                            <div class="flow-manager-toolbar-right">
+                                <button type="button" class="flow-manager-refresh" @click="refreshFlows"><i class="bi bi-arrow-clockwise"></i> 새로고침</button>
+                                <button type="button" class="flow-manager-page-nav" :disabled="managerPage === 1" @click="managerPage > 1 && (managerPage -= 1)">‹ 이전</button>
+                                <button type="button" class="flow-manager-page-nav" :disabled="managerPage >= managerTotalPages" @click="managerPage < managerTotalPages && (managerPage += 1)">다음 ›</button>
+                                <span class="flow-manager-total">총 <strong>{{ filteredFlowList.length }}</strong>개</span>
+                            </div>
+                        </div>
+                        <table class="sms-modal-table flow-manager-table">
+                            <thead>
+                                <tr>
+                                    <th class="sms-th-check">
+                                        <input type="checkbox" :checked="isManagerAllSelected" @change="toggleManagerAll">
+                                    </th>
+                                    <th>플로우 아이디</th>
+                                    <th>플로우 이름</th>
+                                    <th>발송 목적</th>
+                                    <th>메시지 채널</th>
+                                    <th>생성 일시</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="f in pagedFlowList" :key="f.id">
+                                    <td class="sms-th-check">
+                                        <input type="checkbox" :value="f.id" v-model="managerSelectedIds">
+                                    </td>
+                                    <td>{{ f.id }}</td>
+                                    <td><a href="javascript:void(0)" class="flow-manager-name-link" @click="openFlowEditor(f)">{{ f.name }}</a></td>
+                                    <td>{{ purposeLabel(f.purpose) }}</td>
+                                    <td>{{ f.steps.map(s => channelLabel(s.channel)).join(', ') }}</td>
+                                    <td>{{ f.createdAt }}</td>
+                                </tr>
+                                <tr v-if="pagedFlowList.length === 0">
+                                    <td colspan="6" class="sms-modal-empty">생성된 플로우가 없습니다.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+                </div>
+
+                <!-- 생성/수정 모드 -->
+                <div v-else class="flow-mgr-body">
+                    <section class="sms-card flow-editor-section">
+                        <div class="flow-editor-section-title">복합(플로우) 발송 정보</div>
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">플로우 이름 <span class="sms-required">*</span></label>
+                            <div class="sms-form-control sms-form-control-inline">
+                                <div class="flow-input-with-counter">
+                                    <input type="text" class="form-control sms-input" v-model="editor.name" maxlength="20">
+                                    <span class="flow-input-counter">{{ editor.name.length }}/20</span>
+                                </div>
+                                <span v-if="editorSubmitted && !editor.name.trim()" class="sms-error-message flow-inline-error">플로우 이름을 입력하세요.</span>
+                            </div>
+                        </div>
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">발송 목적</label>
+                            <div class="sms-form-control">
+                                <div class="sms-radio-group">
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="editor.purpose" value="general">
+                                        <span>일반용</span>
+                                    </label>
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="editor.purpose" value="auth">
+                                        <span>인증용</span>
+                                    </label>
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="editor.purpose" value="ad">
+                                        <span>광고용</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="sms-card flow-editor-section">
+                        <div class="flow-editor-section-title">플로우 설정</div>
+                        <ul class="flow-info-list flow-info-list-sub">
+                            <li>순차 발송을 원하실 경우 발송할 메시지 채널과 메시지 채널별 템플릿을 선택하고, 메시지 발송 순서를 지정하세요.<br>&nbsp;&nbsp;- 플로우 설정 시 2개 이상의 메시지 채널을 선택해야 합니다.</li>
+                            <li>메시지 채널을 드래그하여 발송 순서를 지정할 수 있습니다.</li>
+                            <li>선택된 메시지 채널을 동시에 발송하고자 할 경우 '동시 발송'을 선택하세요.</li>
+                        </ul>
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">발송 플로우 선택</label>
+                            <div class="sms-form-control">
+                                <div class="sms-radio-group">
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="editor.sendMode" value="sequential">
+                                        <span>순차 발송</span>
+                                    </label>
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="editor.sendMode" value="simultaneous">
+                                        <span>동시 발송</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <table class="flow-editor-step-table">
+                            <thead>
+                                <tr>
+                                    <th class="flow-step-handle-col"></th>
+                                    <th class="flow-step-order-col">발송 순서</th>
+                                    <th class="flow-step-channel-col">메시지 채널</th>
+                                    <th>템플릿 이름</th>
+                                    <th class="flow-step-action-col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(step, i) in editor.steps" :key="i" class="flow-editor-step-row" draggable="true" @dragstart="onStepDragStart(i)" @dragover.prevent @drop="onStepDrop(i)">
+                                    <td class="flow-step-handle-col">
+                                        <i class="bi bi-list flow-step-handle"></i>
+                                    </td>
+                                    <td class="flow-step-order-col">{{ i + 1 }}</td>
+                                    <td class="flow-step-channel-col">
+                                        <select class="form-select sms-input" v-model="step.channel" @change="step.templateId = ''; step.templateName = ''">
+                                            <option value="">메시지 채널 선택</option>
+                                            <option value="sms">SMS</option>
+                                            <option value="kakao">알림톡</option>
+                                            <option value="email">이메일</option>
+                                            <option value="push">PUSH</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <div class="flow-step-template">
+                                            <input type="text" class="form-control sms-input" :value="step.templateName" placeholder="템플릿 이름을 선택하세요." readonly>
+                                            <button type="button" class="flow-step-template-btn" :disabled="!step.channel" @click="openTemplatePicker(i)">선택</button>
+                                        </div>
+                                    </td>
+                                    <td class="flow-step-action-col">
+                                        <button type="button" class="flow-step-remove" :disabled="editor.steps.length <= 2" @click="removeStep(i)" aria-label="삭제">
+                                            <i class="bi bi-dash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <button type="button" class="flow-step-add" @click="addStep">+ 메시지 채널 추가</button>
+                        <p v-if="editorSubmitted && !isEditorStepsValid" class="sms-error-message flow-inline-error">메시지 채널과 템플릿을 모두 지정하세요. (최소 2개)</p>
+                    </section>
+                </div>
+
+                <!-- 하단 액션바 (생성/수정 모드에서만 노출) -->
+                <div v-if="mgrMode === 'editor'" class="flow-mgr-actions">
+                    <button type="button" class="flow-mgr-btn-cancel" @click="cancelEditor">취소</button>
+                    <button type="button" class="flow-mgr-btn-save" @click="saveFlow">저장하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 템플릿 선택 모달 (W800) -->
+    <div class="modal fade" ref="templatePickerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('templatePicker')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">템플릿 선택</h4>
+                    <div class="sms-modal-search-row">
+                        <div class="sms-modal-search">
+                            <input type="text" class="form-control" v-model="templatePicker.search" placeholder="템플릿 이름을 입력하세요.">
+                            <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <table class="sms-modal-table">
+                        <thead>
+                            <tr>
+                                <th class="sms-th-radio"></th>
+                                <th>템플릿 이름</th>
+                                <th>채널</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="t in filteredPickerTemplates" :key="t.id" @click="templatePicker.selectedId = t.id">
+                                <td class="sms-th-radio">
+                                    <input type="radio" :value="t.id" v-model="templatePicker.selectedId">
+                                </td>
+                                <td>{{ t.name }}</td>
+                                <td>{{ channelLabel(t.channel) }}</td>
+                            </tr>
+                            <tr v-if="filteredPickerTemplates.length === 0">
+                                <td colspan="3" class="sms-modal-empty">검색 결과가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('templatePicker')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmTemplatePicker">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 직접입력 모달 (W480) -->
+    <div class="modal fade" ref="recipientInputModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('recipientInput')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title sms-modal-title-sm">수신자 정보</h4>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">수신자 별칭</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientInputModal.name" placeholder="수신자 별칭">
+                    </div>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">휴대폰 번호</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientInputModal.phone" placeholder="-없이 숫자 입력" maxlength="11">
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('recipientInput')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmRecipientInput">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 주소록 모달 (W800) -->
+    <div class="modal fade" ref="addressBookModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('addressBook')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">수신자 선택</h4>
+                    <div class="sms-modal-search-row">
+                        <div class="sms-modal-search">
+                            <input type="text" class="form-control" v-model="addressBookModal.search" @input="addressBookModal.page = 1" placeholder="수신자 별칭을 입력하세요.">
+                            <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                        </div>
+                        <div class="sms-modal-count">총 <strong>{{ addressBookModal.selectedIds.length }}</strong>개 선택</div>
+                    </div>
+                    <table class="sms-modal-table">
+                        <thead>
+                            <tr>
+                                <th class="sms-th-check">
+                                    <input type="checkbox" :checked="isAddressBookAllSelected" @change="toggleAddressBookAll">
+                                </th>
+                                <th>수신자 별칭</th>
+                                <th>휴대폰 번호</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="c in pagedAddressBook" :key="c.id">
+                                <td class="sms-th-check">
+                                    <input type="checkbox" :value="c.id" v-model="addressBookModal.selectedIds">
+                                </td>
+                                <td>{{ c.name }}</td>
+                                <td>{{ c.phone }}</td>
+                            </tr>
+                            <tr v-if="pagedAddressBook.length === 0">
+                                <td colspan="3" class="sms-modal-empty">검색 결과가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="sms-modal-pagination" v-if="addressBookTotalPages > 1">
+                        <button type="button" class="sms-page-btn" @click="addressBookModal.page = 1" :disabled="addressBookModal.page === 1">«</button>
+                        <button type="button" class="sms-page-btn" @click="addressBookModal.page > 1 && (addressBookModal.page -= 1)" :disabled="addressBookModal.page === 1">‹</button>
+                        <button v-for="p in addressBookTotalPages" :key="p" type="button" class="sms-page-btn" :class="{ active: p === addressBookModal.page }" @click="addressBookModal.page = p">{{ p }}</button>
+                        <button type="button" class="sms-page-btn" @click="addressBookModal.page < addressBookTotalPages && (addressBookModal.page += 1)" :disabled="addressBookModal.page === addressBookTotalPages">›</button>
+                        <button type="button" class="sms-page-btn" @click="addressBookModal.page = addressBookTotalPages" :disabled="addressBookModal.page === addressBookTotalPages">»</button>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('addressBook')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmAddressBook">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 수신자 정보 수정 모달 (W480) -->
+    <div class="modal fade" ref="recipientEditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('recipientEdit')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title sms-modal-title-sm">수신자 정보 수정</h4>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">수신자 별칭</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientEditModal.name">
+                    </div>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">휴대폰 번호</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientEditModal.phone" maxlength="13">
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('recipientEdit')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmRecipientEdit">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 초기화 컨펌 모달 (W400) -->
+    <div class="modal fade" ref="resetModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('reset')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon">
+                        <i class="bi bi-exclamation"></i>
+                    </div>
+                    <p class="sms-modal-confirm-text">작성된 모든 내용이 초기화 됩니다.<br>초기화를 진행하시겠어요?</p>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('reset')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmReset">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

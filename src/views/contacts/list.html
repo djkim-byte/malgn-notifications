@@ -1,0 +1,395 @@
+<div class="contacts-page">
+    <div class="container py-5">
+        <h2 class="contacts-page-title">주소록 관리</h2>
+
+        <!-- 결과 카드 -->
+        <section class="contacts-card">
+            <h3 class="contacts-card-title">연락처 관리</h3>
+
+            <!-- 상단 툴바 -->
+            <div class="contacts-toolbar">
+                <div class="contacts-toolbar-left">
+                    <button type="button" class="contacts-btn-primary" @click="openAddModal">
+                        <i class="bi bi-plus-lg"></i> 연락처 추가
+                    </button>
+                    <button type="button" class="contacts-btn-soft contacts-btn-soft-edit"
+                            :disabled="selectedRowIds.length === 0" @click="openEditModal">
+                        연락처 변경
+                    </button>
+                    <button type="button" class="contacts-btn-soft contacts-btn-soft-delete"
+                            :disabled="selectedRowIds.length === 0" @click="openDeleteConfirm">
+                        연락처 삭제
+                    </button>
+                    <button type="button" class="contacts-btn-ghost" @click="requestDownload">
+                        연락처 다운로드 요청
+                    </button>
+                    <button type="button" class="contacts-btn-ghost" @click="openDownloadList">
+                        다운로드 요청 목록
+                    </button>
+                    <div class="contacts-search">
+                        <input type="text" class="contacts-search-input" v-model="searchKeyword"
+                               placeholder="수신자 별칭을 입력하세요." @keyup.enter="runSearch">
+                        <button type="button" class="contacts-search-btn" @click="runSearch">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="contacts-toolbar-right">
+                    <button type="button" class="contacts-btn-ghost" @click="refresh">
+                        <i class="bi bi-arrow-clockwise"></i> 새로고침
+                    </button>
+                    <button type="button" class="contacts-btn-ghost" :disabled="page === 1" @click="goPage(page - 1)">
+                        <i class="bi bi-chevron-left"></i> 이전
+                    </button>
+                    <button type="button" class="contacts-btn-ghost" :disabled="page === totalPages" @click="goPage(page + 1)">
+                        다음 <i class="bi bi-chevron-right"></i>
+                    </button>
+                    <span class="contacts-total">총 <strong>{{ totalCount }}</strong>개</span>
+                </div>
+            </div>
+
+            <!-- 결과 테이블 -->
+            <div class="contacts-table-wrap">
+                <table class="contacts-table">
+                    <thead>
+                        <tr>
+                            <th class="contacts-th-check">
+                                <input type="checkbox" :checked="isAllSelected" @change="toggleAllRows">
+                            </th>
+                            <th>수신자 별칭</th>
+                            <th>수신자 아이디</th>
+                            <th>휴대폰 번호</th>
+                            <th>이메일</th>
+                            <th>토큰</th>
+                            <th>그룹</th>
+                            <th>수정 일시</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in pagedRows" :key="row.id">
+                            <td class="contacts-th-check">
+                                <input type="checkbox" :value="row.id" v-model="selectedRowIds">
+                            </td>
+                            <td>{{ row.alias }}</td>
+                            <td class="contacts-id-cell">{{ row.userId }}</td>
+                            <td>{{ row.phone || '' }}</td>
+                            <td class="contacts-email-cell">
+                                <a v-if="row.email" class="contacts-email-link" href="javascript:void(0)">{{ row.email }}</a>
+                            </td>
+                            <td>
+                                <span v-if="row.tokenCount > 0" class="contacts-token-badge">{{ row.tokenCount }}</span>
+                            </td>
+                            <td>{{ row.group }}</td>
+                            <td>{{ row.modifiedAt }}</td>
+                        </tr>
+                        <tr v-if="pagedRows.length === 0">
+                            <td colspan="8" class="contacts-empty">검색 결과가 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- 연락처 추가/변경 모달 (W800) -->
+    <div class="modal fade" ref="contactFormModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('contactForm')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body contacts-modal-body">
+                    <h4 class="sms-modal-title">{{ isEditMode ? '연락처 변경' : '연락처 추가' }}</h4>
+                    <p class="contacts-modal-desc">연락처를 사전 등록하여 관리할 수 있습니다.</p>
+
+                    <!-- 입력 방식 선택 -->
+                    <div class="contacts-method-row" v-if="!isEditMode">
+                        <label class="contacts-radio">
+                            <input type="radio" v-model="form.method" value="direct">
+                            <span>직접 입력</span>
+                        </label>
+                        <label class="contacts-radio">
+                            <input type="radio" v-model="form.method" value="file">
+                            <span>파일 업로드</span>
+                        </label>
+                    </div>
+
+                    <div class="contacts-modal-divider"></div>
+
+                    <!-- 직접 입력 -->
+                    <div v-if="form.method === 'direct'" class="contacts-form">
+                        <div class="contacts-form-row">
+                            <label class="contacts-form-label">수신자 별칭 <span class="contacts-required">*</span></label>
+                            <div class="contacts-form-control">
+                                <div class="contacts-input-wrap">
+                                    <input type="text" class="contacts-input" v-model="form.alias"
+                                           maxlength="64" placeholder="수신자 별칭">
+                                    <span class="contacts-input-counter">{{ form.alias.length }}/64</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="contacts-form-row">
+                            <label class="contacts-form-label">휴대폰 번호</label>
+                            <div class="contacts-form-control">
+                                <input type="text" class="contacts-input" v-model="form.phone"
+                                       placeholder="-없이 숫자 입력">
+                            </div>
+                        </div>
+                        <div class="contacts-form-row">
+                            <label class="contacts-form-label">이메일</label>
+                            <div class="contacts-form-control">
+                                <input type="text" class="contacts-input" v-model="form.email" placeholder="이메일">
+                            </div>
+                        </div>
+                        <div class="contacts-form-row contacts-form-row-token">
+                            <label class="contacts-form-label">
+                                토큰 <i class="bi bi-question-circle contacts-help-icon"
+                                       title="앱 푸시 발송을 위한 디바이스 토큰을 등록할 수 있습니다."></i>
+                            </label>
+                            <div class="contacts-form-control">
+                                <button type="button" class="contacts-btn-token-add"
+                                        :disabled="tokenEditingIndex !== null"
+                                        @click="addTokenForm">
+                                    <i class="bi bi-plus-lg"></i> 추가
+                                </button>
+
+                                <!-- 등록된 토큰 카드들 -->
+                                <div v-if="form.tokens.length > 0" class="contacts-token-list">
+                                    <div v-for="(t, idx) in form.tokens" :key="t._uid" class="contacts-token-card">
+                                        <div class="contacts-token-summary">
+                                            <span class="contacts-token-pill">{{ t.pushType || '푸시 유형' }}</span>
+                                            <span class="contacts-token-text">{{ t.token || '(토큰 미입력)' }}</span>
+                                            <button type="button" class="contacts-token-icon-btn" @click="editToken(idx)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="contacts-token-icon-btn" @click="removeToken(idx)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 토큰 입력 폼 -->
+                                <div v-if="tokenEditingIndex !== null" class="contacts-token-form">
+                                    <div class="contacts-token-row">
+                                        <label class="contacts-token-label">푸시 유형</label>
+                                        <div class="contacts-token-control">
+                                            <HistoryDropdown v-model="tokenDraft.pushType"
+                                                             :options="pushTypeOptions"
+                                                             placeholder="푸시 유형 선택"></HistoryDropdown>
+                                        </div>
+                                    </div>
+                                    <div class="contacts-token-row">
+                                        <label class="contacts-token-label">토큰</label>
+                                        <div class="contacts-token-control">
+                                            <input type="text" class="contacts-input" v-model="tokenDraft.token" placeholder="토큰">
+                                        </div>
+                                    </div>
+                                    <div class="contacts-token-row">
+                                        <label class="contacts-token-label">국가 코드</label>
+                                        <div class="contacts-token-control">
+                                            <input type="text" class="contacts-input" v-model="tokenDraft.countryCode"
+                                                   placeholder="iso 3166-1 alpha-2, iso 3166-1 alpha-3(e.g. KR)">
+                                        </div>
+                                    </div>
+                                    <div class="contacts-token-row">
+                                        <label class="contacts-token-label">언어 코드</label>
+                                        <div class="contacts-token-control">
+                                            <input type="text" class="contacts-input" v-model="tokenDraft.languageCode"
+                                                   placeholder="iso 639-1, iso639-2(e.g. ko)">
+                                        </div>
+                                    </div>
+                                    <div class="contacts-token-row">
+                                        <label class="contacts-token-label">표준 시간대</label>
+                                        <div class="contacts-token-control">
+                                            <input type="text" class="contacts-input" v-model="tokenDraft.timezone"
+                                                   placeholder="Area/Name(예: Asia/Seoul)">
+                                        </div>
+                                    </div>
+                                    <div class="contacts-token-row">
+                                        <label class="contacts-token-label">알림 수신 거부</label>
+                                        <div class="contacts-token-control">
+                                            <HistoryDropdown v-model="tokenDraft.notifyOptOut"
+                                                             :options="optOutOptions"
+                                                             placeholder="알림 수신 거부 선택"></HistoryDropdown>
+                                        </div>
+                                    </div>
+                                    <div class="contacts-token-row">
+                                        <label class="contacts-token-label">광고 수신 거부</label>
+                                        <div class="contacts-token-control">
+                                            <HistoryDropdown v-model="tokenDraft.adOptOut"
+                                                             :options="optOutOptions"
+                                                             placeholder="광고 수신 거부 선택"></HistoryDropdown>
+                                        </div>
+                                    </div>
+                                    <div class="contacts-token-row">
+                                        <label class="contacts-token-label">야간 광고 수신 거부</label>
+                                        <div class="contacts-token-control">
+                                            <HistoryDropdown v-model="tokenDraft.nightAdOptOut"
+                                                             :options="optOutOptions"
+                                                             placeholder="야간 광고 수신 거부 선택"></HistoryDropdown>
+                                        </div>
+                                    </div>
+                                    <div class="contacts-token-row">
+                                        <label class="contacts-token-label">디바이스 아이디</label>
+                                        <div class="contacts-token-control">
+                                            <input type="text" class="contacts-input" v-model="tokenDraft.deviceId" placeholder="디바이스 아이디">
+                                        </div>
+                                    </div>
+                                    <div class="contacts-token-actions">
+                                        <button type="button" class="contacts-btn-save" @click="saveToken">저장</button>
+                                        <button type="button" class="contacts-btn-cancel-sm" @click="cancelTokenEdit">취소</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="contacts-form-row">
+                            <label class="contacts-form-label">그룹</label>
+                            <div class="contacts-form-control">
+                                <HistoryMultiDropdown v-model="form.groups" :options="groupOptions"
+                                                      empty-label="그룹 선택(최대 16개 선택 가능)"></HistoryMultiDropdown>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 파일 업로드 -->
+                    <div v-else class="contacts-form">
+                        <div class="contacts-file-row">
+                            <button type="button" class="contacts-btn-template" @click="downloadTemplate">템플릿 다운로드</button>
+                        </div>
+                        <div class="contacts-file-pick">
+                            <input type="text" class="contacts-input contacts-file-name"
+                                   :value="form.fileName" placeholder="" readonly>
+                            <button type="button" class="contacts-btn-file" @click="openFilePicker">
+                                <i class="bi bi-upload"></i> 파일 선택
+                            </button>
+                            <input type="file" ref="fileInput" accept=".xlsx" class="contacts-file-hidden"
+                                   @change="handleFileChange">
+                        </div>
+                        <p class="contacts-file-hint">.xlsx 파일 형식으로 등록하세요. (최대 용량: 1MB)</p>
+                    </div>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('contactForm')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="submitContact">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 연락처 삭제 컨펌 모달 (W480) -->
+    <div class="modal fade" ref="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('deleteConfirm')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        선택한 {{ selectedRowIds.length }}개의 연락처를 삭제하시겠습니까?<br>
+                        삭제된 연락처는 복구할 수 없습니다.
+                    </p>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('deleteConfirm')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="confirmDelete">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 다운로드 요청 컨펌 모달 (W480) -->
+    <div class="modal fade" ref="downloadRequestModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('downloadRequest')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        연락처 목록 다운로드를 요청하시겠습니까?<br>
+                        다운로드 요청 후 진행 상태는 [다운로드 요청 목록]에서 확인 가능합니다.
+                    </p>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('downloadRequest')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm" @click="confirmDownloadRequest">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 다운로드 요청 목록 모달 (W800) -->
+    <div class="modal fade" ref="downloadListModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('downloadList')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">다운로드 요청 목록</h4>
+                    <p class="contacts-modal-info">요청한 지 7일이 지난 파일은 만료 처리됩니다.</p>
+                    <table class="sms-modal-table contacts-download-table">
+                        <thead>
+                            <tr>
+                                <th>요청 아이디</th>
+                                <th>요청 일시</th>
+                                <th>만료 일시</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="r in pagedDownloadRequests" :key="r.id">
+                                <td class="contacts-download-id">{{ r.id }}</td>
+                                <td>{{ r.requestedAt }}</td>
+                                <td>{{ r.expireAt }}</td>
+                                <td>
+                                    <span v-if="r.status === 'expired'" class="contacts-download-status-text">만료</span>
+                                    <button v-else-if="r.status === 'ready'" type="button"
+                                            class="contacts-btn-download" @click="downloadFile(r)">
+                                        다운로드
+                                    </button>
+                                    <span v-else-if="r.status === 'processing'" class="contacts-download-status-text">처리 중</span>
+                                </td>
+                            </tr>
+                            <tr v-if="downloadRequests.length === 0">
+                                <td colspan="4" class="sms-modal-empty">다운로드 요청 내역이 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <nav v-if="downloadListTotalPages > 1 || downloadRequests.length > 0"
+                         class="contacts-download-pagination" aria-label="페이지 이동">
+                        <button type="button" class="contacts-download-page-btn"
+                                :disabled="downloadListPage === 1" @click="goDownloadListPage(1)" aria-label="첫 페이지">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </button>
+                        <button type="button" class="contacts-download-page-btn"
+                                :disabled="downloadListPage === 1" @click="goDownloadListPage(downloadListPage - 1)" aria-label="이전 페이지">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+                        <button v-for="p in downloadListPageNumbers" :key="p" type="button"
+                                class="contacts-download-page-btn"
+                                :class="{ 'is-active': p === downloadListPage }"
+                                @click="goDownloadListPage(p)">{{ p }}</button>
+                        <button type="button" class="contacts-download-page-btn"
+                                :disabled="downloadListPage === downloadListTotalPages"
+                                @click="goDownloadListPage(downloadListPage + 1)" aria-label="다음 페이지">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+                        <button type="button" class="contacts-download-page-btn"
+                                :disabled="downloadListPage === downloadListTotalPages"
+                                @click="goDownloadListPage(downloadListTotalPages)" aria-label="마지막 페이지">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </button>
+                    </nav>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions-single">
+                    <button type="button" class="contacts-btn-modal-confirm" @click="closeModal('downloadList')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

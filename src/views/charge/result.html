@@ -1,0 +1,122 @@
+<div class="charge-result-page">
+    <div class="container py-5">
+
+        <!-- 성공 -->
+        <template v-if="result && result.status === 'success'">
+            <div class="charge-result-icon charge-result-icon-success">
+                <i class="bi bi-check-lg"></i>
+            </div>
+            <h1 class="charge-result-title">크레딧 결제가 완료되었습니다.</h1>
+
+            <div class="charge-result-detail">
+                <div class="charge-result-row">
+                    <span class="charge-result-label">주문번호</span>
+                    <span class="charge-result-value charge-result-value-link">{{ result.orderNo }}</span>
+                </div>
+                <div class="charge-result-row">
+                    <span class="charge-result-label">주문일시</span>
+                    <span class="charge-result-value">{{ result.orderedAt }}</span>
+                </div>
+                <div class="charge-result-row">
+                    <span class="charge-result-label">결제금액</span>
+                    <span class="charge-result-value">{{ formatNumber(result.amount) }}원 (VAT 포함)</span>
+                </div>
+                <div class="charge-result-row">
+                    <span class="charge-result-label">결제정보</span>
+                    <span class="charge-result-value">{{ result.paymentInfo }}</span>
+                </div>
+                <div class="charge-result-row">
+                    <span class="charge-result-label">충전 크레딧</span>
+                    <span class="charge-result-value">
+                        {{ formatNumber(result.amount + result.bonus) }}
+                        <span class="charge-coin charge-coin-md">C</span>
+                    </span>
+                </div>
+                <div class="charge-result-row" v-if="result.bonus > 0">
+                    <span class="charge-result-label">크레딧 유효기간</span>
+                    <span class="charge-result-value">
+                        보너스 {{ formatNumber(result.bonus) }}
+                        <span class="charge-coin charge-coin-md">C</span>
+                        <span class="charge-result-meta">({{ result.bonusExpireAt }} 까지)</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="charge-result-compare">
+                <div class="charge-result-compare-cell">
+                    <div class="charge-result-compare-label">결제 전 크레딧</div>
+                    <div class="charge-result-compare-value">
+                        {{ formatNumber(result.creditBefore) }}
+                        <span class="charge-coin charge-coin-md">C</span>
+                    </div>
+                </div>
+                <div class="charge-result-compare-arrow">
+                    <i class="bi bi-chevron-right"></i>
+                </div>
+                <div class="charge-result-compare-cell">
+                    <div class="charge-result-compare-label">결제 후 크레딧</div>
+                    <div class="charge-result-compare-value charge-result-compare-value-after">
+                        {{ formatNumber(result.creditAfter) }}
+                        <span class="charge-coin charge-coin-md">C</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="charge-result-actions">
+                <button type="button" class="charge-result-btn charge-result-btn-primary charge-result-btn-block" @click="goCreditAdmin">
+                    크레딧 관리 바로가기
+                </button>
+            </div>
+        </template>
+
+        <!-- 실패 -->
+        <template v-else-if="result && result.status === 'failed'">
+            <div class="charge-result-icon charge-result-icon-fail">
+                <i class="bi bi-exclamation-lg"></i>
+            </div>
+            <h1 class="charge-result-title">결제에 실패했습니다</h1>
+
+            <div class="charge-result-detail">
+                <div class="charge-result-row">
+                    <span class="charge-result-label">주문번호</span>
+                    <span class="charge-result-value charge-result-value-link">{{ result.orderNo }}</span>
+                </div>
+                <div class="charge-result-row">
+                    <span class="charge-result-label">주문일시</span>
+                    <span class="charge-result-value">{{ result.orderedAt }}</span>
+                </div>
+                <div class="charge-result-row">
+                    <span class="charge-result-label">결제금액</span>
+                    <span class="charge-result-value">{{ formatNumber(result.amount) }}원 (VAT 포함)</span>
+                </div>
+                <div class="charge-result-row">
+                    <span class="charge-result-label">결제정보</span>
+                    <span class="charge-result-value">{{ result.paymentInfo }}</span>
+                </div>
+                <div class="charge-result-row">
+                    <span class="charge-result-label">실패사유</span>
+                    <span class="charge-result-value charge-result-value-danger">{{ result.failReason }}</span>
+                </div>
+            </div>
+
+            <div class="charge-result-actions charge-result-actions-pair">
+                <button type="button" class="charge-result-btn charge-result-btn-outline" @click="goCreditAdmin">
+                    크레딧 관리 바로가기
+                </button>
+                <button type="button" class="charge-result-btn charge-result-btn-primary" @click="retry">
+                    다시 시도하기
+                </button>
+            </div>
+        </template>
+
+        <!-- 결과 데이터 없음 -->
+        <template v-else>
+            <div class="charge-result-empty">
+                <p class="text-muted">표시할 결제 결과가 없습니다.</p>
+                <button type="button" class="charge-result-btn charge-result-btn-primary" @click="navigateTo('/charge')">
+                    충전하기로 이동
+                </button>
+            </div>
+        </template>
+    </div>
+</div>

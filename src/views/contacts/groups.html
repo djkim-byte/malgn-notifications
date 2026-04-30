@@ -1,0 +1,443 @@
+<div class="groups-page">
+    <div class="container py-5">
+        <h2 class="groups-page-title">주소록 관리</h2>
+
+        <!-- 그룹 관리 카드 -->
+        <section class="history-card groups-card" :class="{ 'is-detail-open': selectedGroup }">
+            <h3 class="groups-card-title">그룹 관리</h3>
+
+            <!-- 툴바 -->
+            <div class="groups-toolbar">
+                <div class="groups-toolbar-left">
+                    <button type="button" class="groups-btn-primary" @click="openGroupAddModal">
+                        <i class="bi bi-plus-lg"></i> 그룹 추가
+                    </button>
+                    <button type="button" class="groups-btn-danger"
+                            :disabled="selectedRowIds.length === 0"
+                            @click="openGroupDeleteModal">
+                        그룹 삭제
+                    </button>
+                    <div class="groups-search">
+                        <input type="text" class="groups-search-input"
+                               v-model="searchKeyword"
+                               placeholder="그룹 이름을 입력하세요."
+                               @keyup.enter="runSearch">
+                        <button type="button" class="groups-search-btn" @click="runSearch" aria-label="검색">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="groups-toolbar-right">
+                    <button type="button" class="groups-btn-outline" @click="refreshList">
+                        <i class="bi bi-arrow-clockwise"></i> 새로고침
+                    </button>
+                    <div class="groups-pager">
+                        <button type="button" class="groups-pager-btn"
+                                :disabled="page === 1"
+                                @click="goPage(page - 1)">
+                            <i class="bi bi-chevron-left"></i> 이전
+                        </button>
+                        <button type="button" class="groups-pager-btn"
+                                :disabled="page === totalPages"
+                                @click="goPage(page + 1)">
+                            다음 <i class="bi bi-chevron-right"></i>
+                        </button>
+                    </div>
+                    <span class="groups-total">총 <strong>{{ totalCount }}</strong>개</span>
+                </div>
+            </div>
+
+            <!-- 그룹 목록 테이블 -->
+            <div class="groups-table-wrap">
+                <table class="groups-table">
+                    <thead>
+                        <tr>
+                            <th class="groups-th-check">
+                                <input type="checkbox" :checked="isAllSelected" @change="toggleAllRows">
+                            </th>
+                            <th>그룹 이름</th>
+                            <th>그룹 아이디</th>
+                            <th>연락처 수</th>
+                            <th>등록 일시</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr v-for="row in pagedRows"
+                            :key="row.id"
+                            :class="{ 'is-selected': selectedGroup && selectedGroup.id === row.id }"
+                            @click="selectGroup(row)">
+                            <td class="groups-th-check" @click.stop>
+                                <input type="checkbox" :value="row.id" v-model="selectedRowIds">
+                            </td>
+                            <td>{{ row.name }}</td>
+                            <td><span class="groups-id">{{ row.code }}</span></td>
+                            <td>{{ row.count }}</td>
+                            <td>{{ row.createdAt }}</td>
+                        </tr>
+                        <tr v-if="pagedRows.length === 0">
+                            <td colspan="5" class="groups-empty">표시할 항목이 없습니다.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 상세 패널 (선택된 그룹) -->
+        <section v-if="selectedGroup" class="history-card groups-detail">
+            <div class="groups-detail-head">
+                <h3 class="groups-detail-title">{{ selectedGroup.name }}</h3>
+                <div class="groups-detail-actions">
+                    <button type="button" class="groups-detail-icon-btn" :class="{ 'is-active': detailSize === 'sm' }"
+                            @click="detailSize = 'sm'" aria-label="작게">
+                        <span class="groups-detail-size-icon groups-detail-size-sm"></span>
+                    </button>
+                    <button type="button" class="groups-detail-icon-btn" :class="{ 'is-active': detailSize === 'md' }"
+                            @click="detailSize = 'md'" aria-label="보통">
+                        <span class="groups-detail-size-icon groups-detail-size-md"></span>
+                    </button>
+                    <button type="button" class="groups-detail-icon-btn" :class="{ 'is-active': detailSize === 'lg' }"
+                            @click="detailSize = 'lg'" aria-label="크게">
+                        <span class="groups-detail-size-icon groups-detail-size-lg"></span>
+                    </button>
+                    <button type="button" class="groups-detail-close" @click="closeDetail" aria-label="닫기">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 상세 탭 -->
+            <div class="groups-tabs groups-detail-tabs">
+                <a class="groups-tab" href="javascript:void(0)"
+                   :class="{ 'is-active': detailTab === 'info' }"
+                   @click="detailTab = 'info'">기본 정보</a>
+                <a class="groups-tab" href="javascript:void(0)"
+                   :class="{ 'is-active': detailTab === 'contacts' }"
+                   @click="detailTab = 'contacts'">그룹 연락처 관리</a>
+            </div>
+
+            <!-- 기본 정보 -->
+            <div v-show="detailTab === 'info'" class="groups-info-grid">
+                <div class="groups-info-col">
+                    <div class="groups-info-row">
+                        <span class="groups-info-label">그룹 이름</span>
+                        <span class="groups-info-sep">:</span>
+                        <span class="groups-info-value">{{ selectedGroup.name }}</span>
+                        <button type="button" class="groups-info-btn" @click="openGroupRenameModal">변경</button>
+                    </div>
+                    <div class="groups-info-row">
+                        <span class="groups-info-label">그룹 아이디</span>
+                        <span class="groups-info-sep">:</span>
+                        <span class="groups-info-value groups-id">{{ selectedGroup.code }}</span>
+                    </div>
+                    <div class="groups-info-row">
+                        <span class="groups-info-label">연락처 수</span>
+                        <span class="groups-info-sep">:</span>
+                        <span class="groups-info-value">{{ selectedGroup.count }}개</span>
+                    </div>
+                </div>
+                <div class="groups-info-col">
+                    <div class="groups-info-row">
+                        <span class="groups-info-label">등록 일시</span>
+                        <span class="groups-info-sep">:</span>
+                        <span class="groups-info-value">{{ selectedGroup.createdAt }}</span>
+                    </div>
+                    <div class="groups-info-row">
+                        <span class="groups-info-label">수정 일시</span>
+                        <span class="groups-info-sep">:</span>
+                        <span class="groups-info-value">{{ selectedGroup.updatedAt }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 그룹 연락처 관리 -->
+            <div v-show="detailTab === 'contacts'">
+                <div class="groups-toolbar">
+                    <div class="groups-toolbar-left">
+                        <button type="button" class="groups-btn-primary" @click="openContactAddModal">
+                            <i class="bi bi-plus-lg"></i> 그룹 연락처 추가
+                        </button>
+                        <button type="button" class="groups-btn-danger"
+                                :disabled="contactSelectedIds.length === 0"
+                                @click="removeSelectedContacts">
+                            그룹 연락처 삭제
+                        </button>
+                        <button type="button" class="groups-btn-outline"
+                                :disabled="groupContacts.length === 0"
+                                @click="requestContactsDownload">
+                            그룹 연락처 다운로드 요청
+                        </button>
+                        <button type="button" class="groups-btn-outline" @click="openDownloadList">
+                            다운로드 요청 목록
+                        </button>
+                        <div class="groups-search">
+                            <input type="text" class="groups-search-input"
+                                   v-model="contactKeyword"
+                                   placeholder="수신자 별칭을 입력하세요."
+                                   @keyup.enter="runContactSearch">
+                            <button type="button" class="groups-search-btn" @click="runContactSearch" aria-label="검색">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="groups-toolbar-right">
+                        <button type="button" class="groups-btn-outline" @click="refreshContacts">
+                            <i class="bi bi-arrow-clockwise"></i> 새로고침
+                        </button>
+                        <div class="groups-pager">
+                            <button type="button" class="groups-pager-btn"
+                                    :disabled="contactPage === 1"
+                                    @click="goContactPage(contactPage - 1)">
+                                <i class="bi bi-chevron-left"></i> 이전
+                            </button>
+                            <button type="button" class="groups-pager-btn"
+                                    :disabled="contactPage === contactTotalPages"
+                                    @click="goContactPage(contactPage + 1)">
+                                다음 <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                        <span class="groups-total">총 <strong>{{ groupContacts.length }}</strong>개</span>
+                    </div>
+                </div>
+
+                <div class="groups-table-wrap">
+                    <table class="groups-table">
+                        <thead>
+                            <tr>
+                                <th class="groups-th-check">
+                                    <input type="checkbox" :checked="isAllContactsSelected" @change="toggleAllContacts">
+                                </th>
+                                <th>수신자 별칭</th>
+                                <th>수신자 아이디</th>
+                                <th>휴대폰 이름</th>
+                                <th>이메일</th>
+                                <th>토큰</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="c in pagedContacts" :key="c.id">
+                                <td class="groups-th-check">
+                                    <input type="checkbox" :value="c.id" v-model="contactSelectedIds">
+                                </td>
+                                <td>{{ c.alias }}</td>
+                                <td><span class="groups-id">{{ c.userId }}</span></td>
+                                <td>{{ c.phone || '-' }}</td>
+                                <td>{{ c.email || '-' }}</td>
+                                <td>{{ c.token || '-' }}</td>
+                            </tr>
+                            <tr v-if="pagedContacts.length === 0">
+                                <td colspan="6" class="groups-empty">표시할 항목이 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 그룹 추가 모달 (W400) -->
+    <div class="modal fade" ref="groupAddModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeGroupsModal('groupAdd')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">그룹 추가</h4>
+                    <div class="groups-modal-form-row">
+                        <label class="groups-modal-form-label">그룹 이름</label>
+                        <div class="groups-modal-form-control">
+                            <input type="text"
+                                   class="sms-modal-input"
+                                   v-model="groupAddName"
+                                   maxlength="32"
+                                   placeholder="">
+                            <span class="groups-modal-counter">{{ groupAddName.length }}/32</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="groups-modal-actions">
+                    <button type="button" class="groups-modal-btn-cancel" @click="closeGroupsModal('groupAdd')">취소</button>
+                    <button type="button" class="groups-modal-btn-confirm"
+                            :disabled="!groupAddName.trim()"
+                            @click="confirmGroupAdd">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 그룹 이름 변경 모달 (W480) -->
+    <div class="modal fade" ref="groupRenameModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeGroupsModal('groupRename')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">그룹 이름 변경</h4>
+                    <div class="groups-modal-form-row">
+                        <label class="groups-modal-form-label">그룹 이름</label>
+                        <div class="groups-modal-form-control">
+                            <input type="text"
+                                   class="sms-modal-input"
+                                   v-model="groupRenameName"
+                                   maxlength="32"
+                                   placeholder="">
+                            <span class="groups-modal-counter">{{ groupRenameName.length }}/32</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="groups-modal-actions">
+                    <button type="button" class="groups-modal-btn-cancel" @click="closeGroupsModal('groupRename')">취소</button>
+                    <button type="button" class="groups-modal-btn-confirm"
+                            :disabled="!groupRenameName.trim()"
+                            @click="confirmGroupRename">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 그룹 삭제 확인 모달 (W400) -->
+    <div class="modal fade" ref="groupDeleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeGroupsModal('groupDelete')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">알림</h4>
+                    <p class="sms-modal-text">
+                        선택한 {{ selectedRowIds.length }}개의 그룹을 삭제하시겠습니까?<br>
+                        삭제된 그룹은 복구할 수 없습니다.
+                    </p>
+                </div>
+                <div class="groups-modal-actions">
+                    <button type="button" class="groups-modal-btn-cancel" @click="closeGroupsModal('groupDelete')">취소</button>
+                    <button type="button" class="groups-modal-btn-confirm" @click="confirmGroupDelete">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 그룹 연락처 추가 모달 (W800) -->
+    <div class="modal fade" ref="contactAddModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeGroupsModal('contactAdd')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">그룹 연락처 추가</h4>
+                    <div class="sms-modal-search-row">
+                        <div class="sms-modal-search">
+                            <input type="text"
+                                   v-model="contactPickerKeyword"
+                                   @keyup.enter="runContactPickerSearch"
+                                   placeholder="수신자 별칭을 입력하세요.">
+                            <button type="button" class="sms-modal-search-btn" @click="runContactPickerSearch" aria-label="검색">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                        <span class="sms-modal-count">총 <strong>{{ contactPickerSelectedIds.length }}</strong>개 선택</span>
+                    </div>
+                    <table class="sms-modal-table groups-picker-table">
+                        <thead>
+                            <tr>
+                                <th class="groups-th-check">
+                                    <input type="checkbox"
+                                           :checked="isAllPickerSelected"
+                                           @change="toggleAllPicker">
+                                </th>
+                                <th>수신자 별칭</th>
+                                <th>수신자 아이디</th>
+                                <th>휴대폰 번호</th>
+                                <th>이메일</th>
+                                <th>토큰</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="c in pagedPickerContacts" :key="c.id">
+                                <td class="groups-th-check">
+                                    <input type="checkbox" :value="c.id" v-model="contactPickerSelectedIds">
+                                </td>
+                                <td>{{ c.alias }}</td>
+                                <td><span class="groups-id">{{ c.userId }}</span></td>
+                                <td>{{ c.phone || '' }}</td>
+                                <td>{{ c.email || '' }}</td>
+                                <td>{{ c.token || '' }}</td>
+                            </tr>
+                            <tr v-if="pagedPickerContacts.length === 0">
+                                <td colspan="6" class="sms-modal-empty">검색 결과가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="sms-modal-pagination" v-if="pickerTotalPages > 1">
+                        <button type="button" class="sms-page-btn"
+                                @click="goPickerPage(1)" :disabled="pickerPage === 1">«</button>
+                        <button type="button" class="sms-page-btn"
+                                @click="goPickerPage(pickerPage - 1)" :disabled="pickerPage === 1">‹</button>
+                        <button v-for="p in pickerPageRange" :key="p"
+                                type="button"
+                                class="sms-page-btn"
+                                :class="{ active: p === pickerPage }"
+                                @click="goPickerPage(p)">{{ p }}</button>
+                        <button type="button" class="sms-page-btn"
+                                @click="goPickerPage(pickerPage + 1)" :disabled="pickerPage === pickerTotalPages">›</button>
+                        <button type="button" class="sms-page-btn"
+                                @click="goPickerPage(pickerTotalPages)" :disabled="pickerPage === pickerTotalPages">»</button>
+                    </div>
+                </div>
+                <div class="groups-modal-actions">
+                    <button type="button" class="groups-modal-btn-cancel" @click="closeGroupsModal('contactAdd')">취소</button>
+                    <button type="button" class="groups-modal-btn-confirm"
+                            :disabled="contactPickerSelectedIds.length === 0"
+                            @click="confirmContactAdd">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 다운로드 요청 목록 모달 (W800) -->
+    <div class="modal fade" ref="downloadListModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeGroupsModal('downloadList')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">다운로드 요청 목록</h4>
+                    <p class="history-modal-info">요청한 지 7일이 지난 파일은 만료 처리됩니다.</p>
+                    <table class="sms-modal-table history-modal-table">
+                        <thead>
+                            <tr>
+                                <th>요청 아이디</th>
+                                <th>요청 일시</th>
+                                <th>만료 일시</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="r in downloadRequests" :key="r.id">
+                                <td class="history-modal-id">{{ r.id }}</td>
+                                <td>{{ r.requestedAt }}</td>
+                                <td>{{ r.expireAt }}</td>
+                                <td>
+                                    <span v-if="r.status === 'expired'" class="history-modal-status-text">만료</span>
+                                    <span v-else-if="r.status === 'ready'">
+                                        <a href="javascript:void(0)" class="history-modal-link">다운로드</a>
+                                    </span>
+                                    <span v-else-if="r.status === 'processing'" class="history-modal-status-text">처리 중</span>
+                                </td>
+                            </tr>
+                            <tr v-if="downloadRequests.length === 0">
+                                <td colspan="4" class="sms-modal-empty">다운로드 요청 내역이 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="history-modal-actions-single">
+                    <button type="button" class="history-modal-btn-confirm" @click="closeGroupsModal('downloadList')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
