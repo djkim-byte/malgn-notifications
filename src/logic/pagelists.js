@@ -23,6 +23,10 @@ export default {
                 // 홈
                 { category: '홈', title: '홈', url: '#/home', description: '메인 랜딩 페이지' },
 
+                // BackOffice
+                { category: 'BackOffice', title: 'BackOffice 메뉴 구조', url: '#/backoffice', description: '운영자 BackOffice 메뉴 트리(검색/필터/권한 배지) 시각화' },
+                { category: 'BackOffice', title: '사이트맵 & 기능명세 (사용자 서비스)', url: '#/sitemap', description: '맑은message 사용자 서비스 메뉴 트리 + 기능명세 (검색/필터/채널 배지) 시각화' },
+
                 // 메시지 발송
                 { category: '메시지 발송', title: '문자메시지 발송', url: '#/send/sms', description: '문자(SMS/LMS/MMS) 발송 폼' },
                 { category: '메시지 발송', title: '샘플 템플릿 선택 PU', url: '#/send/sms', description: '저장된 샘플 템플릿 선택 팝업' },

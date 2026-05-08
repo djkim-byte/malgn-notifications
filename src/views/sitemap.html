@@ -1,0 +1,201 @@
+<div class="container py-5 bo-menu">
+    <!-- 페이지 헤더 -->
+    <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-4">
+        <div>
+            <div class="bo-menu-eyebrow">맑은 message · 사용자 서비스</div>
+            <h3 class="fw-bold mb-1">사이트맵 &amp; 기능명세</h3>
+            <p class="text-muted mb-0">
+                전체 {{ totalCategories }}개 대분류 · 총 {{ totalMenus }}개 화면/팝업 (Depth 1~3)
+            </p>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+            <div class="bo-menu-stat">
+                <span class="bo-menu-stat-num">{{ totalCategories }}</span>
+                <span class="bo-menu-stat-label">Categories</span>
+            </div>
+            <div class="bo-menu-stat">
+                <span class="bo-menu-stat-num">{{ totalPages }}</span>
+                <span class="bo-menu-stat-label">Pages</span>
+            </div>
+            <div class="bo-menu-stat">
+                <span class="bo-menu-stat-num">{{ totalPopups }}</span>
+                <span class="bo-menu-stat-label">Popups</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 검색 영역 -->
+    <div class="bo-menu-toolbar mb-4">
+        <div class="bo-menu-search">
+            <i class="bi bi-search"></i>
+            <input
+                type="text"
+                class="form-control"
+                placeholder="메뉴명 / 라우트 / 설명으로 검색"
+                v-model="keyword"
+            >
+            <button
+                v-if="keyword"
+                type="button"
+                class="bo-menu-search-clear"
+                @click="keyword = ''"
+                aria-label="검색어 지우기"
+            ><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="bo-menu-filters">
+            <button
+                type="button"
+                class="bo-menu-chip"
+                :class="{ 'is-active': channelFilter === '' }"
+                @click="channelFilter = ''"
+            >전체</button>
+            <button
+                v-for="ch in channelOptions"
+                :key="ch.code"
+                type="button"
+                class="bo-menu-chip"
+                :class="{ 'is-active': channelFilter === ch.code }"
+                @click="channelFilter = ch.code"
+            >
+                <span class="bo-role-dot" :class="'bo-channel-' + ch.code"></span>
+                {{ ch.name }}
+            </button>
+        </div>
+        <div class="bo-menu-actions">
+            <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                @click="expandAll"
+            ><i class="bi bi-arrows-expand"></i> 전체 펼치기</button>
+            <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                @click="collapseAll"
+            ><i class="bi bi-arrows-collapse"></i> 전체 접기</button>
+        </div>
+    </div>
+
+    <!-- 검색 결과 없음 -->
+    <div v-if="filteredCategories.length === 0" class="bo-menu-empty">
+        <i class="bi bi-search"></i>
+        <p class="mb-0">조건에 맞는 메뉴가 없습니다.</p>
+        <small class="text-muted">다른 검색어를 입력하거나 필터를 변경해 주세요.</small>
+    </div>
+
+    <!-- 2단 레이아웃: 메인 테이블 + 우측 카테고리 목록 -->
+    <div v-else class="content-2col">
+        <!-- 메인: 카테고리별 테이블 -->
+        <div class="bo-menu-main">
+            <div
+                v-for="cat in filteredCategories"
+                :key="cat.id"
+                :id="'sm-cat-' + cat.id"
+                class="bo-menu-card"
+            >
+                <button
+                    type="button"
+                    class="bo-menu-card-head"
+                    @click="toggleCategory(cat.id)"
+                    :aria-expanded="!isCollapsed(cat.id)"
+                >
+                    <span class="bo-menu-card-num">{{ cat.id }}</span>
+                    <span class="bo-menu-card-title">{{ cat.name }}</span>
+                    <span class="bo-menu-card-count">{{ cat.totalCount }}</span>
+                    <i class="bi bo-menu-card-chevron" :class="isCollapsed(cat.id) ? 'bi-chevron-down' : 'bi-chevron-up'"></i>
+                </button>
+                <div v-show="!isCollapsed(cat.id)" class="bo-menu-card-body">
+                    <div class="table-responsive">
+                        <table class="table bo-menu-table align-middle mb-0">
+                            <colgroup>
+                                <col class="bo-col-code">
+                                <col class="bo-col-name">
+                                <col class="bo-col-desc">
+                                <col class="bo-col-route">
+                                <col class="bo-col-roles">
+                            </colgroup>
+                            <thead>
+                                <tr>
+                                    <th>코드</th>
+                                    <th>메뉴명</th>
+                                    <th>기능명세</th>
+                                    <th>라우트</th>
+                                    <th class="text-end">채널</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="(item, idx) in cat.items"
+                                    :key="cat.id + '-' + idx"
+                                    :class="['bo-depth-' + item.depth, { 'is-highlight': isHighlight(item) }]"
+                                >
+                                    <td class="bo-cell-code">
+                                        <span class="bo-menu-row-code">{{ item.code }}</span>
+                                    </td>
+                                    <td class="bo-cell-name">
+                                        <span class="bo-menu-indent" :class="'bo-indent-' + item.depth"></span>
+                                        <span class="bo-menu-row-bullet" :class="'bo-depth-' + item.depth"></span>
+                                        <span class="bo-menu-row-name" v-html="highlight(item.name)"></span>
+                                    </td>
+                                    <td class="bo-cell-desc">
+                                        <span v-if="item.description" v-html="highlight(item.description)"></span>
+                                        <span v-else class="text-muted">—</span>
+                                    </td>
+                                    <td class="bo-cell-route">
+                                        <a
+                                            v-if="item.route && item.depth === 2"
+                                            href="javascript:void(0)"
+                                            @click.prevent="goRoute(item.route)"
+                                            class="bo-menu-row-route"
+                                            v-html="highlight(item.route)"
+                                        ></a>
+                                        <code v-else-if="item.route" class="bo-menu-row-route" v-html="highlight(item.route)"></code>
+                                        <span v-else class="text-muted">—</span>
+                                    </td>
+                                    <td class="bo-cell-roles">
+                                        <div class="bo-menu-row-roles">
+                                            <span
+                                                v-for="ch in item.channels"
+                                                :key="ch"
+                                                class="bo-role-badge"
+                                                :class="'bo-channel-' + ch"
+                                            >{{ getChannelName(ch) }}</span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 사이드: 빠른 이동 -->
+        <aside class="content-2col-aside bo-menu-aside">
+            <div class="bo-menu-aside-card">
+                <div class="bo-menu-aside-title">바로 이동</div>
+                <ul class="bo-menu-aside-list">
+                    <li v-for="cat in categories" :key="'jump-' + cat.id">
+                        <a
+                            :href="'#sm-cat-' + cat.id"
+                            class="bo-menu-aside-link"
+                            @click.prevent="jumpToCategory(cat.id)"
+                        >
+                            <span class="bo-menu-aside-num">{{ cat.id }}</span>
+                            <span class="bo-menu-aside-name">{{ cat.name }}</span>
+                            <span class="bo-menu-aside-count">{{ cat.totalCount }}</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="bo-menu-aside-card bo-menu-legend">
+                <div class="bo-menu-aside-title">채널 범례</div>
+                <ul class="bo-menu-legend-list">
+                    <li v-for="ch in channelOptions" :key="'lg-' + ch.code">
+                        <span class="bo-role-badge" :class="'bo-channel-' + ch.code">{{ ch.name }}</span>
+                        <span class="bo-menu-legend-desc">{{ ch.desc }}</span>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+    </div>
+</div>
