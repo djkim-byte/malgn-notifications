@@ -53,6 +53,13 @@ export default {
             addCategoryModal: { parentName: 'Root Category', parentId: null, name: '' },
             editCategoryModal: { id: '', name: '' },
             sampleModal: { search: '', selectedId: null },
+            aiTemplateModal: {
+                inputType: 'basic',
+                chatInput: '',
+                isGenerating: false,
+                messages: [],
+                generated: null
+            },
             alertText: '',
 
             itemModal: {
@@ -85,6 +92,7 @@ export default {
                 group: new bootstrap.Modal(this.$refs.groupModal),
                 templateDetail: new bootstrap.Modal(this.$refs.templateDetailModal),
                 sample: new bootstrap.Modal(this.$refs.sampleModal),
+                aiTemplate: new bootstrap.Modal(this.$refs.aiTemplateModal),
                 delete: new bootstrap.Modal(this.$refs.deleteModal),
                 alert: new bootstrap.Modal(this.$refs.alertModal)
             };
@@ -487,6 +495,98 @@ export default {
         openTemplateDetailModal() {
             if (!this.selectedTemplate) return;
             this.showModal('templateDetail');
+        },
+
+        openAiTemplateModal() {
+            const inEdit = this.mode !== 'list';
+            const ai = this.aiTemplateModal;
+            ai.inputType = inEdit ? (this.form.inputType || 'basic') : 'basic';
+            ai.chatInput = '';
+            ai.isGenerating = false;
+            ai.messages = [];
+            ai.generated = null;
+            this.showModal('aiTemplate');
+        },
+
+        useSuggestion(text) {
+            this.aiTemplateModal.chatInput = text;
+        },
+
+        sendAiPrompt() {
+            const ai = this.aiTemplateModal;
+            const prompt = ai.chatInput.trim();
+            if (!prompt || ai.isGenerating) return;
+
+            ai.messages.push({ role: 'user', text: prompt });
+            ai.chatInput = '';
+            ai.isGenerating = true;
+            this.scrollAiChatToBottom();
+
+            // 모의 LLM 응답 (실서비스에서는 LLM API 호출)
+            setTimeout(() => {
+                const generated = this.mockGeneratePushTemplate(prompt, ai.inputType);
+                const isFirst = ai.generated === null;
+                ai.messages.push({
+                    role: 'assistant',
+                    text: isFirst
+                        ? '요청하신 내용으로 PUSH 템플릿을 생성했습니다. 우측 미리보기에서 확인하시고, 수정하고 싶은 부분이 있으면 알려주세요.'
+                        : '말씀하신 내용을 반영해 다시 생성했습니다. 우측 미리보기를 확인해 주세요.',
+                    template: generated
+                });
+                ai.generated = generated;
+                ai.isGenerating = false;
+                this.scrollAiChatToBottom();
+            }, 900);
+        },
+
+        mockGeneratePushTemplate(prompt, inputType) {
+            const summary = prompt.length > 30 ? prompt.slice(0, 30) + '...' : prompt;
+            const title = `[안내] ${summary}`;
+            const content = `${prompt}\n자세한 내용을 확인해 주세요.`;
+            if (inputType === 'json') {
+                const jsonBody = JSON.stringify({
+                    notification: {
+                        title,
+                        body: content
+                    },
+                    data: {
+                        type: 'announcement'
+                    }
+                }, null, 2);
+                return { title, content, jsonBody };
+            }
+            return { title, content, jsonBody: '' };
+        },
+
+        scrollAiChatToBottom() {
+            this.$nextTick(() => {
+                const el = this.$refs.aiChatBody;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
+        },
+
+        applyAiTemplate() {
+            if (!this.aiTemplateModal.generated) return;
+            const tpl = this.aiTemplateModal.generated;
+            const ai = this.aiTemplateModal;
+
+            if (this.mode === 'list') {
+                this.editingTemplateId = null;
+                this.editingCategoryId = this.selectedCategoryId || (this.categories[0] && this.categories[0].id) || null;
+                this.form = this.makeEmptyForm();
+                this.mode = 'register';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            this.form.inputType = ai.inputType;
+            if (ai.inputType === 'json') {
+                this.form.json.body = tpl.jsonBody || '';
+            } else {
+                this.form.basic.title = tpl.title || '';
+                this.form.basic.content = tpl.content || '';
+            }
+
+            this.closeModal('aiTemplate');
         },
 
         openSampleModal() {

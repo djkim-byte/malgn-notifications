@@ -207,6 +207,14 @@ export default {
                 page: 1,
                 pageSize: 6
             },
+            aiTemplateModal: {
+                messageType: 'basic',
+                emphasisType: 'none',
+                chatInput: '',
+                isGenerating: false,
+                messages: [],
+                generated: null
+            },
             alertText: '',
 
             // 버튼/바로 연결 유형
@@ -291,6 +299,7 @@ export default {
                 itemList: new bootstrap.Modal(this.$refs.itemListModal),
                 templateDetail: new bootstrap.Modal(this.$refs.templateDetailModal),
                 sample: new bootstrap.Modal(this.$refs.sampleModal),
+                aiTemplate: new bootstrap.Modal(this.$refs.aiTemplateModal),
                 delete: new bootstrap.Modal(this.$refs.deleteModal),
                 alert: new bootstrap.Modal(this.$refs.alertModal)
             };
@@ -793,6 +802,124 @@ export default {
         openTemplateDetailModal() {
             if (!this.selectedTemplate) return;
             this.showModal('templateDetail');
+        },
+
+        // ===== AI 템플릿 =====
+        openAiTemplateModal() {
+            const inEdit = this.mode !== 'list';
+            const ai = this.aiTemplateModal;
+            ai.messageType = inEdit ? (this.form.messageType || 'basic') : 'basic';
+            ai.emphasisType = inEdit ? (this.form.emphasisType || 'none') : 'none';
+            ai.chatInput = '';
+            ai.isGenerating = false;
+            ai.messages = [];
+            ai.generated = null;
+            this.showModal('aiTemplate');
+        },
+
+        useSuggestion(text) {
+            this.aiTemplateModal.chatInput = text;
+        },
+
+        messageTypeLabel(type) {
+            const labels = { basic: '기본형', channel: '채널 추가형', extra: '부가 정보형', composite: '복합형' };
+            return labels[type] || '기본형';
+        },
+
+        sendAiPrompt() {
+            const ai = this.aiTemplateModal;
+            const prompt = ai.chatInput.trim();
+            if (!prompt || ai.isGenerating) return;
+
+            ai.messages.push({ role: 'user', text: prompt });
+            ai.chatInput = '';
+            ai.isGenerating = true;
+            this.scrollAiChatToBottom();
+
+            // 모의 LLM 응답 (실서비스에서는 LLM API 호출)
+            setTimeout(() => {
+                const generated = this.mockGenerateKakaoTemplate(prompt, ai.messageType, ai.emphasisType);
+                const isFirst = ai.generated === null;
+                ai.messages.push({
+                    role: 'assistant',
+                    text: isFirst
+                        ? '요청하신 내용으로 알림톡 템플릿을 생성했습니다. 우측 미리보기에서 확인하시고, 수정하고 싶은 부분이 있으면 알려주세요.'
+                        : '말씀하신 내용을 반영해 다시 생성했습니다. 우측 미리보기를 확인해 주세요.',
+                    template: generated
+                });
+                ai.generated = generated;
+                ai.isGenerating = false;
+                this.scrollAiChatToBottom();
+            }, 900);
+        },
+
+        mockGenerateKakaoTemplate(prompt, messageType, emphasisType) {
+            const summary = prompt.length > 60 ? prompt.slice(0, 60) + '...' : prompt;
+            const tpl = {
+                content: `안녕하세요, #{name}님.\n\n${summary}\n\n자세한 내용은 아래 안내를 확인해 주세요.\n감사합니다.`,
+                extraInfo: '',
+                channelMessage: '',
+                highlightTitle: '',
+                highlightSubtitle: '',
+                itemListHeader: '',
+                itemList: [],
+                itemSummary: { name: '', content: '' }
+            };
+
+            if (emphasisType === 'highlight') {
+                tpl.highlightTitle = '안내 도착';
+                tpl.highlightSubtitle = '#{name}님께';
+            } else if (emphasisType === 'itemList') {
+                tpl.itemListHeader = '주요 안내';
+                tpl.itemList = [
+                    { name: '구분', content: '안내 내용' },
+                    { name: '대상', content: '#{name}님' }
+                ];
+                tpl.itemSummary = { name: '합계', content: '-' };
+            }
+
+            if (messageType === 'extra' || messageType === 'composite') {
+                tpl.extraInfo = '※ 본 메시지는 발신 전용으로, 회신은 처리되지 않습니다.';
+            }
+            if (messageType === 'channel' || messageType === 'composite') {
+                tpl.channelMessage = '채널을 추가하고 다양한 혜택을 받아보세요.';
+            }
+
+            return tpl;
+        },
+
+        scrollAiChatToBottom() {
+            this.$nextTick(() => {
+                const el = this.$refs.aiChatBody;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
+        },
+
+        applyAiTemplate() {
+            if (!this.aiTemplateModal.generated) return;
+            const tpl = this.aiTemplateModal.generated;
+            const ai = this.aiTemplateModal;
+
+            if (this.mode === 'list') {
+                this.editingTemplateId = null;
+                this.editingCategoryId = this.selectedCategoryId || (this.categories[0] && this.categories[0].id) || null;
+                this.form = this.makeEmptyForm();
+                this.mode = 'register';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            this.form.messageType = ai.messageType;
+            this.form.emphasisType = ai.emphasisType;
+            this.form.content = tpl.content || '';
+            this.form.extraInfo = tpl.extraInfo || '';
+            this.form.channelMessage = tpl.channelMessage || '';
+            this.form.highlightTitle = tpl.highlightTitle || '';
+            this.form.highlightSubtitle = tpl.highlightSubtitle || '';
+            this.form.itemListHeader = tpl.itemListHeader || '';
+            this.form.itemList = tpl.itemList ? tpl.itemList.map(it => ({ ...it })) : [];
+            this.form.itemSummary = tpl.itemSummary ? { ...tpl.itemSummary } : { name: '', content: '' };
+
+            this.closeModal('aiTemplate');
         },
 
         // ===== 샘플 템플릿 =====

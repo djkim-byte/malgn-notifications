@@ -1,298 +1,365 @@
 export default {
+    name: 'Pagelists',
     layout: 'default',
     data() {
         return {
-            search: '',
             baseUrl: 'https://malgn-notifications.pages.dev',
-            categories: [
-                {
-                    title: '1. 메인',
-                    items: [
-                        { type: 'Page', name: '홈', path: '/home' }
-                    ]
-                },
-                {
-                    title: '2. 인증',
-                    items: [
-                        { type: 'Page', name: '회원가입', path: '/signup' },
-                        { type: 'PU', name: '회원가입 - OTP 인증 알림', path: '/signup' },
-                        { type: 'PU', name: '회원가입 - 휴대폰 인증 알림', path: '/signup' },
-                        { type: 'PU', name: '회원가입 - 이용약관', path: '/signup' },
-                        { type: 'Page', name: '로그인', path: '/login' },
-                        { type: 'Page', name: '로그인 보안 인증', path: '/login/security' },
-                        { type: 'PU', name: '로그인 보안 - 인증코드 알림', path: '/login/security' },
-                        { type: 'Page', name: '비밀번호 재설정 (요청)', path: '/reset-password' },
-                        { type: 'PU', name: '비밀번호 재설정 - 메일 발송 완료', path: '/reset-password' },
-                        { type: 'Page', name: '비밀번호 재설정 (신규 입력)', path: '/reset-password/new' },
-                        { type: 'PU', name: '비밀번호 재설정 - 완료 알림', path: '/reset-password/new' }
-                    ]
-                },
-                {
-                    title: '3. 충전 / 결제',
-                    items: [
-                        { type: 'Page', name: '크레딧 충전', path: '/charge' },
-                        { type: 'PU', name: '충전 - 카드 추가', path: '/charge' },
-                        { type: 'PU', name: '충전 - 결제 확인', path: '/charge' },
-                        { type: 'Page', name: '충전 결과', path: '/charge/result' }
-                    ]
-                },
-                {
-                    title: '4. 문의',
-                    items: [
-                        { type: 'Page', name: '1:1 문의 작성', path: '/inquiry' },
-                        { type: 'PU', name: '문의 - 파일 오류 알림', path: '/inquiry' },
-                        { type: 'Page', name: '문의 접수 완료', path: '/inquiry/complete' }
-                    ]
-                },
-                {
-                    title: '5. 마이페이지 / 계정',
-                    items: [
-                        { type: 'Page', name: '문의 내역', path: '/account/inquiries' },
-                        { type: 'PU', name: '문의 내역 - 삭제 확인', path: '/account/inquiries' },
-                        { type: 'Page', name: '문의 내역 상세', path: '/account/inquiries/detail' },
-                        { type: 'PU', name: '문의 상세 - 삭제 확인', path: '/account/inquiries/detail' },
-                        { type: 'Page', name: '크레딧 내역', path: '/account/credit' },
-                        { type: 'PU', name: '크레딧 - 영수증', path: '/account/credit' },
-                        { type: 'PU', name: '크레딧 - 크레딧 상세내용', path: '/account/credit' },
-                        { type: 'PU', name: '크레딧 - 취소 확인', path: '/account/credit' },
-                        { type: 'PU', name: '크레딧 - 취소 완료', path: '/account/credit' },
-                        { type: 'Page', name: '계정 설정', path: '/account/settings' },
-                        { type: 'PU', name: '계정 설정 - 알림', path: '/account/settings' },
-                        { type: 'PU', name: '계정 설정 - 확인', path: '/account/settings' }
-                    ]
-                },
-                {
-                    title: '6. 연락처',
-                    items: [
-                        { type: 'Page', name: '연락처 목록', path: '/contacts/list' },
-                        { type: 'PU', name: '연락처 - 추가/변경', path: '/contacts/list' },
-                        { type: 'PU', name: '연락처 - 삭제 확인', path: '/contacts/list' },
-                        { type: 'PU', name: '연락처 - 다운로드 요청', path: '/contacts/list' },
-                        { type: 'PU', name: '연락처 - 다운로드 요청 목록', path: '/contacts/list' },
-                        { type: 'Page', name: '연락처 그룹', path: '/contacts/groups' },
-                        { type: 'PU', name: '그룹 - 추가', path: '/contacts/groups' },
-                        { type: 'PU', name: '그룹 - 이름 변경', path: '/contacts/groups' },
-                        { type: 'PU', name: '그룹 - 삭제 확인', path: '/contacts/groups' },
-                        { type: 'PU', name: '그룹 - 연락처 추가', path: '/contacts/groups' },
-                        { type: 'PU', name: '그룹 - 다운로드 요청 목록', path: '/contacts/groups' },
-                        { type: 'Page', name: '수신거부 관리', path: '/contacts/optout' },
-                        { type: 'PU', name: '수신거부 - 추가', path: '/contacts/optout' },
-                        { type: 'PU', name: '수신거부 - 취소 확인', path: '/contacts/optout' },
-                        { type: 'PU', name: '수신거부 - 다운로드 요청', path: '/contacts/optout' },
-                        { type: 'PU', name: '수신거부 - 다운로드 요청 목록', path: '/contacts/optout' }
-                    ]
-                },
-                {
-                    title: '7. 발신 정보',
-                    items: [
-                        { type: 'Page', name: '발신번호 관리', path: '/sender/numbers' },
-                        { type: 'PU', name: '발신번호 - 개인정보 수집 동의', path: '/sender/numbers' },
-                        { type: 'PU', name: '발신번호 - 등록 및 서류 인증', path: '/sender/numbers' },
-                        { type: 'PU', name: '발신번호 - 삭제 확인', path: '/sender/numbers' },
-                        { type: 'PU', name: '발신번호 - 등록 안내', path: '/sender/numbers' },
-                        { type: 'Page', name: '알림톡 발신프로필', path: '/sender/profiles' },
-                        { type: 'PU', name: '발신프로필 - 등록', path: '/sender/profiles' },
-                        { type: 'PU', name: '발신프로필 - 그룹 관리', path: '/sender/profiles' },
-                        { type: 'PU', name: '발신프로필 - 삭제 확인', path: '/sender/profiles' },
-                        { type: 'PU', name: '발신프로필 - 토큰 발송 알림', path: '/sender/profiles' },
-                        { type: 'Page', name: 'RCS 브랜드', path: '/sender/brands' },
-                        { type: 'PU', name: '브랜드 - 연결 확인', path: '/sender/brands' },
-                        { type: 'PU', name: '브랜드 - 연결 완료', path: '/sender/brands' },
-                        { type: 'Page', name: '이메일 도메인', path: '/sender/domains' },
-                        { type: 'PU', name: '도메인 - 등록', path: '/sender/domains' },
-                        { type: 'PU', name: '도메인 - DKIM 설정', path: '/sender/domains' },
-                        { type: 'PU', name: '도메인 - 삭제 확인', path: '/sender/domains' },
-                        { type: 'Page', name: '푸시 인증서', path: '/sender/push-cert' },
-                        { type: 'PU', name: '푸시 인증서 - 결과 알림', path: '/sender/push-cert' },
-                        { type: 'Page', name: '080 수신거부 번호', path: '/sender/optout-080' },
-                        { type: 'PU', name: '080 - 신청', path: '/sender/optout-080' },
-                        { type: 'PU', name: '080 - 취소 확인', path: '/sender/optout-080' }
-                    ]
-                },
-                {
-                    title: '8. 발송',
-                    items: [
-                        { type: 'Page', name: 'SMS 발송', path: '/send/sms' },
-                        { type: 'PU', name: 'SMS - 샘플 템플릿 선택', path: '/send/sms' },
-                        { type: 'PU', name: 'SMS - 수신자 정보', path: '/send/sms' },
-                        { type: 'PU', name: 'SMS - 수신자 선택', path: '/send/sms' },
-                        { type: 'PU', name: 'SMS - 광고 수신 알림', path: '/send/sms' },
-                        { type: 'PU', name: 'SMS - 초기화 확인', path: '/send/sms' },
-                        { type: 'Page', name: '카카오톡 발송', path: '/send/kakao' },
-                        { type: 'PU', name: '카카오 - 템플릿 선택', path: '/send/kakao' },
-                        { type: 'PU', name: '카카오 - 수신자 정보', path: '/send/kakao' },
-                        { type: 'PU', name: '카카오 - 수신자 선택', path: '/send/kakao' },
-                        { type: 'PU', name: '카카오 - 수신자 정보 수정', path: '/send/kakao' },
-                        { type: 'PU', name: '카카오 - 초기화 확인', path: '/send/kakao' },
-                        { type: 'Page', name: 'RCS 발송', path: '/send/rcs' },
-                        { type: 'PU', name: 'RCS - 템플릿 선택', path: '/send/rcs' },
-                        { type: 'PU', name: 'RCS - 수신자 정보', path: '/send/rcs' },
-                        { type: 'PU', name: 'RCS - 수신자 정보 수정', path: '/send/rcs' },
-                        { type: 'PU', name: 'RCS - 수신자 선택', path: '/send/rcs' },
-                        { type: 'PU', name: 'RCS - 버튼', path: '/send/rcs' },
-                        { type: 'PU', name: 'RCS - 초기화 확인', path: '/send/rcs' },
-                        { type: 'Page', name: '이메일 발송', path: '/send/email' },
-                        { type: 'PU', name: '이메일 - 템플릿 선택', path: '/send/email' },
-                        { type: 'PU', name: '이메일 - 수신자 정보', path: '/send/email' },
-                        { type: 'PU', name: '이메일 - 수신자 정보 수정', path: '/send/email' },
-                        { type: 'PU', name: '이메일 - 수신자 선택', path: '/send/email' },
-                        { type: 'PU', name: '이메일 - 광고 수신 알림', path: '/send/email' },
-                        { type: 'PU', name: '이메일 - 초기화 확인', path: '/send/email' },
-                        { type: 'Page', name: '푸시 발송', path: '/send/push' },
-                        { type: 'PU', name: '푸시 - 템플릿 선택', path: '/send/push' },
-                        { type: 'PU', name: '푸시 - 수신자 정보', path: '/send/push' },
-                        { type: 'PU', name: '푸시 - 수신자 선택', path: '/send/push' },
-                        { type: 'PU', name: '푸시 - 수신자 정보 수정', path: '/send/push' },
-                        { type: 'PU', name: '푸시 - 버튼', path: '/send/push' },
-                        { type: 'PU', name: '푸시 - 미디어', path: '/send/push' },
-                        { type: 'PU', name: '푸시 - Android 큰 아이콘', path: '/send/push' },
-                        { type: 'PU', name: '푸시 - 그룹', path: '/send/push' },
-                        { type: 'PU', name: '푸시 - 초기화 확인', path: '/send/push' },
-                        { type: 'Page', name: 'Flow 발송', path: '/send/flow' },
-                        { type: 'PU', name: 'Flow - 매니저', path: '/send/flow' },
-                        { type: 'PU', name: 'Flow - 템플릿 선택', path: '/send/flow' },
-                        { type: 'PU', name: 'Flow - 수신자 정보', path: '/send/flow' },
-                        { type: 'PU', name: 'Flow - 수신자 선택', path: '/send/flow' },
-                        { type: 'PU', name: 'Flow - 수신자 정보 수정', path: '/send/flow' },
-                        { type: 'PU', name: 'Flow - 초기화 확인', path: '/send/flow' }
-                    ]
-                },
-                {
-                    title: '9. 발송 이력',
-                    items: [
-                        { type: 'Page', name: 'SMS 이력', path: '/history/sms' },
-                        { type: 'PU', name: 'SMS 이력 - 일괄 취소', path: '/history/sms' },
-                        { type: 'PU', name: 'SMS 이력 - 다운로드 요청', path: '/history/sms' },
-                        { type: 'PU', name: 'SMS 이력 - 채널 알림', path: '/history/sms' },
-                        { type: 'PU', name: 'SMS 이력 - 템플릿 선택', path: '/history/sms' },
-                        { type: 'PU', name: 'SMS 이력 - 다운로드 요청 목록', path: '/history/sms' },
-                        { type: 'Page', name: '카카오톡 이력', path: '/history/kakao' },
-                        { type: 'PU', name: '카카오 이력 - 일괄 취소', path: '/history/kakao' },
-                        { type: 'PU', name: '카카오 이력 - 다운로드 요청', path: '/history/kakao' },
-                        { type: 'PU', name: '카카오 이력 - 채널 알림', path: '/history/kakao' },
-                        { type: 'PU', name: '카카오 이력 - 템플릿 선택', path: '/history/kakao' },
-                        { type: 'PU', name: '카카오 이력 - 다운로드 요청 목록', path: '/history/kakao' },
-                        { type: 'Page', name: 'RCS 이력', path: '/history/rcs' },
-                        { type: 'PU', name: 'RCS 이력 - 일괄 취소', path: '/history/rcs' },
-                        { type: 'PU', name: 'RCS 이력 - 다운로드 요청', path: '/history/rcs' },
-                        { type: 'PU', name: 'RCS 이력 - 채널 알림', path: '/history/rcs' },
-                        { type: 'PU', name: 'RCS 이력 - 템플릿 선택', path: '/history/rcs' },
-                        { type: 'PU', name: 'RCS 이력 - 다운로드 요청 목록', path: '/history/rcs' },
-                        { type: 'Page', name: '이메일 이력', path: '/history/email' },
-                        { type: 'PU', name: '이메일 이력 - 일괄 취소', path: '/history/email' },
-                        { type: 'PU', name: '이메일 이력 - 다운로드 요청', path: '/history/email' },
-                        { type: 'PU', name: '이메일 이력 - 채널 알림', path: '/history/email' },
-                        { type: 'PU', name: '이메일 이력 - 템플릿 선택', path: '/history/email' },
-                        { type: 'PU', name: '이메일 이력 - 다운로드 요청 목록', path: '/history/email' },
-                        { type: 'Page', name: '푸시 이력', path: '/history/push' },
-                        { type: 'PU', name: '푸시 이력 - 일괄 취소', path: '/history/push' },
-                        { type: 'PU', name: '푸시 이력 - 다운로드 요청', path: '/history/push' },
-                        { type: 'PU', name: '푸시 이력 - 채널 알림', path: '/history/push' },
-                        { type: 'PU', name: '푸시 이력 - 템플릿 선택', path: '/history/push' },
-                        { type: 'PU', name: '푸시 이력 - 다운로드 요청 목록', path: '/history/push' },
-                        { type: 'Page', name: '발송 통계', path: '/history/stats' }
-                    ]
-                },
-                {
-                    title: '10. 템플릿 관리',
-                    items: [
-                        { type: 'Page', name: 'SMS 템플릿', path: '/manage/sms' },
-                        { type: 'PU', name: 'SMS 템플릿 - 카테고리 추가', path: '/manage/sms' },
-                        { type: 'PU', name: 'SMS 템플릿 - 카테고리 이름 수정', path: '/manage/sms' },
-                        { type: 'PU', name: 'SMS 템플릿 - 광고 수신 알림', path: '/manage/sms' },
-                        { type: 'PU', name: 'SMS 템플릿 - 상세 보기', path: '/manage/sms' },
-                        { type: 'PU', name: 'SMS 템플릿 - 샘플 템플릿', path: '/manage/sms' },
-                        { type: 'PU', name: 'SMS 템플릿 - 삭제 확인', path: '/manage/sms' },
-                        { type: 'PU', name: 'SMS 템플릿 - 알림', path: '/manage/sms' },
-                        { type: 'Page', name: '카카오톡 템플릿', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 카테고리 추가', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 카테고리 이름 수정', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 대표 링크', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 버튼', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 바로 연결', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 아이템 리스트', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 상세 보기', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 샘플 템플릿', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 삭제 확인', path: '/manage/kakao' },
-                        { type: 'PU', name: '카카오 템플릿 - 알림', path: '/manage/kakao' },
-                        { type: 'Page', name: 'RCS 템플릿', path: '/manage/rcs' },
-                        { type: 'PU', name: 'RCS 템플릿 - 카테고리 추가', path: '/manage/rcs' },
-                        { type: 'PU', name: 'RCS 템플릿 - 카테고리 이름 수정', path: '/manage/rcs' },
-                        { type: 'PU', name: 'RCS 템플릿 - 버튼', path: '/manage/rcs' },
-                        { type: 'PU', name: 'RCS 템플릿 - 상세 보기', path: '/manage/rcs' },
-                        { type: 'PU', name: 'RCS 템플릿 - 샘플 템플릿', path: '/manage/rcs' },
-                        { type: 'PU', name: 'RCS 템플릿 - 삭제 확인', path: '/manage/rcs' },
-                        { type: 'PU', name: 'RCS 템플릿 - 알림', path: '/manage/rcs' },
-                        { type: 'Page', name: '이메일 템플릿', path: '/manage/email' },
-                        { type: 'PU', name: '이메일 템플릿 - 카테고리 추가', path: '/manage/email' },
-                        { type: 'PU', name: '이메일 템플릿 - 카테고리 이름 수정', path: '/manage/email' },
-                        { type: 'PU', name: '이메일 템플릿 - 광고 수신 알림', path: '/manage/email' },
-                        { type: 'PU', name: '이메일 템플릿 - 상세 보기', path: '/manage/email' },
-                        { type: 'PU', name: '이메일 템플릿 - 샘플 템플릿', path: '/manage/email' },
-                        { type: 'PU', name: '이메일 템플릿 - 삭제 확인', path: '/manage/email' },
-                        { type: 'PU', name: '이메일 템플릿 - 알림', path: '/manage/email' },
-                        { type: 'Page', name: '푸시 템플릿', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 카테고리 추가', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 카테고리 이름 수정', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 버튼', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 미디어(공통)', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 미디어(Android)', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 미디어(iOS)', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - Android 큰 아이콘', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 그룹', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 상세 보기', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 샘플 템플릿', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 삭제 확인', path: '/manage/push' },
-                        { type: 'PU', name: '푸시 템플릿 - 알림', path: '/manage/push' },
-                        { type: 'Page', name: '발송 설정', path: '/manage/settings' },
-                        { type: 'PU', name: '발송 설정 - 알림', path: '/manage/settings' },
-                        { type: 'PU', name: '발송 설정 - 대체 문자 설정', path: '/manage/settings' }
-                    ]
-                },
-                {
-                    title: '11. 시스템 / 템플릿 페이지',
-                    items: [
-                        { type: 'Page', name: '에러 - 시스템 오류', path: '/templete/error/system' },
-                        { type: 'Page', name: '에러 - 페이지 없음', path: '/templete/error/not-found' },
-                        { type: 'Page', name: '에러 - 네트워크 오류', path: '/templete/error/network' },
-                        { type: 'Page', name: '점검 - 긴급 점검', path: '/templete/inspection/emergency' },
-                        { type: 'Page', name: '점검 - 정기 점검', path: '/templete/inspection/scheduled' },
-                        { type: 'Page', name: '메일 - 이메일 인증', path: '/templete/email/verify' },
-                        { type: 'Page', name: '메일 - 비밀번호 재설정', path: '/templete/email/reset-password' }
-                    ]
-                }
-            ]
+            statusMap: {}
         };
     },
+    mounted() {
+        const saved = localStorage.getItem('pagelists-status');
+        if (saved) {
+            try {
+                this.statusMap = JSON.parse(saved);
+            } catch (e) {
+                this.statusMap = {};
+            }
+        }
+    },
     computed: {
+        pages() {
+            return [
+                // 홈
+                { category: '홈', title: '홈', url: '#/home', description: '메인 랜딩 페이지' },
+
+                // 메시지 발송
+                { category: '메시지 발송', title: '문자메시지 발송', url: '#/send/sms', description: '문자(SMS/LMS/MMS) 발송 폼' },
+                { category: '메시지 발송', title: '샘플 템플릿 선택 PU', url: '#/send/sms', description: '저장된 샘플 템플릿 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 PU', url: '#/send/sms', description: '수신자 정보 입력/추가 팝업' },
+                { category: '메시지 발송', title: '수신자 선택 PU', url: '#/send/sms', description: '주소록에서 수신자 선택 팝업' },
+                { category: '메시지 발송', title: '광고 수신 알림 PU', url: '#/send/sms', description: '광고 수신 동의 안내 팝업' },
+                { category: '메시지 발송', title: '발송 컨펌 PU', url: '#/send/sms', description: '발송 확인 컨펌 팝업' },
+                { category: '메시지 발송', title: '초기화 확인 PU', url: '#/send/sms', description: '발송 폼 초기화 확인 팝업' },
+                { category: '메시지 발송', title: '알림톡 발송', url: '#/send/kakao', description: '카카오 알림톡 발송 폼' },
+                { category: '메시지 발송', title: '템플릿 선택 PU', url: '#/send/kakao', description: '알림톡 템플릿 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 PU', url: '#/send/kakao', description: '수신자 정보 입력 팝업' },
+                { category: '메시지 발송', title: '수신자 선택 PU', url: '#/send/kakao', description: '주소록에서 수신자 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 수정 PU', url: '#/send/kakao', description: '수신자 정보 수정 팝업' },
+                { category: '메시지 발송', title: '발송 컨펌 PU', url: '#/send/kakao', description: '발송 확인 컨펌 팝업' },
+                { category: '메시지 발송', title: '초기화 확인 PU', url: '#/send/kakao', description: '발송 폼 초기화 확인 팝업' },
+                { category: '메시지 발송', title: 'RCS 발송', url: '#/send/rcs', description: 'RCS 메시지 발송 폼' },
+                { category: '메시지 발송', title: '템플릿 선택 PU', url: '#/send/rcs', description: 'RCS 템플릿 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 PU', url: '#/send/rcs', description: '수신자 정보 입력 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 수정 PU', url: '#/send/rcs', description: '수신자 정보 수정 팝업' },
+                { category: '메시지 발송', title: '수신자 선택 PU', url: '#/send/rcs', description: '주소록에서 수신자 선택 팝업' },
+                { category: '메시지 발송', title: '버튼 PU', url: '#/send/rcs', description: 'RCS 버튼 추가/편집 팝업' },
+                { category: '메시지 발송', title: '발송 컨펌 PU', url: '#/send/rcs', description: '발송 확인 컨펌 팝업' },
+                { category: '메시지 발송', title: '초기화 확인 PU', url: '#/send/rcs', description: '발송 폼 초기화 확인 팝업' },
+                { category: '메시지 발송', title: '이메일 발송', url: '#/send/email', description: '이메일 발송 폼' },
+                { category: '메시지 발송', title: '템플릿 선택 PU', url: '#/send/email', description: '이메일 템플릿 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 PU', url: '#/send/email', description: '수신자 정보 입력 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 수정 PU', url: '#/send/email', description: '수신자 정보 수정 팝업' },
+                { category: '메시지 발송', title: '수신자 선택 PU', url: '#/send/email', description: '주소록에서 수신자 선택 팝업' },
+                { category: '메시지 발송', title: '광고 수신 알림 PU', url: '#/send/email', description: '광고 수신 동의 안내 팝업' },
+                { category: '메시지 발송', title: '발송 컨펌 PU', url: '#/send/email', description: '발송 확인 컨펌 팝업' },
+                { category: '메시지 발송', title: '초기화 확인 PU', url: '#/send/email', description: '발송 폼 초기화 확인 팝업' },
+                { category: '메시지 발송', title: 'PUSH 발송', url: '#/send/push', description: '앱 푸시 발송 폼' },
+                { category: '메시지 발송', title: '템플릿 선택 PU', url: '#/send/push', description: '푸시 템플릿 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 PU', url: '#/send/push', description: '수신자 정보 입력 팝업' },
+                { category: '메시지 발송', title: '수신자 선택 PU', url: '#/send/push', description: '주소록에서 수신자 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 수정 PU', url: '#/send/push', description: '수신자 정보 수정 팝업' },
+                { category: '메시지 발송', title: '버튼 PU', url: '#/send/push', description: '푸시 버튼 추가/편집 팝업' },
+                { category: '메시지 발송', title: '미디어 PU', url: '#/send/push', description: '미디어 첨부 팝업' },
+                { category: '메시지 발송', title: 'Android 큰 아이콘 PU', url: '#/send/push', description: 'Android 큰 아이콘 첨부 팝업' },
+                { category: '메시지 발송', title: '그룹 PU', url: '#/send/push', description: '발송 그룹 선택 팝업' },
+                { category: '메시지 발송', title: '발송 컨펌 PU', url: '#/send/push', description: '발송 확인 컨펌 팝업' },
+                { category: '메시지 발송', title: '초기화 확인 PU', url: '#/send/push', description: '발송 폼 초기화 확인 팝업' },
+                { category: '메시지 발송', title: '복합(플로우) 발송', url: '#/send/flow', description: '여러 채널 복합 발송 플로우' },
+                { category: '메시지 발송', title: 'Flow 매니저 PU', url: '#/send/flow', description: '플로우 노드 편집 팝업' },
+                { category: '메시지 발송', title: '템플릿 선택 PU', url: '#/send/flow', description: '템플릿 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 PU', url: '#/send/flow', description: '수신자 정보 입력 팝업' },
+                { category: '메시지 발송', title: '수신자 선택 PU', url: '#/send/flow', description: '주소록에서 수신자 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 수정 PU', url: '#/send/flow', description: '수신자 정보 수정 팝업' },
+                { category: '메시지 발송', title: '발송 컨펌 PU', url: '#/send/flow', description: '발송 확인 컨펌 팝업' },
+                { category: '메시지 발송', title: '초기화 확인 PU', url: '#/send/flow', description: '발송 폼 초기화 확인 팝업' },
+
+                // 발송 조회/통계
+                { category: '발송 조회/통계', title: '문자메시지 발송 조회', url: '#/history/sms', description: 'SMS 발송 이력 조회' },
+                { category: '발송 조회/통계', title: '일괄 취소 PU', url: '#/history/sms', description: '예약 발송 일괄 취소 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 PU', url: '#/history/sms', description: '엑셀 다운로드 요청 팝업' },
+                { category: '발송 조회/통계', title: '채널 알림 PU', url: '#/history/sms', description: '채널 안내 팝업' },
+                { category: '발송 조회/통계', title: '템플릿 선택 PU', url: '#/history/sms', description: '템플릿 비교/선택 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 목록 PU', url: '#/history/sms', description: '다운로드 요청 목록 팝업' },
+                { category: '발송 조회/통계', title: '알림톡 발송 조회', url: '#/history/kakao', description: '알림톡 발송 이력 조회' },
+                { category: '발송 조회/통계', title: '일괄 취소 PU', url: '#/history/kakao', description: '예약 발송 일괄 취소 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 PU', url: '#/history/kakao', description: '엑셀 다운로드 요청 팝업' },
+                { category: '발송 조회/통계', title: '채널 알림 PU', url: '#/history/kakao', description: '채널 안내 팝업' },
+                { category: '발송 조회/통계', title: '템플릿 선택 PU', url: '#/history/kakao', description: '템플릿 비교/선택 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 목록 PU', url: '#/history/kakao', description: '다운로드 요청 목록 팝업' },
+                { category: '발송 조회/통계', title: 'RCS 발송 조회', url: '#/history/rcs', description: 'RCS 발송 이력 조회' },
+                { category: '발송 조회/통계', title: '일괄 취소 PU', url: '#/history/rcs', description: '예약 발송 일괄 취소 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 PU', url: '#/history/rcs', description: '엑셀 다운로드 요청 팝업' },
+                { category: '발송 조회/통계', title: '채널 알림 PU', url: '#/history/rcs', description: '채널 안내 팝업' },
+                { category: '발송 조회/통계', title: '템플릿 선택 PU', url: '#/history/rcs', description: '템플릿 비교/선택 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 목록 PU', url: '#/history/rcs', description: '다운로드 요청 목록 팝업' },
+                { category: '발송 조회/통계', title: '이메일 발송 조회', url: '#/history/email', description: '이메일 발송 이력 조회' },
+                { category: '발송 조회/통계', title: '일괄 취소 PU', url: '#/history/email', description: '예약 발송 일괄 취소 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 PU', url: '#/history/email', description: '엑셀 다운로드 요청 팝업' },
+                { category: '발송 조회/통계', title: '채널 알림 PU', url: '#/history/email', description: '채널 안내 팝업' },
+                { category: '발송 조회/통계', title: '템플릿 선택 PU', url: '#/history/email', description: '템플릿 비교/선택 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 목록 PU', url: '#/history/email', description: '다운로드 요청 목록 팝업' },
+                { category: '발송 조회/통계', title: 'PUSH 발송 조회', url: '#/history/push', description: '푸시 발송 이력 조회' },
+                { category: '발송 조회/통계', title: '일괄 취소 PU', url: '#/history/push', description: '예약 발송 일괄 취소 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 PU', url: '#/history/push', description: '엑셀 다운로드 요청 팝업' },
+                { category: '발송 조회/통계', title: '채널 알림 PU', url: '#/history/push', description: '채널 안내 팝업' },
+                { category: '발송 조회/통계', title: '템플릿 선택 PU', url: '#/history/push', description: '템플릿 비교/선택 팝업' },
+                { category: '발송 조회/통계', title: '다운로드 요청 목록 PU', url: '#/history/push', description: '다운로드 요청 목록 팝업' },
+                { category: '발송 조회/통계', title: '통계', url: '#/history/stats', description: '발송 통계 대시보드' },
+
+                // 주소록
+                { category: '주소록', title: '연락처 관리', url: '#/contacts/list', description: '연락처 목록 + CRUD' },
+                { category: '주소록', title: '연락처 추가/변경 PU', url: '#/contacts/list', description: '연락처 추가/수정 팝업' },
+                { category: '주소록', title: '연락처 삭제 확인 PU', url: '#/contacts/list', description: '연락처 삭제 확인 팝업' },
+                { category: '주소록', title: '다운로드 요청 PU', url: '#/contacts/list', description: '연락처 다운로드 요청 팝업' },
+                { category: '주소록', title: '다운로드 요청 목록 PU', url: '#/contacts/list', description: '다운로드 요청 목록 팝업' },
+                { category: '주소록', title: '그룹 관리', url: '#/contacts/groups', description: '연락처 그룹 관리' },
+                { category: '주소록', title: '그룹 추가 PU', url: '#/contacts/groups', description: '그룹 추가 팝업' },
+                { category: '주소록', title: '그룹 이름 변경 PU', url: '#/contacts/groups', description: '그룹 이름 변경 팝업' },
+                { category: '주소록', title: '그룹 삭제 확인 PU', url: '#/contacts/groups', description: '그룹 삭제 확인 팝업' },
+                { category: '주소록', title: '그룹 연락처 추가 PU', url: '#/contacts/groups', description: '그룹에 연락처 추가 팝업' },
+                { category: '주소록', title: '다운로드 요청 목록 PU', url: '#/contacts/groups', description: '다운로드 요청 목록 팝업' },
+                { category: '주소록', title: '수신 거부 관리', url: '#/contacts/optout', description: '수신 거부 번호 관리' },
+                { category: '주소록', title: '수신거부 추가 PU', url: '#/contacts/optout', description: '수신거부 번호 추가 팝업' },
+                { category: '주소록', title: '취소 확인 PU', url: '#/contacts/optout', description: '수신거부 취소 확인 팝업' },
+                { category: '주소록', title: '다운로드 요청 PU', url: '#/contacts/optout', description: '다운로드 요청 팝업' },
+                { category: '주소록', title: '다운로드 요청 목록 PU', url: '#/contacts/optout', description: '다운로드 요청 목록 팝업' },
+
+                // 발신 정보
+                { category: '발신 정보', title: '발신 번호 관리', url: '#/sender/numbers', description: '발신 번호 등록/관리' },
+                { category: '발신 정보', title: '개인정보 수집 동의 PU', url: '#/sender/numbers', description: '필수 개인정보 수집 동의 팝업' },
+                { category: '발신 정보', title: '발신 정보 등록 PU', url: '#/sender/numbers', description: '발신 정보 등록 + 서류 인증 팝업' },
+                { category: '발신 정보', title: '삭제 확인 PU', url: '#/sender/numbers', description: '삭제 확인 팝업' },
+                { category: '발신 정보', title: '등록 안내 PU', url: '#/sender/numbers', description: '발신번호 등록 안내 팝업' },
+                { category: '발신 정보', title: '브랜드 관리', url: '#/sender/brands', description: 'RCS 브랜드 관리' },
+                { category: '발신 정보', title: '연결 확인 PU', url: '#/sender/brands', description: '브랜드 연결 확인 팝업' },
+                { category: '발신 정보', title: '연결 완료 PU', url: '#/sender/brands', description: '브랜드 연결 완료 팝업' },
+                { category: '발신 정보', title: '도메인 관리', url: '#/sender/domains', description: '이메일 발신 도메인 관리' },
+                { category: '발신 정보', title: '도메인 등록 PU', url: '#/sender/domains', description: '도메인 등록 팝업' },
+                { category: '발신 정보', title: 'DKIM 설정 PU', url: '#/sender/domains', description: 'DKIM 인증 설정 팝업' },
+                { category: '발신 정보', title: '삭제 확인 PU', url: '#/sender/domains', description: '도메인 삭제 확인 팝업' },
+                { category: '발신 정보', title: 'PUSH 인증 관리', url: '#/sender/push-cert', description: 'FCM/APNs 인증서 관리' },
+                { category: '발신 정보', title: '결과 알림 PU', url: '#/sender/push-cert', description: '인증서 등록 결과 알림 팝업' },
+                { category: '발신 정보', title: '발신 프로필 관리', url: '#/sender/profiles', description: '카카오 발신 프로필 관리' },
+                { category: '발신 정보', title: '발신프로필 등록 PU', url: '#/sender/profiles', description: '발신 프로필 등록 팝업' },
+                { category: '발신 정보', title: '그룹 관리 PU', url: '#/sender/profiles', description: '발신 프로필 그룹 관리 팝업' },
+                { category: '발신 정보', title: '삭제 확인 PU', url: '#/sender/profiles', description: '프로필 삭제 확인 팝업' },
+                { category: '발신 정보', title: '토큰 발송 알림 PU', url: '#/sender/profiles', description: '토큰 발송 안내 팝업' },
+                { category: '발신 정보', title: '080 수신 거부 번호 관리', url: '#/sender/optout-080', description: '080 수신거부 번호 신청/관리' },
+                { category: '발신 정보', title: '080 신청 PU', url: '#/sender/optout-080', description: '080 수신거부 번호 신청 팝업' },
+                { category: '발신 정보', title: '취소 확인 PU', url: '#/sender/optout-080', description: '신청 취소 확인 팝업' },
+
+                // 메시지관리
+                { category: '메시지관리', title: '문자메시지 템플릿', url: '#/manage/sms', description: 'SMS 템플릿 카테고리/리스트 관리' },
+                { category: '메시지관리', title: '카테고리 추가 PU', url: '#/manage/sms', description: '카테고리 추가 팝업' },
+                { category: '메시지관리', title: '카테고리 이름 수정 PU', url: '#/manage/sms', description: '카테고리 이름 수정 팝업' },
+                { category: '메시지관리', title: '광고 수신 알림 PU', url: '#/manage/sms', description: '광고 수신 동의 안내 팝업' },
+                { category: '메시지관리', title: '템플릿 상세 보기 PU', url: '#/manage/sms', description: '템플릿 상세 보기 팝업' },
+                { category: '메시지관리', title: '샘플 템플릿 PU', url: '#/manage/sms', description: '샘플 템플릿 보기/선택 팝업' },
+                { category: '메시지관리', title: 'AI 템플릿 PU', url: '#/manage/sms', description: 'AI 템플릿 생성 팝업' },
+                { category: '메시지관리', title: '삭제 확인 PU', url: '#/manage/sms', description: '템플릿 삭제 확인 팝업' },
+                { category: '메시지관리', title: '알림 PU', url: '#/manage/sms', description: '알림 메시지 팝업' },
+                { category: '메시지관리', title: '알림톡 템플릿', url: '#/manage/kakao', description: '알림톡 템플릿 관리' },
+                { category: '메시지관리', title: '카테고리 추가 PU', url: '#/manage/kakao', description: '카테고리 추가 팝업' },
+                { category: '메시지관리', title: '카테고리 이름 수정 PU', url: '#/manage/kakao', description: '카테고리 이름 수정 팝업' },
+                { category: '메시지관리', title: '대표 링크 PU', url: '#/manage/kakao', description: '대표 링크 설정 팝업' },
+                { category: '메시지관리', title: '버튼 PU', url: '#/manage/kakao', description: '버튼 추가/편집 팝업' },
+                { category: '메시지관리', title: '바로 연결 PU', url: '#/manage/kakao', description: '바로 연결 설정 팝업' },
+                { category: '메시지관리', title: '아이템 리스트 PU', url: '#/manage/kakao', description: '아이템 리스트 설정 팝업' },
+                { category: '메시지관리', title: '템플릿 상세 보기 PU', url: '#/manage/kakao', description: '템플릿 상세 보기 팝업' },
+                { category: '메시지관리', title: '샘플 템플릿 PU', url: '#/manage/kakao', description: '샘플 템플릿 보기/선택 팝업' },
+                { category: '메시지관리', title: 'AI 템플릿 PU', url: '#/manage/kakao', description: 'AI 템플릿 생성 팝업' },
+                { category: '메시지관리', title: '삭제 확인 PU', url: '#/manage/kakao', description: '템플릿 삭제 확인 팝업' },
+                { category: '메시지관리', title: '알림 PU', url: '#/manage/kakao', description: '알림 메시지 팝업' },
+                { category: '메시지관리', title: 'RCS 템플릿', url: '#/manage/rcs', description: 'RCS 템플릿 관리' },
+                { category: '메시지관리', title: '카테고리 추가 PU', url: '#/manage/rcs', description: '카테고리 추가 팝업' },
+                { category: '메시지관리', title: '카테고리 이름 수정 PU', url: '#/manage/rcs', description: '카테고리 이름 수정 팝업' },
+                { category: '메시지관리', title: '버튼 PU', url: '#/manage/rcs', description: '버튼 추가/편집 팝업' },
+                { category: '메시지관리', title: '템플릿 상세 보기 PU', url: '#/manage/rcs', description: '템플릿 상세 보기 팝업' },
+                { category: '메시지관리', title: '샘플 템플릿 PU', url: '#/manage/rcs', description: '샘플 템플릿 보기/선택 팝업' },
+                { category: '메시지관리', title: 'AI 템플릿 PU', url: '#/manage/rcs', description: 'AI 템플릿 생성 팝업' },
+                { category: '메시지관리', title: '삭제 확인 PU', url: '#/manage/rcs', description: '템플릿 삭제 확인 팝업' },
+                { category: '메시지관리', title: '알림 PU', url: '#/manage/rcs', description: '알림 메시지 팝업' },
+                { category: '메시지관리', title: '이메일 템플릿', url: '#/manage/email', description: '이메일 템플릿 관리' },
+                { category: '메시지관리', title: '카테고리 추가 PU', url: '#/manage/email', description: '카테고리 추가 팝업' },
+                { category: '메시지관리', title: '카테고리 이름 수정 PU', url: '#/manage/email', description: '카테고리 이름 수정 팝업' },
+                { category: '메시지관리', title: '광고 수신 알림 PU', url: '#/manage/email', description: '광고 수신 동의 안내 팝업' },
+                { category: '메시지관리', title: '템플릿 상세 보기 PU', url: '#/manage/email', description: '템플릿 상세 보기 팝업' },
+                { category: '메시지관리', title: '샘플 템플릿 PU', url: '#/manage/email', description: '샘플 템플릿 보기/선택 팝업' },
+                { category: '메시지관리', title: 'AI 템플릿 PU', url: '#/manage/email', description: 'AI 템플릿 생성 팝업' },
+                { category: '메시지관리', title: '삭제 확인 PU', url: '#/manage/email', description: '템플릿 삭제 확인 팝업' },
+                { category: '메시지관리', title: '알림 PU', url: '#/manage/email', description: '알림 메시지 팝업' },
+                { category: '메시지관리', title: 'PUSH 템플릿', url: '#/manage/push', description: '푸시 템플릿 관리' },
+                { category: '메시지관리', title: '카테고리 추가 PU', url: '#/manage/push', description: '카테고리 추가 팝업' },
+                { category: '메시지관리', title: '카테고리 이름 수정 PU', url: '#/manage/push', description: '카테고리 이름 수정 팝업' },
+                { category: '메시지관리', title: '버튼 PU', url: '#/manage/push', description: '버튼 추가/편집 팝업' },
+                { category: '메시지관리', title: '미디어(공통) PU', url: '#/manage/push', description: '공통 미디어 첨부 팝업' },
+                { category: '메시지관리', title: '미디어(Android) PU', url: '#/manage/push', description: 'Android 미디어 첨부 팝업' },
+                { category: '메시지관리', title: '미디어(iOS) PU', url: '#/manage/push', description: 'iOS 미디어 첨부 팝업' },
+                { category: '메시지관리', title: 'Android 큰 아이콘 PU', url: '#/manage/push', description: 'Android 큰 아이콘 첨부 팝업' },
+                { category: '메시지관리', title: '그룹 PU', url: '#/manage/push', description: '발송 그룹 설정 팝업' },
+                { category: '메시지관리', title: '템플릿 상세 보기 PU', url: '#/manage/push', description: '템플릿 상세 보기 팝업' },
+                { category: '메시지관리', title: '샘플 템플릿 PU', url: '#/manage/push', description: '샘플 템플릿 보기/선택 팝업' },
+                { category: '메시지관리', title: 'AI 템플릿 PU', url: '#/manage/push', description: 'AI 템플릿 생성 팝업' },
+                { category: '메시지관리', title: '삭제 확인 PU', url: '#/manage/push', description: '템플릿 삭제 확인 팝업' },
+                { category: '메시지관리', title: '알림 PU', url: '#/manage/push', description: '알림 메시지 팝업' },
+                { category: '메시지관리', title: '상세 설정', url: '#/manage/settings', description: '메시지 발송 상세 설정' },
+                { category: '메시지관리', title: '알림 PU', url: '#/manage/settings', description: '알림 메시지 팝업' },
+                { category: '메시지관리', title: '대체 문자 설정 PU', url: '#/manage/settings', description: '대체 문자 설정 팝업' },
+
+                // 문의하기
+                { category: '문의하기', title: '1:1 문의 작성', url: '#/inquiry', description: '1:1 문의 작성 폼' },
+                { category: '문의하기', title: '파일 오류 알림 PU', url: '#/inquiry', description: '첨부파일 오류 안내 팝업' },
+                { category: '문의하기', title: '문의 접수 완료', url: '#/inquiry/complete', description: '문의 접수 완료 안내 페이지' },
+
+                // 로그인
+                { category: '로그인', title: '로그인', url: '#/login', description: '이메일/비밀번호 로그인' },
+                { category: '로그인', title: '로그인 보안 인증', url: '#/login/security', description: 'OTP/이메일 보안 인증' },
+                { category: '로그인', title: '인증코드 알림 PU', url: '#/login/security', description: '인증코드 발송 안내 팝업' },
+                { category: '로그인', title: '비밀번호 재설정 (요청)', url: '#/reset-password', description: '비밀번호 재설정 메일 발송' },
+                { category: '로그인', title: '메일 발송 완료 PU', url: '#/reset-password', description: '메일 발송 완료 안내 팝업' },
+                { category: '로그인', title: '비밀번호 재설정 (신규 입력)', url: '#/reset-password/new', description: '새 비밀번호 입력' },
+                { category: '로그인', title: '재설정 완료 PU', url: '#/reset-password/new', description: '비밀번호 재설정 완료 안내 팝업' },
+
+                // 회원가입
+                { category: '회원가입', title: '회원가입', url: '#/signup', description: '이메일/약관 동의 가입 폼' },
+                { category: '회원가입', title: 'OTP 인증 알림 PU', url: '#/signup', description: 'OTP 인증 안내 팝업' },
+                { category: '회원가입', title: '휴대폰 인증 알림 PU', url: '#/signup', description: '휴대폰 인증 안내 팝업' },
+                { category: '회원가입', title: '이용약관 PU', url: '#/signup', description: '이용약관 / 개인정보 동의 팝업' },
+
+                // 캠페인 관리
+                { category: '캠페인 관리', title: '캠페인 목록', url: '#/campaign', description: '캠페인 목록 + 통계 카드 + 검색/필터 + 복사/삭제' },
+                { category: '캠페인 관리', title: '캠페인 생성/수정', url: '#/campaign', description: '기본 정보, 수신자 그룹, 발송 채널/메시지, 발송 시점, 시뮬레이션' },
+                { category: '캠페인 관리', title: '설문폼 추가 PU', url: '#/campaign', description: '설문폼 복수 선택 팝업' },
+                { category: '캠페인 관리', title: '테스트 발송 PU', url: '#/campaign', description: '테스트 발송 채널 선택 + 차감 크레딧 안내 팝업' },
+                { category: '캠페인 관리', title: '발송 컨펌 PU', url: '#/campaign', description: '발송 클릭 시 컨펌 팝업 (수신자/크레딧 차감 안내)' },
+                { category: '캠페인 관리', title: '크레딧 부족 PU', url: '#/campaign', description: '크레딧 부족 시 충전 유도 팝업' },
+                { category: '캠페인 관리', title: '필수 정보 미입력 알림 PU', url: '#/campaign', description: '필수 정보 미입력 알림 팝업' },
+                { category: '캠페인 관리', title: '예약 재발송 PU', url: '#/campaign', description: '예약 대기 중 재발송 안내 팝업' },
+                { category: '캠페인 관리', title: '발송 완료 복제 PU', url: '#/campaign', description: '발송 완료된 캠페인 복제 안내 팝업' },
+                { category: '캠페인 관리', title: '대기 중 캠페인 중지 PU', url: '#/campaign', description: '대기 중 캠페인 중지 컨펌 팝업' },
+                { category: '캠페인 관리', title: '진행 중 캠페인 중지 PU', url: '#/campaign', description: '진행 중 캠페인 중지 컨펌 팝업' },
+                { category: '캠페인 관리', title: '복사 확인 PU', url: '#/campaign', description: '캠페인 복사 확인 팝업' },
+                { category: '캠페인 관리', title: '삭제 확인 PU', url: '#/campaign', description: '캠페인 삭제 확인 팝업' },
+                { category: '캠페인 관리', title: '캠페인 관리 (변형 v3)', url: '#/campaign3', description: '캠페인 관리 변형 페이지 (디자인 검토용)' },
+
+                // 충전하기
+                { category: '충전하기', title: '크레딧 충전', url: '#/charge', description: '크레딧 충전 페이지' },
+                { category: '충전하기', title: '카드 추가 PU', url: '#/charge', description: '결제 카드 등록 팝업' },
+                { category: '충전하기', title: '결제 확인 PU', url: '#/charge', description: '결제 확인 팝업' },
+                { category: '충전하기', title: '충전 결과', url: '#/charge/result', description: '충전 결과 안내 페이지' },
+
+                // 크레딧 관리
+                { category: '크레딧 관리', title: '크레딧 내역', url: '#/account/credit', description: '크레딧 사용/충전 내역' },
+                { category: '크레딧 관리', title: '영수증 PU', url: '#/account/credit', description: '영수증 보기 팝업' },
+                { category: '크레딧 관리', title: '크레딧 상세내용 PU', url: '#/account/credit', description: '크레딧 상세 내용 팝업' },
+                { category: '크레딧 관리', title: '취소 확인 PU', url: '#/account/credit', description: '결제 취소 확인 팝업' },
+                { category: '크레딧 관리', title: '취소 완료 PU', url: '#/account/credit', description: '결제 취소 완료 안내 팝업' },
+
+                // 문의 내역
+                { category: '문의 내역', title: '문의 내역', url: '#/account/inquiries', description: '내가 문의한 내역 목록' },
+                { category: '문의 내역', title: '삭제 확인 PU', url: '#/account/inquiries', description: '문의 삭제 확인 팝업' },
+                { category: '문의 내역', title: '문의 내역 상세', url: '#/account/inquiries/detail', description: '문의 상세 + 답변 보기' },
+                { category: '문의 내역', title: '삭제 확인 PU', url: '#/account/inquiries/detail', description: '문의 삭제 확인 팝업' },
+
+                // 계정관리
+                { category: '계정관리', title: '계정 설정', url: '#/account/settings', description: '계정 정보 / 결제 이메일 설정' },
+                { category: '계정관리', title: '알림 PU', url: '#/account/settings', description: '알림 메시지 팝업' },
+                { category: '계정관리', title: '서명 등록 PU', url: '#/account/settings', description: '전자 서명 등록/입력 팝업' },
+                { category: '계정관리', title: '문서 뷰어 PU', url: '#/account/settings', description: '계약서/약관 문서 뷰어 팝업' },
+                { category: '계정관리', title: '확인 PU', url: '#/account/settings', description: '확인 메시지 팝업' },
+
+                // 시스템 / 템플릿 페이지
+                { category: '시스템 / 템플릿 페이지', title: '에러 - 시스템 오류', url: '#/templete/error/system', description: '시스템 오류 안내 페이지' },
+                { category: '시스템 / 템플릿 페이지', title: '에러 - 페이지 없음', url: '#/templete/error/not-found', description: '404 Not Found 페이지' },
+                { category: '시스템 / 템플릿 페이지', title: '에러 - 네트워크 오류', url: '#/templete/error/network', description: '네트워크 오류 안내 페이지' },
+                { category: '시스템 / 템플릿 페이지', title: '404 페이지 (단독)', url: '#/404', description: '쏠쏠 브랜드 404 단독 페이지 (layout 없음)' },
+                { category: '시스템 / 템플릿 페이지', title: '에러 페이지 (단독)', url: '#/error', description: '쏠쏠 브랜드 시스템 에러 단독 페이지 (layout 없음)' },
+                { category: '시스템 / 템플릿 페이지', title: '점검 - 긴급 점검', url: '#/templete/inspection/emergency', description: '긴급 점검 안내 페이지' },
+                { category: '시스템 / 템플릿 페이지', title: '점검 - 정기 점검', url: '#/templete/inspection/scheduled', description: '정기 점검 안내 페이지' },
+                { category: '시스템 / 템플릿 페이지', title: '메일 - 이메일 인증', url: '#/templete/email/verify', description: '이메일 인증 메일 템플릿' },
+                { category: '시스템 / 템플릿 페이지', title: '메일 - 비밀번호 재설정', url: '#/templete/email/reset-password', description: '비밀번호 재설정 메일 템플릿' }
+            ];
+        },
+        groupedPages() {
+            const groups = [];
+            let currentCategory = null;
+            for (const page of this.pages) {
+                if (page.category !== currentCategory) {
+                    groups.push({ category: page.category, pages: [] });
+                    currentCategory = page.category;
+                }
+                groups[groups.length - 1].pages.push(page);
+            }
+            return groups;
+        },
         totalPages() {
-            return this.categories.reduce((sum, cat) =>
-                sum + cat.items.filter(i => i.type === 'Page').length, 0);
-        },
-        totalPopups() {
-            return this.categories.reduce((sum, cat) =>
-                sum + cat.items.filter(i => i.type === 'PU').length, 0);
-        },
-        filteredCategories() {
-            const q = this.search.trim().toLowerCase();
-            if (!q) return this.categories;
-            return this.categories
-                .map(cat => ({
-                    ...cat,
-                    items: cat.items.filter(i =>
-                        i.name.toLowerCase().includes(q) ||
-                        i.path.toLowerCase().includes(q)
-                    )
-                }))
-                .filter(cat => cat.items.length > 0);
+            return this.pages.length;
         }
     },
     methods: {
-        getFullUrl(path) {
-            return `${this.baseUrl}/#${path}`;
+        getFullUrl(url) {
+            if (!url) return '';
+            if (url.startsWith('#/')) {
+                return this.baseUrl + '/' + url;
+            }
+            return this.baseUrl + '/' + url;
         },
-        openItem(path) {
-            this.navigateTo(path);
+        getStatusKey(page) {
+            return page.category + '::' + page.title + '::' + page.url;
+        },
+        getStatus(page) {
+            const key = this.getStatusKey(page);
+            if (!this.statusMap[key]) {
+                this.statusMap[key] = { design: false, publishing: '', saved: false };
+            }
+            return this.statusMap[key];
+        },
+        saveStatus(page) {
+            const key = this.getStatusKey(page);
+            this.statusMap[key].saved = true;
+            localStorage.setItem('pagelists-status', JSON.stringify(this.statusMap));
+        },
+        editStatus(page) {
+            const key = this.getStatusKey(page);
+            this.statusMap[key].saved = false;
+        },
+        getSubcategory(page) {
+            const map = {
+                // 메시지 발송 — 채널별
+                '#/send/sms': '문자메시지',
+                '#/send/kakao': '알림톡',
+                '#/send/rcs': 'RCS',
+                '#/send/email': '이메일',
+                '#/send/push': 'PUSH',
+                '#/send/flow': '복합(플로우)',
+                // 발송 조회/통계 — 채널별
+                '#/history/sms': '문자메시지',
+                '#/history/kakao': '알림톡',
+                '#/history/rcs': 'RCS',
+                '#/history/email': '이메일',
+                '#/history/push': 'PUSH',
+                '#/history/stats': '통계',
+                // 주소록 — 하위 메뉴별
+                '#/contacts/list': '연락처 관리',
+                '#/contacts/groups': '그룹 관리',
+                '#/contacts/optout': '수신 거부 관리',
+                // 발신 정보 — 하위 메뉴별
+                '#/sender/numbers': '발신 번호 관리',
+                '#/sender/brands': '브랜드 관리',
+                '#/sender/domains': '도메인 관리',
+                '#/sender/push-cert': 'PUSH 인증 관리',
+                '#/sender/profiles': '발신 프로필 관리',
+                '#/sender/optout-080': '080 수신 거부 관리',
+                // 메시지관리 — 채널별
+                '#/manage/sms': '문자메시지',
+                '#/manage/kakao': '알림톡',
+                '#/manage/rcs': 'RCS',
+                '#/manage/email': '이메일',
+                '#/manage/push': 'PUSH',
+                '#/manage/settings': '상세 설정'
+            };
+            return map[page.url] || page.category;
         }
     }
 };

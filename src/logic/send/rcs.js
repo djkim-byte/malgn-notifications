@@ -89,11 +89,23 @@ export default {
             recipientInputModal: { name: '', phone: '', varValue: '' },
             recipientEditModal: { id: null, name: '', phone: '', varValue: '' },
             addressBookModal: {
+                activeTab: 'individual',
                 search: '',
                 selectedIds: [],
                 varMap: {},
                 page: 1,
                 pageSize: 9,
+                groupSearch: '',
+                selectedGroupIds: [],
+                groupPage: 1,
+                groupPageSize: 9,
+                groups: [
+                    { id: 'g1', name: '위캔디오_V4공지_고객용', contactIds: [] },
+                    { id: 'g2', name: '트래픽_알림_오발송', contactIds: [101, 102, 103, 104, 105, 106, 107, 108] },
+                    { id: 'g3', name: '위캔디오_업무_소통방', contactIds: [109, 110, 111, 112, 113, 114, 115, 116, 117, 118] },
+                    { id: 'g4', name: '맑은소프트_전체', contactIds: [101, 103, 109, 113, 114, 115, 116] },
+                    { id: 'g5', name: 'CDN_파트너', contactIds: [101, 102, 106, 110] }
+                ],
                 contacts: [
                     { id: 101, name: 'CDNETWORKS', phone: '010-0000-0001' },
                     { id: 102, name: 'CDNW', phone: '010-0000-0002' },
@@ -115,7 +127,8 @@ export default {
                     { id: 118, name: '박지원', phone: '010-9090-1212' }
                 ]
             },
-            buttonModal: { editIndex: null, type: '', name: '', value: '' }
+            buttonModal: { editIndex: null, type: '', name: '', value: '' },
+            sendDemoStep: 0
         };
     },
 
@@ -127,7 +140,8 @@ export default {
                 recipientEdit: new bootstrap.Modal(this.$refs.recipientEditModal),
                 addressBook: new bootstrap.Modal(this.$refs.addressBookModal),
                 button: new bootstrap.Modal(this.$refs.buttonModal),
-                reset: new bootstrap.Modal(this.$refs.resetModal)
+                reset: new bootstrap.Modal(this.$refs.resetModal),
+                sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal)
             };
         });
     },
@@ -179,8 +193,39 @@ export default {
             const ids = this.pagedAddressBook.map(c => c.id);
             return ids.length > 0 && ids.every(id => this.addressBookModal.selectedIds.includes(id));
         },
+        filteredGroupList() {
+            const q = this.addressBookModal.groupSearch.trim().toLowerCase();
+            if (!q) return this.addressBookModal.groups;
+            return this.addressBookModal.groups.filter(g => g.name.toLowerCase().includes(q));
+        },
+        groupTotalPages() {
+            return Math.max(1, Math.ceil(this.filteredGroupList.length / this.addressBookModal.groupPageSize));
+        },
+        pagedGroupList() {
+            const start = (this.addressBookModal.groupPage - 1) * this.addressBookModal.groupPageSize;
+            return this.filteredGroupList.slice(start, start + this.addressBookModal.groupPageSize);
+        },
+        isGroupAllSelected() {
+            const ids = this.pagedGroupList.map(g => g.id);
+            return ids.length > 0 && ids.every(id => this.addressBookModal.selectedGroupIds.includes(id));
+        },
+        groupExpandedContactIds() {
+            const set = new Set();
+            this.addressBookModal.groups
+                .filter(g => this.addressBookModal.selectedGroupIds.includes(g.id))
+                .forEach(g => (g.contactIds || []).forEach(id => set.add(id)));
+            return Array.from(set);
+        },
+        addressBookSelectedCount() {
+            return this.addressBookModal.activeTab === 'group'
+                ? this.groupExpandedContactIds.length
+                : this.addressBookModal.selectedIds.length;
+        },
         selectedAddressBookContacts() {
-            return this.addressBookModal.contacts.filter(c => this.addressBookModal.selectedIds.includes(c.id));
+            const ids = this.addressBookModal.activeTab === 'group'
+                ? this.groupExpandedContactIds
+                : this.addressBookModal.selectedIds;
+            return this.addressBookModal.contacts.filter(c => ids.includes(c.id));
         },
         buttonValueLabel() {
             const map = { url: 'URL', copy: '복사할 값', call: '전화번호' };
@@ -291,11 +336,19 @@ export default {
 
         // ===== 주소록 =====
         openAddressBook() {
+            this.addressBookModal.activeTab = 'individual';
             this.addressBookModal.search = '';
             this.addressBookModal.selectedIds = [];
             this.addressBookModal.varMap = {};
             this.addressBookModal.page = 1;
+            this.addressBookModal.groupSearch = '';
+            this.addressBookModal.selectedGroupIds = [];
+            this.addressBookModal.groupPage = 1;
             this.showModal('addressBook');
+        },
+        switchAddressBookTab(tab) {
+            if (this.addressBookModal.activeTab === tab) return;
+            this.addressBookModal.activeTab = tab;
         },
         toggleAddressBookAll(e) {
             const ids = this.pagedAddressBook.map(c => c.id);
@@ -306,12 +359,27 @@ export default {
                 this.addressBookModal.selectedIds = this.addressBookModal.selectedIds.filter(id => !ids.includes(id));
             }
         },
+        toggleGroupAll(e) {
+            const ids = this.pagedGroupList.map(g => g.id);
+            if (e.target.checked) {
+                const merged = new Set([...this.addressBookModal.selectedGroupIds, ...ids]);
+                this.addressBookModal.selectedGroupIds = Array.from(merged);
+            } else {
+                this.addressBookModal.selectedGroupIds = this.addressBookModal.selectedGroupIds.filter(id => !ids.includes(id));
+            }
+        },
+        groupContactCount(group) {
+            return (group && group.contactIds || []).length;
+        },
         confirmAddressBook() {
-            if (this.addressBookModal.selectedIds.length === 0) {
+            const pickedIds = this.addressBookModal.activeTab === 'group'
+                ? this.groupExpandedContactIds
+                : this.addressBookModal.selectedIds;
+            if (pickedIds.length === 0) {
                 alert('수신자를 선택하세요.');
                 return;
             }
-            const picked = this.addressBookModal.contacts.filter(c => this.addressBookModal.selectedIds.includes(c.id));
+            const picked = this.addressBookModal.contacts.filter(c => pickedIds.includes(c.id));
             const existingPhones = new Set(this.recipients.map(r => r.phone));
             picked.forEach(c => {
                 if (!existingPhones.has(c.phone)) {
@@ -422,8 +490,20 @@ export default {
             return true;
         },
         handleSubmit() {
-            this.submitted = true;
-            if (!this.validate()) return;
+            if (this.sendDemoStep === 0) {
+                this.submitted = true;
+                this.validate();
+                this.sendDemoStep = 1;
+            } else {
+                bootstrap.Modal.getOrCreateInstance(this.$refs.sendConfirmModal).show();
+                this.sendDemoStep = 0;
+            }
+        },
+        closeSendConfirm() {
+            bootstrap.Modal.getOrCreateInstance(this.$refs.sendConfirmModal).hide();
+        },
+        confirmSend() {
+            this.closeSendConfirm();
             alert('RCS 메시지가 발송되었습니다.');
             this.doReset();
         },

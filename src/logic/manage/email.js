@@ -119,6 +119,13 @@ export default {
                 customOptoutText: ''
             },
             sampleModal: { search: '', selectedId: null },
+            aiTemplateModal: {
+                chatInput: '',
+                isGenerating: false,
+                messages: [],
+                generated: null,
+                previewMode: 'text'
+            },
             alertText: '',
 
             sampleTemplates: [
@@ -138,6 +145,7 @@ export default {
                 adAlert: new bootstrap.Modal(this.$refs.adAlertModal),
                 templateDetail: new bootstrap.Modal(this.$refs.templateDetailModal),
                 sample: new bootstrap.Modal(this.$refs.sampleModal),
+                aiTemplate: new bootstrap.Modal(this.$refs.aiTemplateModal),
                 delete: new bootstrap.Modal(this.$refs.deleteModal),
                 alert: new bootstrap.Modal(this.$refs.alertModal)
             };
@@ -502,6 +510,80 @@ export default {
         openTemplateDetailModal() {
             if (!this.selectedTemplate) return;
             this.showModal('templateDetail');
+        },
+
+        openAiTemplateModal() {
+            const ai = this.aiTemplateModal;
+            ai.chatInput = '';
+            ai.isGenerating = false;
+            ai.messages = [];
+            ai.generated = null;
+            ai.previewMode = 'text';
+            this.showModal('aiTemplate');
+        },
+
+        useSuggestion(text) {
+            this.aiTemplateModal.chatInput = text;
+        },
+
+        sendAiPrompt() {
+            const ai = this.aiTemplateModal;
+            const prompt = ai.chatInput.trim();
+            if (!prompt || ai.isGenerating) return;
+
+            ai.messages.push({ role: 'user', text: prompt });
+            ai.chatInput = '';
+            ai.isGenerating = true;
+            this.scrollAiChatToBottom();
+
+            // 모의 LLM 응답 (실서비스에서는 LLM API 호출)
+            setTimeout(() => {
+                const generated = this.mockGenerateEmailTemplate(prompt);
+                const isFirst = ai.generated === null;
+                ai.messages.push({
+                    role: 'assistant',
+                    text: isFirst
+                        ? '요청하신 내용으로 이메일 템플릿을 생성했습니다. 우측 미리보기에서 확인하시고, 수정하고 싶은 부분이 있으면 알려주세요.'
+                        : '말씀하신 내용을 반영해 다시 생성했습니다. 우측 미리보기를 확인해 주세요.',
+                    template: generated
+                });
+                ai.generated = generated;
+                ai.isGenerating = false;
+                this.scrollAiChatToBottom();
+            }, 900);
+        },
+
+        mockGenerateEmailTemplate(prompt) {
+            const summary = prompt.length > 60 ? prompt.slice(0, 60) + '...' : prompt;
+            const title = `[안내] ${summary}`;
+            const content = `안녕하세요, #{name}님.\n\n${prompt}\n\n자세한 내용은 홈페이지에서 확인하실 수 있으며, 추가 문의는 고객센터로 연락 주시기 바랍니다.\n\n감사합니다.\n쏠쏠 드림`;
+            return { title, content };
+        },
+
+        scrollAiChatToBottom() {
+            this.$nextTick(() => {
+                const el = this.$refs.aiChatBody;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
+        },
+
+        applyAiTemplate() {
+            if (!this.aiTemplateModal.generated) return;
+            const tpl = this.aiTemplateModal.generated;
+
+            if (this.mode === 'list') {
+                this.editingTemplateId = null;
+                this.editingCategoryId = this.selectedCategoryId || (this.categories[0] && this.categories[0].id) || null;
+                this.resetForm();
+                this.mode = 'register';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            this.form.title = tpl.title || '';
+            this.form.content = tpl.content || '';
+            this.previewMode = this.aiTemplateModal.previewMode;
+
+            this.closeModal('aiTemplate');
         },
 
         openSampleModal() {

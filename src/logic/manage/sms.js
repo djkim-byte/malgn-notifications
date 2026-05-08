@@ -122,6 +122,13 @@ export default {
             editCategoryModal: { id: '', name: '' },
             adAlertModal: { selected080: '' },
             sampleModal: { activeTab: 'SMS', search: '', selectedId: null, page: 1, pageSize: 8 },
+            aiTemplateModal: {
+                activeTab: 'SMS',
+                chatInput: '',
+                isGenerating: false,
+                messages: [],
+                generated: null
+            },
             alertText: '',
 
             // 샘플 템플릿
@@ -167,6 +174,7 @@ export default {
                 adAlert: new bootstrap.Modal(this.$refs.adAlertModal),
                 templateDetail: new bootstrap.Modal(this.$refs.templateDetailModal),
                 sample: new bootstrap.Modal(this.$refs.sampleModal),
+                aiTemplate: new bootstrap.Modal(this.$refs.aiTemplateModal),
                 delete: new bootstrap.Modal(this.$refs.deleteModal),
                 alert: new bootstrap.Modal(this.$refs.alertModal)
             };
@@ -252,6 +260,12 @@ export default {
         },
         previewText() {
             return this.form.content;
+        },
+        aiInputPlaceholder() {
+            const tab = this.aiTemplateModal.activeTab;
+            if (tab === 'SMS') return '예) 봄맞이 신상품 출시 안내 단문 메시지를 만들어줘';
+            if (tab === 'LMS') return '예) 회원가입을 환영하는 장문 메시지를 만들어줘';
+            return '예) 신제품 이미지와 함께 보낼 포토 메시지를 만들어줘';
         }
     },
 
@@ -567,6 +581,97 @@ export default {
         openTemplateDetailModal() {
             if (!this.selectedTemplate) return;
             this.showModal('templateDetail');
+        },
+
+        // ===== AI 템플릿 =====
+        openAiTemplateModal() {
+            const ai = this.aiTemplateModal;
+            ai.activeTab = (this.mode !== 'list' && this.form.messageType) ? this.form.messageType : 'SMS';
+            ai.chatInput = '';
+            ai.isGenerating = false;
+            ai.messages = [];
+            ai.generated = null;
+            this.showModal('aiTemplate');
+        },
+
+        useSuggestion(text) {
+            this.aiTemplateModal.chatInput = text;
+        },
+
+        sendAiPrompt() {
+            const prompt = this.aiTemplateModal.chatInput.trim();
+            if (!prompt || this.aiTemplateModal.isGenerating) return;
+
+            this.aiTemplateModal.messages.push({ role: 'user', text: prompt });
+            this.aiTemplateModal.chatInput = '';
+            this.aiTemplateModal.isGenerating = true;
+            this.scrollAiChatToBottom();
+
+            // 모의 LLM 응답 (실서비스에서는 LLM API 호출)
+            setTimeout(() => {
+                const generated = this.mockGenerateTemplate(prompt, this.aiTemplateModal.activeTab);
+                const isFirst = this.aiTemplateModal.generated === null;
+                this.aiTemplateModal.messages.push({
+                    role: 'assistant',
+                    text: isFirst
+                        ? '요청하신 내용으로 템플릿을 생성했습니다. 우측 미리보기에서 확인하시고, 수정하고 싶은 부분이 있으면 알려주세요.'
+                        : '말씀하신 내용을 반영해 다시 생성했습니다. 우측 미리보기를 확인해 주세요.',
+                    template: generated
+                });
+                this.aiTemplateModal.generated = generated;
+                this.aiTemplateModal.isGenerating = false;
+                this.scrollAiChatToBottom();
+            }, 900);
+        },
+
+        mockGenerateTemplate(prompt, tab) {
+            const summary = prompt.length > 40 ? prompt.slice(0, 40) + '...' : prompt;
+            if (tab === 'SMS') {
+                return {
+                    title: '',
+                    content: `[안내] ${summary}\n자세한 내용은 홈페이지에서 확인해 주세요.`,
+                    thumbnail: ''
+                };
+            }
+            if (tab === 'LMS') {
+                return {
+                    title: '안내드립니다',
+                    content: `안녕하세요, #{name}님.\n\n${prompt}\n\n관련 문의는 고객센터(1644-7143)로 연락 주시기 바랍니다.\n감사합니다.`,
+                    thumbnail: ''
+                };
+            }
+            return {
+                title: '안내 이미지',
+                content: `${prompt}\n\n자세한 내용은 첨부 이미지를 확인해 주세요.`,
+                thumbnail: 'https://placehold.co/400x500/6756ED/fff?text=AI+Template'
+            };
+        },
+
+        scrollAiChatToBottom() {
+            this.$nextTick(() => {
+                const el = this.$refs.aiChatBody;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
+        },
+
+        applyAiTemplate() {
+            if (!this.aiTemplateModal.generated) return;
+            const tpl = this.aiTemplateModal.generated;
+            const ai = this.aiTemplateModal;
+
+            if (this.mode === 'list') {
+                this.editingTemplateId = null;
+                this.editingCategoryId = this.selectedCategoryId || (this.categories[0] && this.categories[0].id) || null;
+                this.resetForm();
+                this.mode = 'register';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            this.form.messageType = ai.activeTab;
+            this.form.title = tpl.title || '';
+            this.form.content = tpl.content || '';
+
+            this.closeModal('aiTemplate');
         },
 
         // ===== 샘플 템플릿 =====

@@ -121,10 +121,22 @@ export default {
             recipientInputModal: { email: '' },
             recipientEditModal: { id: null, name: '', email: '' },
             addressBookModal: {
+                activeTab: 'individual',
                 search: '',
                 selectedIds: [],
                 page: 1,
                 pageSize: 11,
+                groupSearch: '',
+                selectedGroupIds: [],
+                groupPage: 1,
+                groupPageSize: 11,
+                groups: [
+                    { id: 'g1', name: '위캔디오_V4공지_고객용', contactIds: [] },
+                    { id: 'g2', name: '트래픽_알림_오발송', contactIds: [101, 102, 103, 104, 105, 106, 107, 108] },
+                    { id: 'g3', name: '위캔디오_업무_소통방', contactIds: [109, 110, 111, 112, 113, 114, 115, 116, 117, 118] },
+                    { id: 'g4', name: '맑은소프트_전체', contactIds: [101, 103, 109, 119, 120, 121, 122, 123, 124, 125] },
+                    { id: 'g5', name: 'CDN_파트너', contactIds: [101, 102, 106, 110] }
+                ],
                 contacts: [
                     { id: 101, name: 'CDNETWORKS', email: 'seungyoon.chae@cdnetworks.co.kr' },
                     { id: 102, name: 'CDNW', email: 'haewon.lee@cdnetworks.co.kr' },
@@ -157,7 +169,8 @@ export default {
                     { id: 129, name: '최서진', email: 'seojin.choi@malgnsoft.com' },
                     { id: 130, name: '한지민', email: 'jimin.han@malgnsoft.com' }
                 ]
-            }
+            },
+            sendDemoStep: 0
         };
     },
 
@@ -170,7 +183,8 @@ export default {
                 recipientEdit: new bootstrap.Modal(this.$refs.recipientEditModal),
                 addressBook: new bootstrap.Modal(this.$refs.addressBookModal),
                 adAlert: new bootstrap.Modal(this.$refs.adAlertModal),
-                reset: new bootstrap.Modal(this.$refs.resetModal)
+                reset: new bootstrap.Modal(this.$refs.resetModal),
+                sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal)
             };
         });
     },
@@ -224,6 +238,34 @@ export default {
         isAddressBookAllSelected() {
             const ids = this.pagedAddressBook.map(c => c.id);
             return ids.length > 0 && ids.every(id => this.addressBookModal.selectedIds.includes(id));
+        },
+        filteredGroupList() {
+            const q = this.addressBookModal.groupSearch.trim().toLowerCase();
+            if (!q) return this.addressBookModal.groups;
+            return this.addressBookModal.groups.filter(g => g.name.toLowerCase().includes(q));
+        },
+        groupTotalPages() {
+            return Math.max(1, Math.ceil(this.filteredGroupList.length / this.addressBookModal.groupPageSize));
+        },
+        pagedGroupList() {
+            const start = (this.addressBookModal.groupPage - 1) * this.addressBookModal.groupPageSize;
+            return this.filteredGroupList.slice(start, start + this.addressBookModal.groupPageSize);
+        },
+        isGroupAllSelected() {
+            const ids = this.pagedGroupList.map(g => g.id);
+            return ids.length > 0 && ids.every(id => this.addressBookModal.selectedGroupIds.includes(id));
+        },
+        groupExpandedContactIds() {
+            const set = new Set();
+            this.addressBookModal.groups
+                .filter(g => this.addressBookModal.selectedGroupIds.includes(g.id))
+                .forEach(g => (g.contactIds || []).forEach(id => set.add(id)));
+            return Array.from(set);
+        },
+        addressBookSelectedCount() {
+            return this.addressBookModal.activeTab === 'group'
+                ? this.groupExpandedContactIds.length
+                : this.addressBookModal.selectedIds.length;
         }
     },
 
@@ -314,10 +356,19 @@ export default {
 
         // ===== 주소록 =====
         openAddressBook() {
+            this.addressBookModal.activeTab = 'individual';
             this.addressBookModal.search = '';
             this.addressBookModal.selectedIds = [];
             this.addressBookModal.page = 1;
+            this.addressBookModal.groupSearch = '';
+            this.addressBookModal.selectedGroupIds = [];
+            this.addressBookModal.groupPage = 1;
             this.showModal('addressBook');
+        },
+
+        switchAddressBookTab(tab) {
+            if (this.addressBookModal.activeTab === tab) return;
+            this.addressBookModal.activeTab = tab;
         },
 
         toggleAddressBookAll(e) {
@@ -330,8 +381,25 @@ export default {
             }
         },
 
+        toggleGroupAll(e) {
+            const ids = this.pagedGroupList.map(g => g.id);
+            if (e.target.checked) {
+                const merged = new Set([...this.addressBookModal.selectedGroupIds, ...ids]);
+                this.addressBookModal.selectedGroupIds = Array.from(merged);
+            } else {
+                this.addressBookModal.selectedGroupIds = this.addressBookModal.selectedGroupIds.filter(id => !ids.includes(id));
+            }
+        },
+
+        groupContactCount(group) {
+            return (group && group.contactIds || []).length;
+        },
+
         confirmAddressBook() {
-            const picked = this.addressBookModal.contacts.filter(c => this.addressBookModal.selectedIds.includes(c.id));
+            const pickedIds = this.addressBookModal.activeTab === 'group'
+                ? this.groupExpandedContactIds
+                : this.addressBookModal.selectedIds;
+            const picked = this.addressBookModal.contacts.filter(c => pickedIds.includes(c.id));
             if (picked.length === 0) {
                 alert('수신자를 선택하세요.');
                 return;
@@ -472,8 +540,22 @@ export default {
         },
 
         handleSubmit() {
-            this.submitted = true;
-            if (!this.validate()) return;
+            if (this.sendDemoStep === 0) {
+                this.submitted = true;
+                this.validate();
+                this.sendDemoStep = 1;
+            } else {
+                bootstrap.Modal.getOrCreateInstance(this.$refs.sendConfirmModal).show();
+                this.sendDemoStep = 0;
+            }
+        },
+
+        closeSendConfirm() {
+            bootstrap.Modal.getOrCreateInstance(this.$refs.sendConfirmModal).hide();
+        },
+
+        confirmSend() {
+            this.closeSendConfirm();
             alert('이메일이 발송되었습니다.');
             this.doReset();
         },

@@ -1,89 +1,84 @@
 <div class="container py-5 pagelists">
-    <!-- 헤더 -->
     <div class="d-flex justify-content-between align-items-end flex-wrap gap-3 mb-4">
         <div>
-            <h1 class="fw-bold mb-2">페이지 목록</h1>
-            <p class="text-muted mb-0">맑은 NOTIFICATIONS의 모든 화면 및 팝업(PU) 목록입니다.</p>
+            <h3 class="fw-bold mb-1">맑은 NOTIFICATIONS - 페이지 목록</h3>
+            <p class="text-muted mb-0">총 {{ totalPages }}개 페이지</p>
         </div>
-        <div class="d-flex gap-2">
-            <div class="pagelists-stat">
-                <div class="pagelists-stat-label">Pages</div>
-                <div class="pagelists-stat-value">{{ totalPages }}</div>
-            </div>
-            <div class="pagelists-stat">
-                <div class="pagelists-stat-label">Popups</div>
-                <div class="pagelists-stat-value">{{ totalPopups }}</div>
-            </div>
+        <div class="pagelists-total-badge">
+            <span class="pagelists-total-num">{{ totalPages }}</span>
+            <span class="pagelists-total-label">Total</span>
         </div>
     </div>
 
-    <!-- 검색 -->
-    <div class="position-relative mb-4">
-        <i class="bi bi-search pagelists-search-icon"></i>
-        <input
-            v-model="search"
-            type="text"
-            class="form-control pagelists-search-input"
-            placeholder="페이지명 또는 경로 검색…"
-        >
-        <button
-            v-if="search"
-            type="button"
-            class="btn btn-link pagelists-search-clear"
-            @click="search = ''"
-            aria-label="검색어 초기화"
-        >
-            <i class="bi bi-x-circle-fill"></i>
-        </button>
-    </div>
-
-    <!-- 카테고리별 테이블 -->
-    <div v-for="cat in filteredCategories" :key="cat.title" class="mb-5">
-        <h2 class="fs-5 fw-bold mb-3 pagelists-cat-title">{{ cat.title }}</h2>
-        <div class="table-responsive pagelists-card">
-            <table class="table table-hover align-middle mb-0">
-                <thead>
+    <div v-for="group in groupedPages" :key="group.category" class="mb-4">
+        <h6 class="fw-bold mb-2">
+            {{ group.category }}
+            <span class="badge bg-secondary ms-1">{{ group.pages.length }}</span>
+        </h6>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0 pagelists-table">
+                <thead class="table-light">
                     <tr>
-                        <th class="pagelists-col-type">구분</th>
-                        <th class="pagelists-col-name">이름</th>
-                        <th class="pagelists-col-url">URL</th>
+                        <th class="pl-col-cat">구분</th>
+                        <th class="pl-col-title">제목</th>
+                        <th class="pl-col-url">URL</th>
+                        <th class="pl-col-desc">설명</th>
+                        <th class="pl-col-design">디자인</th>
+                        <th class="pl-col-pub">퍼블리싱</th>
+                        <th class="pl-col-mgmt">관리</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="(item, idx) in cat.items" :key="cat.title + '-' + idx">
-                        <td>
-                            <span
-                                class="badge pagelists-badge"
-                                :class="item.type === 'Page' ? 'pagelists-badge-page' : 'pagelists-badge-pu'"
-                            >{{ item.type }}</span>
-                        </td>
+                    <tr v-for="page in group.pages" :key="getStatusKey(page)">
+                        <td>{{ getSubcategory(page) }}</td>
+                        <td>{{ page.title }}</td>
                         <td>
                             <a
-                                href="javascript:void(0)"
-                                class="pagelists-name-link"
-                                @click="openItem(item.path)"
-                            >{{ item.name }}</a>
-                        </td>
-                        <td>
-                            <a
-                                :href="getFullUrl(item.path)"
+                                v-if="page.url"
+                                :href="getFullUrl(page.url)"
                                 target="_blank"
                                 rel="noopener"
                                 class="pagelists-url-link"
-                            >{{ getFullUrl(item.path) }}</a>
+                            >{{ getFullUrl(page.url) }}</a>
+                            <span v-else class="text-muted">추후 생성</span>
+                        </td>
+                        <td class="text-muted small">{{ page.description }}</td>
+                        <td class="text-center">
+                            <input
+                                type="checkbox"
+                                class="form-check-input"
+                                :checked="getStatus(page).design"
+                                :disabled="getStatus(page).saved"
+                                @change="getStatus(page).design = $event.target.checked"
+                            >
+                        </td>
+                        <td>
+                            <input
+                                type="text"
+                                class="form-control form-control-sm"
+                                placeholder="퍼블리싱 메모"
+                                :value="getStatus(page).publishing"
+                                :disabled="getStatus(page).saved"
+                                @input="getStatus(page).publishing = $event.target.value"
+                            >
+                        </td>
+                        <td class="text-center">
+                            <button
+                                v-if="!getStatus(page).saved"
+                                type="button"
+                                class="btn btn-primary btn-sm"
+                                @click="saveStatus(page)"
+                            >저장</button>
+                            <button
+                                v-else
+                                type="button"
+                                class="btn btn-outline-secondary btn-sm"
+                                @click="editStatus(page)"
+                            >수정</button>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-    </div>
-
-    <!-- 빈 상태 -->
-    <div v-if="filteredCategories.length === 0" class="pagelists-empty">
-        <i class="bi bi-search pagelists-empty-icon"></i>
-        <p class="pagelists-empty-text">"{{ search }}"에 해당하는 결과가 없습니다.</p>
-        <button type="button" class="btn btn-outline-primary btn-sm" @click="search = ''">
-            검색 초기화
-        </button>
     </div>
 </div>

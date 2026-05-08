@@ -394,6 +394,26 @@ export default {
             editCategoryModal: { id: '', name: '' },
             buttonModal: { editingIdx: null, type: '', name: '', value: '' },
             sampleModal: { activeTab: 'SMS', search: '', selectedId: null, page: 1, pageSize: 8 },
+            aiTemplateModal: {
+                messageType: 'SMS',
+                messageFormat: 'standalone',
+                messageSubType: 'SMS',
+                title: '',
+                content: '',
+                mainTitle: { useLogo: true, icon: 'tag', title: '' },
+                bodies: [{ title: '', content: '' }],
+                attachmentMode: 'upload',
+                attachmentName: '',
+                slides: [
+                    { title: '', content: '', attachmentMode: 'upload', attachmentName: '' },
+                    { title: '', content: '', attachmentMode: 'upload', attachmentName: '' },
+                    { title: '', content: '', attachmentMode: 'upload', attachmentName: '' }
+                ],
+                chatInput: '',
+                isGenerating: false,
+                messages: [],
+                hasGenerated: false
+            },
             alertText: '',
 
             // 발신 유형 — 포맷 옵션 (messageType 별)
@@ -514,6 +534,7 @@ export default {
                 button: new bootstrap.Modal(this.$refs.buttonModal),
                 templateDetail: new bootstrap.Modal(this.$refs.templateDetailModal),
                 sample: new bootstrap.Modal(this.$refs.sampleModal),
+                aiTemplate: new bootstrap.Modal(this.$refs.aiTemplateModal),
                 delete: new bootstrap.Modal(this.$refs.deleteModal),
                 alert: new bootstrap.Modal(this.$refs.alertModal)
             };
@@ -580,6 +601,62 @@ export default {
             if (t === 'MMS') return 'mms-carousel';
             return 'sms-basic';
         },
+        // ===== AI 모달 — 발신 유형 옵션/변형 =====
+        aiMessageFormatOptions() {
+            return this.messageFormatOptionsMap[this.aiTemplateModal.messageType] || [];
+        },
+        aiMessageSubTypeOptions() {
+            const key = `${this.aiTemplateModal.messageType}:${this.aiTemplateModal.messageFormat}`;
+            return this.messageSubTypeOptionsMap[key] || [];
+        },
+        aiFormVariant() {
+            const t = this.aiTemplateModal.messageType;
+            const f = this.aiTemplateModal.messageFormat;
+            const s = this.aiTemplateModal.messageSubType;
+            if (t === 'SMS') return 'sms-basic';
+            if (t === 'LMS' && f === 'standalone') return 'lms-basic';
+            if (t === 'LMS' && f === 'format') {
+                if (s === 'paragraph') return 'lms-format-multi';
+                return 'lms-format-single';
+            }
+            if (t === 'MMS' && f === 'standalone') return 'mms-basic';
+            if (t === 'MMS') return 'mms-carousel';
+            return 'sms-basic';
+        },
+        aiPreviewVariant() {
+            const t = this.aiTemplateModal.messageType;
+            const f = this.aiTemplateModal.messageFormat;
+            const s = this.aiTemplateModal.messageSubType;
+            if (t === 'SMS') return s === 'integrated-sms' ? 'sms-card' : 'sms-bubble';
+            if (t === 'LMS' && f === 'standalone') {
+                return s === 'integrated-lms' ? 'lms-card' : 'lms-bubble';
+            }
+            if (t === 'LMS' && f === 'format') {
+                if (s === 'basic-title') return 'lms-format-emphasis';
+                if (s === 'paragraph') return 'lms-format-paragraph';
+                return 'lms-format-basic';
+            }
+            if (t === 'MMS' && f === 'standalone') {
+                if (s === 'horizontal') return 'mms-horizontal';
+                if (s === 'vertical') return 'mms-vertical';
+                if (s === 'integrated-mms-t') return 'mms-card-t';
+                if (s === 'integrated-mms-m') return 'mms-card-m';
+                return 'mms-horizontal';
+            }
+            if (t === 'MMS' && f === 'carousel-small') return 'mms-carousel-small';
+            if (t === 'MMS' && f === 'carousel-medium') return 'mms-carousel-medium';
+            return 'sms-bubble';
+        },
+        aiSelectedMainIcon() {
+            const found = this.mainTitleIcons.find(m => m.value === this.aiTemplateModal.mainTitle.icon);
+            return found ? found.icon : 'bi-tag';
+        },
+        aiVariantLabel() {
+            const t = this.aiTemplateModal.messageType;
+            const subOpt = this.aiMessageSubTypeOptions.find(o => o.value === this.aiTemplateModal.messageSubType);
+            return subOpt ? `${t} ${subOpt.label}` : t;
+        },
+
         // 미리보기 변형 — 카드/말풍선 등 시각 요소 결정
         previewVariant() {
             const t = this.form.messageType;
@@ -1130,6 +1207,162 @@ export default {
         openTemplateDetailModal() {
             if (!this.selectedTemplate) return;
             this.showModal('templateDetail');
+        },
+
+        // ===== AI 템플릿 =====
+        openAiTemplateModal() {
+            const inEdit = this.mode !== 'list';
+            const ai = this.aiTemplateModal;
+            ai.messageType = inEdit ? (this.form.messageType || 'SMS') : 'SMS';
+            ai.messageFormat = inEdit ? (this.form.messageFormat || 'standalone') : 'standalone';
+            ai.messageSubType = inEdit ? (this.form.messageSubType || 'SMS') : 'SMS';
+            ai.title = '';
+            ai.content = '';
+            ai.mainTitle = { useLogo: true, icon: 'tag', title: '' };
+            ai.bodies = [{ title: '', content: '' }];
+            ai.attachmentMode = 'upload';
+            ai.attachmentName = '';
+            ai.slides = [
+                { title: '', content: '', attachmentMode: 'upload', attachmentName: '' },
+                { title: '', content: '', attachmentMode: 'upload', attachmentName: '' },
+                { title: '', content: '', attachmentMode: 'upload', attachmentName: '' }
+            ];
+            ai.chatInput = '';
+            ai.isGenerating = false;
+            ai.messages = [];
+            ai.hasGenerated = false;
+            this.showModal('aiTemplate');
+        },
+
+        onAiMessageTypeChange() {
+            const ai = this.aiTemplateModal;
+            const formatOptions = this.messageFormatOptionsMap[ai.messageType] || [];
+            ai.messageFormat = formatOptions.length > 0 ? formatOptions[0].value : 'standalone';
+            this.onAiMessageFormatChange();
+            ai.hasGenerated = false;
+        },
+
+        onAiMessageFormatChange() {
+            const ai = this.aiTemplateModal;
+            const key = `${ai.messageType}:${ai.messageFormat}`;
+            const subOptions = this.messageSubTypeOptionsMap[key] || [];
+            ai.messageSubType = subOptions.length > 0 ? subOptions[0].value : '';
+            ai.hasGenerated = false;
+        },
+
+        useSuggestion(text) {
+            this.aiTemplateModal.chatInput = text;
+        },
+
+        sendAiPrompt() {
+            const ai = this.aiTemplateModal;
+            const prompt = ai.chatInput.trim();
+            if (!prompt || ai.isGenerating) return;
+
+            ai.messages.push({ role: 'user', text: prompt });
+            ai.chatInput = '';
+            ai.isGenerating = true;
+            this.scrollAiChatToBottom();
+
+            // 모의 LLM 응답 (실서비스에서는 LLM API 호출)
+            setTimeout(() => {
+                const summary = this.mockGenerateRcsTemplate(prompt);
+                const isFirst = !ai.hasGenerated;
+                ai.messages.push({
+                    role: 'assistant',
+                    text: isFirst
+                        ? '요청하신 내용으로 RCS 템플릿을 생성했습니다. 우측 미리보기에서 확인하시고, 수정하고 싶은 부분이 있으면 알려주세요.'
+                        : '말씀하신 내용을 반영해 다시 생성했습니다. 우측 미리보기를 확인해 주세요.',
+                    template: summary
+                });
+                ai.hasGenerated = true;
+                ai.isGenerating = false;
+                this.scrollAiChatToBottom();
+            }, 900);
+        },
+
+        mockGenerateRcsTemplate(prompt) {
+            const ai = this.aiTemplateModal;
+            const variant = this.aiFormVariant;
+            const summary = prompt.length > 60 ? prompt.slice(0, 60) + '...' : prompt;
+            const longBody = `안녕하세요, #{name}님.\n\n${prompt}\n\n자세한 내용은 홈페이지에서 확인해 주세요.`;
+            const result = { title: '', previewText: '' };
+
+            if (variant === 'sms-basic') {
+                ai.title = '';
+                ai.content = `[안내] ${summary}\n자세한 내용은 홈페이지에서 확인해 주세요.`;
+                result.previewText = ai.content;
+            } else if (variant === 'lms-basic') {
+                ai.title = '안내드립니다';
+                ai.content = longBody;
+                result.title = ai.title;
+                result.previewText = ai.content;
+            } else if (variant === 'lms-format-single') {
+                ai.mainTitle = { useLogo: true, icon: 'bell', title: '안내 도착' };
+                ai.bodies = [{ title: '주요 안내', content: `${prompt}\n자세한 내용은 아래에서 확인해 주세요.` }];
+                ai.title = ai.mainTitle.title;
+                result.title = ai.mainTitle.title;
+                result.previewText = ai.bodies[0].content;
+            } else if (variant === 'lms-format-multi') {
+                ai.mainTitle = { useLogo: true, icon: 'note', title: '안내드립니다' };
+                ai.bodies = [
+                    { title: '안내 사항', content: prompt },
+                    { title: '유의 사항', content: '본 메시지는 발신 전용입니다.' },
+                    { title: '문의', content: '고객센터 1644-7143' }
+                ];
+                ai.title = ai.mainTitle.title;
+                result.title = ai.mainTitle.title;
+                result.previewText = ai.bodies.map(b => `${b.title}: ${b.content}`).join('\n');
+            } else if (variant === 'mms-basic') {
+                ai.title = '';
+                ai.content = `${prompt}\n첨부된 이미지를 확인해 주세요.`;
+                ai.attachmentName = 'ai-template.jpg';
+                result.previewText = ai.content;
+            } else if (variant === 'mms-carousel') {
+                ai.slides = [
+                    { title: '슬라이드 1', content: `${prompt}`, attachmentMode: 'upload', attachmentName: 'slide1.jpg' },
+                    { title: '슬라이드 2', content: '자세한 내용은 홈페이지에서 확인해 주세요.', attachmentMode: 'upload', attachmentName: 'slide2.jpg' },
+                    { title: '슬라이드 3', content: '문의: 고객센터 1644-7143', attachmentMode: 'upload', attachmentName: 'slide3.jpg' }
+                ];
+                result.previewText = ai.slides.map(s => `${s.title}: ${s.content}`).join('\n');
+            } else {
+                ai.content = `[안내] ${summary}`;
+                result.previewText = ai.content;
+            }
+            return result;
+        },
+
+        scrollAiChatToBottom() {
+            this.$nextTick(() => {
+                const el = this.$refs.aiChatBody;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
+        },
+
+        applyAiTemplate() {
+            if (!this.aiTemplateModal.hasGenerated) return;
+            const ai = this.aiTemplateModal;
+
+            if (this.mode === 'list') {
+                this.editingTemplateId = null;
+                this.editingCategoryId = this.selectedCategoryId || (this.categories[0] && this.categories[0].id) || null;
+                this.form = this.makeEmptyForm();
+                this.mode = 'register';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            this.form.messageType = ai.messageType;
+            this.form.messageFormat = ai.messageFormat;
+            this.form.messageSubType = ai.messageSubType;
+            this.form.title = ai.title || '';
+            this.form.content = ai.content || '';
+            this.form.mainTitle = { ...ai.mainTitle };
+            this.form.bodies = ai.bodies.map(b => ({ ...b }));
+            this.form.attachmentMode = ai.attachmentMode;
+            this.form.attachmentName = ai.attachmentName || '';
+            this.form.slides = ai.slides.map(s => ({ ...s }));
+
+            this.closeModal('aiTemplate');
         },
 
         // ===== 샘플 템플릿 =====

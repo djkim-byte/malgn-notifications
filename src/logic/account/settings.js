@@ -74,17 +74,66 @@ export default {
 
             // ----- 계약 관리 -----
             contract: {
-                agreement: {
-                    viewed: false,
-                    signed: false,
-                    signer: '',
-                    signedAt: ''
-                },
+                // 이용계약서 리스트 (status: 'initial' | 'active' | 'expired' | 'pending')
+                agreements: [],
+
+                // 사업자등록증
                 bizCert: {
-                    file: null,
-                    uploadedAt: ''
+                    current: null,
+                    history: []
+                },
+                // 대부업등록증 (해당업체에 한함)
+                lendingCert: {
+                    applicable: false,
+                    current: null,
+                    history: []
                 }
             },
+
+            // 마법사가 어떤 계약을 체결 중인지 추적 (null=신규, 객체=갱신 대상)
+            signingTarget: null,
+
+            // 계약체결 마법사 (3단계)
+            signWizard: {
+                step: 1,
+                steps: [
+                    {
+                        id: 1,
+                        title: '제1장 · 총칙 및 서비스 이용',
+                        confirmed: false,
+                        scrolledToEnd: false
+                    },
+                    {
+                        id: 2,
+                        title: '제2장 · 이용요금 및 결제',
+                        confirmed: false,
+                        scrolledToEnd: false
+                    },
+                    {
+                        id: 3,
+                        title: '제3장 · 전자서명 / 공인인증',
+                        confirmed: false,
+                        scrolledToEnd: false
+                    }
+                ],
+                signMethod: 'sign',          // 'sign' | 'cert'
+                signerName: '',
+                hasSignature: false,
+                isDrawing: false,
+                lastPoint: null
+            },
+
+            // 모달용 뷰어 상태
+            docViewer: {
+                title: '',
+                subtitle: '',
+                fileName: '',
+                kind: 'pdf',                 // 'pdf' | 'contract'
+                contract: null
+            },
+
+            signModal: null,
+            docViewerModal: null,
 
             // ----- 결제 이메일 변경 폼 -----
             paymentEmailForm: {
@@ -116,6 +165,7 @@ export default {
                 iconClass: 'is-info'
             },
             confirmAction: null,
+            alertAction: null,
 
             alertModal: null,
             confirmModal: null
@@ -125,13 +175,32 @@ export default {
     computed: {
         isCodeFilled() {
             return this.paymentEmailForm.code.every(c => c && c.length === 1);
+        },
+        currentSignStep() {
+            return this.signWizard.steps.find(s => s.id === this.signWizard.step);
+        },
+        canConfirmCurrentStep() {
+            const s = this.currentSignStep;
+            if (!s) return false;
+            if (this.signWizard.step === 3) {
+                return this.signWizard.hasSignature && !!this.signWizard.signerName.trim();
+            }
+            return s.scrolledToEnd;
+        },
+        signProgressPercent() {
+            const total = this.signWizard.steps.length;
+            const done  = this.signWizard.steps.filter(s => s.confirmed).length;
+            return Math.round((done / total) * 100);
         }
     },
 
     mounted() {
+        this.seedContractDemo();
         this.$nextTick(() => {
-            this.alertModal   = new bootstrap.Modal(this.$refs.alertModal);
-            this.confirmModal = new bootstrap.Modal(this.$refs.confirmModal);
+            this.alertModal     = new bootstrap.Modal(this.$refs.alertModal);
+            this.confirmModal   = new bootstrap.Modal(this.$refs.confirmModal);
+            this.signModal      = new bootstrap.Modal(this.$refs.signModal, { backdrop: 'static', keyboard: false });
+            this.docViewerModal = new bootstrap.Modal(this.$refs.docViewerModal);
         });
     },
 
@@ -147,7 +216,15 @@ export default {
                 iconName: opts.iconName || 'bi bi-exclamation-lg',
                 iconClass: opts.iconClass || 'is-info'
             };
+            this.alertAction = typeof opts.onConfirm === 'function' ? opts.onConfirm : null;
             if (this.alertModal) this.alertModal.show();
+        },
+
+        runAlertAction() {
+            const fn = this.alertAction;
+            if (this.alertModal) this.alertModal.hide();
+            this.alertAction = null;
+            if (typeof fn === 'function') fn();
         },
 
         showConfirm(text, action, opts = {}) {
@@ -340,28 +417,272 @@ export default {
         },
 
         // ============== 계약 관리 ==============
-        viewContract() {
-            this.contract.agreement.viewed = true;
-            this.showAlert('이용계약서를 확인하였습니다.', {
-                desc: '계약서 확인이 완료되었습니다. 전자서명을 진행해 주세요.',
-                iconName: 'bi bi-file-earmark-text',
-                iconClass: 'is-info'
+        seedContractDemo() {
+            // 데모 리스트 (최초계약 / 체결완료 / 계약갱신 각 1건)
+            this.contract.agreements = [
+                {
+                    id: 'AGR-INIT-0001',
+                    title: '최초 이용계약 온라인체결',
+                    version: '신규',
+                    signer: '-',
+                    signedAt: '-',
+                    expiredAt: '-',
+                    requestedAt: this.formatNow(),
+                    deadlineAt: '',
+                    status: 'initial'
+                },
+                {
+                    id: 'AGR-2022-0001',
+                    title: '맑은소프트 메시징 이용계약서 (2022년 구표준)',
+                    version: 'v0.9',
+                    signer: '하근호',
+                    signedAt: '2022.06.02 09:30',
+                    expiredAt: '2026.04.19',
+                    status: 'active'
+                },
+                {
+                    id: 'AGR-2026-RNW-0001',
+                    title: '맑은소프트 메시징 이용계약서 (2026년 신규)',
+                    version: 'v2.0',
+                    signer: '-',
+                    signedAt: '-',
+                    expiredAt: '-',
+                    requestedAt: '2026.05.01 09:00',
+                    deadlineAt: '2026.05.31',
+                    status: 'pending'
+                }
+            ];
+
+            // 사업자등록증 이력(첨부 일자 노출용 데모)
+            const today = new Date();
+            const todayYmd = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+            this.contract.bizCert.history = [
+                {
+                    id: 'BIZ-TODAY-001',
+                    name: `사업자등록증_맑은소프트_${todayYmd}.pdf`,
+                    size: 412 * 1024,
+                    uploadedAt: this.formatNow()
+                },
+                {
+                    id: 'BIZ-2023-001',
+                    name: '사업자등록증_맑은소프트_20230110.pdf',
+                    size: 412 * 1024,
+                    uploadedAt: '2023.01.10 11:08'
+                }
+            ];
+
+            this.contract.lendingCert.history = [];
+        },
+
+        // ----- 상태 표시 헬퍼 -----
+        statusIconClass(status) {
+            switch (status) {
+                case 'initial': return 'bi bi-pencil-square';
+                case 'active':  return 'bi bi-patch-check-fill';
+                case 'expired': return 'bi bi-archive-fill';
+                case 'pending': return 'bi bi-exclamation-circle-fill';
+                default:        return 'bi bi-file-earmark-text';
+            }
+        },
+        statusLabel(status) {
+            switch (status) {
+                case 'initial': return '최초계약';
+                case 'active':  return '체결완료';
+                case 'expired': return '만료';
+                case 'pending': return '계약갱신';
+                default:        return '';
+            }
+        },
+        needsSigning(status) {
+            return status === 'initial' || status === 'pending';
+        },
+
+        // ----- 계약체결 마법사 -----
+        openSignWizard(target = null) {
+            this.signingTarget = target;
+            this.signWizard.step = 1;
+            this.signWizard.signMethod = 'sign';
+            this.signWizard.signerName = this.profile.ceoName || '';
+            this.signWizard.hasSignature = false;
+            this.signWizard.isDrawing = false;
+            this.signWizard.lastPoint = null;
+            this.signWizard.steps.forEach(s => {
+                s.confirmed = false;
+                s.scrolledToEnd = false;
+            });
+            if (this.signModal) this.signModal.show();
+            this.$nextTick(() => this.bindSignDocScroll());
+        },
+
+        closeSignWizard() {
+            if (this.signModal) this.signModal.hide();
+        },
+
+        bindSignDocScroll() {
+            // 현재 단계의 문서 스크롤이 끝까지 내려갔을 때만 '확인하였음' 활성화
+            const el = this.$refs.signDoc;
+            if (!el) return;
+            // 짧은 문서일 때 즉시 활성화
+            if (el.scrollHeight - el.clientHeight <= 4) {
+                if (this.currentSignStep) this.currentSignStep.scrolledToEnd = true;
+            }
+        },
+
+        onSignDocScroll(e) {
+            if (this.signWizard.step === 3) return;
+            const el = e.target;
+            const reachedEnd = el.scrollTop + el.clientHeight >= el.scrollHeight - 4;
+            if (reachedEnd && this.currentSignStep) {
+                this.currentSignStep.scrolledToEnd = true;
+            }
+        },
+
+        confirmSignStep() {
+            const cur = this.currentSignStep;
+            if (!cur) return;
+            if (!this.canConfirmCurrentStep) return;
+
+            cur.confirmed = true;
+
+            if (this.signWizard.step < 3) {
+                this.signWizard.step += 1;
+                // 다음 단계 진입 후 스크롤 상태 초기화
+                this.$nextTick(() => {
+                    const el = this.$refs.signDoc;
+                    if (el) el.scrollTop = 0;
+                    this.bindSignDocScroll();
+                });
+            } else {
+                // 마지막 단계: 서명 완료
+                this.completeSigning();
+            }
+        },
+
+        prevSignStep() {
+            if (this.signWizard.step > 1) {
+                this.signWizard.step -= 1;
+                this.$nextTick(() => {
+                    const el = this.$refs.signDoc;
+                    if (el) el.scrollTop = el.scrollHeight; // 이미 본 문서이므로 끝으로
+                    this.bindSignDocScroll();
+                });
+            }
+        },
+
+        completeSigning() {
+            const target = this.signingTarget;
+            const now = this.formatNow();
+            const signer = this.signWizard.signerName.trim() || this.profile.ceoName;
+
+            this.contract.agreements = this.contract.agreements.map(a => {
+                // 체결 대상(initial/pending)을 active 로 갱신
+                if (target && a.id === target.id) {
+                    return {
+                        ...a,
+                        signer,
+                        signedAt: now,
+                        expiredAt: '2028.05.07',
+                        status: 'active'
+                    };
+                }
+                // 기존 active 는 expired 로 이동
+                if (a.status === 'active') {
+                    return { ...a, status: 'expired' };
+                }
+                return a;
+            });
+
+            // signingTarget 이 없으면(신규) 새 항목을 맨 앞에 추가
+            if (!target) {
+                this.contract.agreements = [
+                    {
+                        id: 'AGR-' + new Date().getFullYear() + '-' + Math.floor(Math.random() * 9000 + 1000),
+                        title: '맑은소프트 쏠쏠 이용계약서 (2026년 표준)',
+                        version: 'v2.0',
+                        signer,
+                        signedAt: now,
+                        expiredAt: '2028.05.07',
+                        status: 'active'
+                    },
+                    ...this.contract.agreements
+                ];
+            }
+
+            this.signingTarget = null;
+
+            this.closeSignWizard();
+            this.showAlert('전자서명이 완료되었습니다.', {
+                desc: '이용계약서 체결이 완료되었습니다.',
+                iconName: 'bi bi-shield-check',
+                iconClass: 'is-success'
             });
         },
 
-        signContract() {
-            if (!this.contract.agreement.viewed && !this.contract.agreement.signed) {
-                this.showAlert('계약서 확인 후 서명을 진행할 수 있습니다.');
-                return;
+        // ----- 서명 패드 -----
+        getCanvasPoint(e) {
+            const canvas = this.$refs.signCanvas;
+            if (!canvas) return { x: 0, y: 0 };
+            const rect = canvas.getBoundingClientRect();
+            const t = e.touches && e.touches[0];
+            const cx = t ? t.clientX : e.clientX;
+            const cy = t ? t.clientY : e.clientY;
+            return {
+                x: (cx - rect.left) * (canvas.width / rect.width),
+                y: (cy - rect.top)  * (canvas.height / rect.height)
+            };
+        },
+
+        startSignDraw(e) {
+            if (this.signWizard.signMethod !== 'sign') return;
+            e.preventDefault();
+            this.signWizard.isDrawing = true;
+            this.signWizard.lastPoint = this.getCanvasPoint(e);
+        },
+
+        moveSignDraw(e) {
+            if (!this.signWizard.isDrawing) return;
+            e.preventDefault();
+            const canvas = this.$refs.signCanvas;
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const p = this.getCanvasPoint(e);
+            const last = this.signWizard.lastPoint;
+
+            ctx.lineWidth = 2.4;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = '#1f2937';
+            ctx.beginPath();
+            ctx.moveTo(last.x, last.y);
+            ctx.lineTo(p.x, p.y);
+            ctx.stroke();
+
+            this.signWizard.lastPoint = p;
+            this.signWizard.hasSignature = true;
+        },
+
+        endSignDraw() {
+            this.signWizard.isDrawing = false;
+            this.signWizard.lastPoint = null;
+        },
+
+        clearSignature() {
+            const canvas = this.$refs.signCanvas;
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
             }
+            this.signWizard.hasSignature = false;
+        },
+
+        useCertificate() {
+            // 데모: 공인인증서 모듈 호출 가정
             this.showConfirm(
-                '공인인증서로 전자서명을 진행하시겠어요?',
+                '공인인증서로 서명을 진행하시겠어요?',
                 () => {
-                    this.contract.agreement.signed = true;
-                    this.contract.agreement.signer = this.profile.ceoName;
-                    this.contract.agreement.signedAt = this.formatNow();
-                    this.showAlert('전자서명이 완료되었습니다.', {
-                        iconName: 'bi bi-shield-check',
+                    this.signWizard.signMethod = 'cert';
+                    this.signWizard.hasSignature = true;
+                    this.showAlert('공인인증서 서명이 완료되었습니다.', {
+                        iconName: 'bi bi-shield-lock-fill',
                         iconClass: 'is-success'
                     });
                 },
@@ -373,36 +694,104 @@ export default {
             );
         },
 
+        // ----- 계약서 뷰어 -----
+        openContractViewer(item) {
+            this.docViewer = {
+                title: item.title || '이용계약서',
+                subtitle: `서명자 ${item.signer || '-'} · ${item.signedAt || '-'}`,
+                fileName: '',
+                kind: 'contract',
+                contract: item
+            };
+            if (this.docViewerModal) this.docViewerModal.show();
+        },
+
+        openCertViewer(kind, item) {
+            this.docViewer = {
+                title: kind === 'lending' ? '대부업등록증' : '사업자등록증',
+                subtitle: `${item.name} · ${item.uploadedAt}`,
+                fileName: item.name,
+                kind: 'pdf',
+                contract: null
+            };
+            if (this.docViewerModal) this.docViewerModal.show();
+        },
+
+        // ----- 사업자등록증 / 대부업등록증 업로드 -----
+        askBizCertUpload() {
+            this.showAlert('사업자등록증 업로드 안내', {
+                desc: 'PDF 형식의 파일만 첨부할 수 있으며, 최대 10MB까지 업로드할 수 있습니다.\n[확인] 버튼을 클릭하시면 파일 선택 창이 열립니다.',
+                iconName: 'bi bi-file-earmark-pdf',
+                iconClass: 'is-info',
+                onConfirm: () => this.triggerBizCertUpload()
+            });
+        },
+        askLendingCertUpload() {
+            this.showAlert('대부업등록증 업로드 안내', {
+                desc: 'PDF 형식의 파일만 첨부할 수 있으며, 최대 10MB까지 업로드할 수 있습니다.\n[확인] 버튼을 클릭하시면 파일 선택 창이 열립니다.',
+                iconName: 'bi bi-file-earmark-pdf',
+                iconClass: 'is-info',
+                onConfirm: () => this.triggerLendingCertUpload()
+            });
+        },
+
         triggerBizCertUpload() {
             if (this.$refs.bizCertInput) this.$refs.bizCertInput.click();
+        },
+        triggerLendingCertUpload() {
+            if (this.$refs.lendingCertInput) this.$refs.lendingCertInput.click();
         },
 
         onBizCertChange(e) {
             const file = e.target.files && e.target.files[0];
-            if (file) this.applyBizCertFile(file);
+            if (file) this.applyCertFile('biz', file);
+            e.target.value = '';
+        },
+        onLendingCertChange(e) {
+            const file = e.target.files && e.target.files[0];
+            if (file) this.applyCertFile('lending', file);
             e.target.value = '';
         },
 
-        onBizCertDrop(e) {
-            const file = e.dataTransfer.files && e.dataTransfer.files[0];
-            if (file) this.applyBizCertFile(file);
-        },
-
-        applyBizCertFile(file) {
+        applyCertFile(kind, file) {
+            const isPdf = (file.type === 'application/pdf') || /\.pdf$/i.test(file.name);
+            if (!isPdf) {
+                this.showAlert('PDF 파일만 첨부할 수 있습니다.');
+                return;
+            }
             if (file.size > 10 * 1024 * 1024) {
                 this.showAlert('파일 용량이 10MB를 초과합니다.');
                 return;
             }
-            this.contract.bizCert.file = file;
-            this.contract.bizCert.uploadedAt = this.formatNow();
+
+            const target = kind === 'lending' ? this.contract.lendingCert : this.contract.bizCert;
+            const next = {
+                id: kind.toUpperCase() + '-' + Date.now(),
+                name: file.name,
+                size: file.size,
+                uploadedAt: this.formatNow()
+            };
+
+            // 기존 current를 history 맨 앞으로 이동
+            if (target.current) {
+                target.history = [target.current, ...target.history];
+            }
+            target.current = next;
         },
 
         removeBizCert() {
             this.showConfirm(
-                '사업자등록증 파일을 삭제하시겠어요?',
+                '현재 사업자등록증을 삭제하시겠어요?',
                 () => {
-                    this.contract.bizCert.file = null;
-                    this.contract.bizCert.uploadedAt = '';
+                    this.contract.bizCert.current = null;
+                }
+            );
+        },
+        removeLendingCert() {
+            this.showConfirm(
+                '현재 대부업등록증을 삭제하시겠어요?',
+                () => {
+                    this.contract.lendingCert.current = null;
                 }
             );
         },
@@ -421,7 +810,11 @@ export default {
         },
 
         saveContract() {
-            this.showAlert('계약 정보가 저장되었습니다.');
+            this.showAlert('계약 정보가 정상적으로 접수되었습니다.', {
+                desc: '제출하신 계약 정보 및 첨부 서류는 관리자 승인 후 사용하실 수 있습니다.\n승인 결과는 등록된 이메일로 안내드릴 예정이니, 잠시만 기다려 주세요.',
+                iconName: 'bi bi-clock-history',
+                iconClass: 'is-info'
+            });
         },
 
         // ============== 결제 이메일 변경 ==============

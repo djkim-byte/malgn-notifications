@@ -429,48 +429,93 @@
                 </button>
                 <div class="sms-modal-body">
                     <h4 class="sms-modal-title">수신자 선택</h4>
+                    <div class="sms-modal-tabs" role="tablist">
+                        <button type="button" class="sms-modal-tab" :class="{ 'is-active': addressBookModal.activeTab === 'individual' }" @click="switchAddressBookTab('individual')">개별선택</button>
+                        <button type="button" class="sms-modal-tab" :class="{ 'is-active': addressBookModal.activeTab === 'group' }" @click="switchAddressBookTab('group')">그룹선택</button>
+                    </div>
                     <div class="kakao-recipient-modal-grid">
                         <div class="kakao-recipient-modal-list">
-                            <div class="sms-modal-search-row">
-                                <div class="sms-modal-search">
-                                    <input type="text" class="form-control" v-model="addressBookModal.search" @input="addressBookModal.page = 1" placeholder="수신자 별칭을 입력하세요.">
-                                    <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                            <template v-if="addressBookModal.activeTab === 'individual'">
+                                <div class="sms-modal-search-row">
+                                    <div class="sms-modal-search">
+                                        <input type="text" class="form-control" v-model="addressBookModal.search" @input="addressBookModal.page = 1" placeholder="수신자 별칭을 입력하세요.">
+                                        <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                                    </div>
+                                    <div class="sms-modal-count">총 <strong>{{ addressBookSelectedCount }}</strong>개 선택</div>
                                 </div>
-                                <div class="sms-modal-count">총 <strong>{{ addressBookModal.selectedIds.length }}</strong>개 선택</div>
-                            </div>
-                            <table class="sms-modal-table">
-                                <thead>
-                                    <tr>
-                                        <th class="sms-th-check">
-                                            <input type="checkbox" :checked="isAddressBookAllSelected" @change="toggleAddressBookAll">
-                                        </th>
-                                        <th>수신자 별칭</th>
-                                        <th>휴대폰 번호</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr v-for="c in pagedAddressBook" :key="c.id">
-                                        <td class="sms-th-check">
-                                            <input type="checkbox" :value="c.id" v-model="addressBookModal.selectedIds">
-                                        </td>
-                                        <td>{{ c.name }}</td>
-                                        <td>{{ c.phone }}</td>
-                                    </tr>
-                                    <tr v-if="pagedAddressBook.length === 0">
-                                        <td colspan="3" class="sms-modal-empty">검색 결과가 없습니다.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div class="sms-modal-pagination" v-if="addressBookTotalPages > 1">
-                                <button type="button" class="sms-page-btn" @click="addressBookModal.page = 1" :disabled="addressBookModal.page === 1">«</button>
-                                <button type="button" class="sms-page-btn" @click="addressBookModal.page > 1 && (addressBookModal.page -= 1)" :disabled="addressBookModal.page === 1">‹</button>
-                                <button v-for="p in addressBookTotalPages" :key="p" type="button" class="sms-page-btn" :class="{ active: p === addressBookModal.page }" @click="addressBookModal.page = p">{{ p }}</button>
-                                <button type="button" class="sms-page-btn" @click="addressBookModal.page < addressBookTotalPages && (addressBookModal.page += 1)" :disabled="addressBookModal.page === addressBookTotalPages">›</button>
-                                <button type="button" class="sms-page-btn" @click="addressBookModal.page = addressBookTotalPages" :disabled="addressBookModal.page === addressBookTotalPages">»</button>
-                            </div>
+                                <table class="sms-modal-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="sms-th-check">
+                                                <input type="checkbox" :checked="isAddressBookAllSelected" @change="toggleAddressBookAll">
+                                            </th>
+                                            <th>수신자 별칭</th>
+                                            <th>휴대폰 번호</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="c in pagedAddressBook" :key="c.id">
+                                            <td class="sms-th-check">
+                                                <input type="checkbox" :value="c.id" v-model="addressBookModal.selectedIds">
+                                            </td>
+                                            <td>{{ c.name }}</td>
+                                            <td>{{ c.phone }}</td>
+                                        </tr>
+                                        <tr v-if="pagedAddressBook.length === 0">
+                                            <td colspan="3" class="sms-modal-empty">검색 결과가 없습니다.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div class="sms-modal-pagination" v-if="addressBookTotalPages > 1">
+                                    <button type="button" class="sms-page-btn" @click="addressBookModal.page = 1" :disabled="addressBookModal.page === 1">«</button>
+                                    <button type="button" class="sms-page-btn" @click="addressBookModal.page > 1 && (addressBookModal.page -= 1)" :disabled="addressBookModal.page === 1">‹</button>
+                                    <button v-for="p in addressBookTotalPages" :key="p" type="button" class="sms-page-btn" :class="{ active: p === addressBookModal.page }" @click="addressBookModal.page = p">{{ p }}</button>
+                                    <button type="button" class="sms-page-btn" @click="addressBookModal.page < addressBookTotalPages && (addressBookModal.page += 1)" :disabled="addressBookModal.page === addressBookTotalPages">›</button>
+                                    <button type="button" class="sms-page-btn" @click="addressBookModal.page = addressBookTotalPages" :disabled="addressBookModal.page === addressBookTotalPages">»</button>
+                                </div>
+                            </template>
+                            <template v-else-if="addressBookModal.activeTab === 'group'">
+                                <div class="sms-modal-search-row">
+                                    <div class="sms-modal-search">
+                                        <input type="text" class="form-control" v-model="addressBookModal.groupSearch" @input="addressBookModal.groupPage = 1" placeholder="그룹명을 입력하세요.">
+                                        <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                                    </div>
+                                    <div class="sms-modal-count">총 <strong>{{ addressBookSelectedCount }}</strong>명 선택</div>
+                                </div>
+                                <table class="sms-modal-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="sms-th-check">
+                                                <input type="checkbox" :checked="isGroupAllSelected" @change="toggleGroupAll">
+                                            </th>
+                                            <th>그룹명</th>
+                                            <th>연락처 수</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="g in pagedGroupList" :key="g.id">
+                                            <td class="sms-th-check">
+                                                <input type="checkbox" :value="g.id" v-model="addressBookModal.selectedGroupIds">
+                                            </td>
+                                            <td>{{ g.name }}</td>
+                                            <td>{{ groupContactCount(g) }}명</td>
+                                        </tr>
+                                        <tr v-if="pagedGroupList.length === 0">
+                                            <td colspan="3" class="sms-modal-empty">검색 결과가 없습니다.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <div class="sms-modal-pagination" v-if="groupTotalPages > 1">
+                                    <button type="button" class="sms-page-btn" @click="addressBookModal.groupPage = 1" :disabled="addressBookModal.groupPage === 1">«</button>
+                                    <button type="button" class="sms-page-btn" @click="addressBookModal.groupPage > 1 && (addressBookModal.groupPage -= 1)" :disabled="addressBookModal.groupPage === 1">‹</button>
+                                    <button v-for="p in groupTotalPages" :key="p" type="button" class="sms-page-btn" :class="{ active: p === addressBookModal.groupPage }" @click="addressBookModal.groupPage = p">{{ p }}</button>
+                                    <button type="button" class="sms-page-btn" @click="addressBookModal.groupPage < groupTotalPages && (addressBookModal.groupPage += 1)" :disabled="addressBookModal.groupPage === groupTotalPages">›</button>
+                                    <button type="button" class="sms-page-btn" @click="addressBookModal.groupPage = groupTotalPages" :disabled="addressBookModal.groupPage === groupTotalPages">»</button>
+                                </div>
+                            </template>
                         </div>
                         <div class="kakao-recipient-modal-edit">
-                            <div v-if="addressBookModal.selectedIds.length === 0" class="kakao-recipient-edit-empty">
+                            <div v-if="addressBookSelectedCount === 0" class="kakao-recipient-edit-empty">
                                 <i class="bi bi-info-circle"></i>
                                 <span>좌측에서 수신자를 선택해 주세요.</span>
                             </div>
@@ -529,6 +574,60 @@
                 <div class="sms-modal-actions">
                     <button type="button" class="sms-btn-modal-cancel" @click="closeModal('recipientEdit')">취소</button>
                     <button type="button" class="sms-btn-modal-confirm" @click="confirmRecipientEdit">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 발송 확인 모달 (W800) -->
+    <div class="modal fade" ref="sendConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeSendConfirm" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-send-confirm-body">
+                    <h4 class="sms-send-confirm-title">발송 확인</h4>
+                    <div class="sms-send-confirm-info">
+                        <div class="sms-send-confirm-info-row">
+                            <span class="sms-send-confirm-info-label">선택된 그룹</span>
+                            <span class="sms-send-confirm-info-value">{그룹명}, {그룹명}</span>
+                        </div>
+                        <div class="sms-send-confirm-info-row">
+                            <span class="sms-send-confirm-info-label">총 수신자 수</span>
+                            <span class="sms-send-confirm-info-value">000명</span>
+                        </div>
+                        <div class="sms-send-confirm-info-row">
+                            <span class="sms-send-confirm-info-label">채널</span>
+                            <span class="sms-send-confirm-info-value">알림톡</span>
+                        </div>
+                        <div class="sms-send-confirm-info-row">
+                            <span class="sms-send-confirm-info-label">건당 단가</span>
+                            <span class="sms-send-confirm-info-value">알림톡 : 8.0 <i class="sms-credit-icon">C</i></span>
+                        </div>
+                    </div>
+                    <div class="sms-send-confirm-cost">
+                        <div class="sms-send-confirm-cost-cell">
+                            <span class="sms-send-confirm-cost-label">예상 비용</span>
+                            <span class="sms-send-confirm-cost-value">000,000 <i class="sms-credit-icon sms-credit-icon-lg">C</i></span>
+                        </div>
+                        <div class="sms-send-confirm-cost-cell">
+                            <span class="sms-send-confirm-cost-label">현재 잔액</span>
+                            <span class="sms-send-confirm-cost-value">0,000 <i class="sms-credit-icon sms-credit-icon-lg">C</i></span>
+                        </div>
+                        <div class="sms-send-confirm-cost-cell">
+                            <span class="sms-send-confirm-cost-label">발송 후 잔액</span>
+                            <span class="sms-send-confirm-cost-value sms-send-confirm-cost-value-warning">-00.000 <i class="sms-credit-icon sms-credit-icon-lg">C</i></span>
+                        </div>
+                    </div>
+                    <div class="sms-send-confirm-notice">
+                        <i class="bi bi-info-circle-fill"></i>
+                        <span><strong>발송을 위해 크레딧 충전이 필요합니다.</strong> 크레딧 충전은 <a class="sms-send-confirm-link">크레딧 관리</a> 메뉴에서 가능합니다. 충전하러 가기 전, 임시 저장을 클릭해주세요.</span>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeSendConfirm">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmSend">발송하기</button>
                 </div>
             </div>
         </div>

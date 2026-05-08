@@ -35,7 +35,7 @@
                     <div class="account-section">
                         <div class="account-section-head">
                             <h2 class="account-section-title">가입 정보</h2>
-                            <button type="button" class="account-btn-dark account-btn-dark-sm">사업자등록증 변경</button>
+                            <button type="button" class="account-btn-dark account-btn-dark-sm" @click="activeTab = 'contract'">사업자등록증 변경</button>
                         </div>
 
                         <div class="account-info-list">
@@ -377,83 +377,182 @@
                 <div v-show="activeTab === 'contract'" class="account-tab-pane">
                     <div class="account-contract">
 
-                        <!-- 이용계약서 -->
+                        <!-- ===== 이용계약 체결 ===== -->
                         <div class="account-section">
                             <div class="account-section-head">
-                                <h2 class="account-section-title">이용계약서</h2>
-                                <div class="account-section-help">전자계약서를 확인 후 공인인증서로 전자서명을 진행해 주세요.</div>
+                                <h2 class="account-section-title">이용계약 체결</h2>
+                                <div class="account-section-help">전자계약 방식의 이용계약서 목록입니다. 좌측 아이콘으로 체결 상태를 확인하실 수 있습니다.</div>
                             </div>
 
-                            <div class="account-contract-card">
-                                <div class="account-contract-card-row">
-                                    <div class="account-contract-card-icon">
-                                        <i class="bi bi-file-earmark-text"></i>
+                            <ul class="account-contract-list">
+                                <li v-for="item in contract.agreements"
+                                    :key="item.id"
+                                    class="account-contract-listitem"
+                                    :class="'is-' + item.status">
+                                    <div class="account-contract-listitem-icon" :class="'is-' + item.status">
+                                        <span class="account-contract-listitem-icon-shape">
+                                            <i :class="statusIconClass(item.status)"></i>
+                                        </span>
+                                        <span class="account-contract-listitem-statustext">{{ statusLabel(item.status) }}</span>
                                     </div>
-                                    <div class="account-contract-card-body">
-                                        <div class="account-contract-card-title">이용계약서</div>
-                                        <div class="account-contract-card-meta">
-                                            <span v-if="contract.agreement.signed" class="account-status-badge is-success">
-                                                <i class="bi bi-patch-check-fill"></i> 서명 완료
-                                            </span>
-                                            <span v-else class="account-status-badge is-pending">
-                                                <i class="bi bi-clock"></i> 서명 대기
-                                            </span>
-                                            <span class="account-contract-card-name" v-if="contract.agreement.signed">서명자: {{ contract.agreement.signer }} · {{ contract.agreement.signedAt }}</span>
+                                    <div class="account-contract-listitem-body">
+                                        <div class="account-contract-listitem-title">{{ item.title }}</div>
+
+                                        <!-- 체결 완료 / 만료: 서명자·체결일·만료일 -->
+                                        <div v-if="item.status === 'active' || item.status === 'expired'"
+                                             class="account-contract-listitem-meta">
+                                            <span class="account-contract-listitem-tag">{{ item.version }}</span>
+                                            <span>서명자 {{ item.signer }}</span>
+                                            <span>체결 {{ item.signedAt }}</span>
+                                            <span>만료 {{ item.expiredAt }}</span>
+                                        </div>
+
+                                        <!-- 최초계약: 안내 문구 -->
+                                        <div v-else-if="item.status === 'initial'"
+                                             class="account-contract-listitem-meta">
+                                            <span class="account-contract-listitem-tag">{{ item.version }}</span>
+                                            <span>회원가입 후 최초 1회 체결이 필요합니다.</span>
+                                            <span>요청일 {{ item.requestedAt }}</span>
+                                        </div>
+
+                                        <!-- 계약갱신: 요청일·체결마감 -->
+                                        <div v-else-if="item.status === 'pending'"
+                                             class="account-contract-listitem-meta">
+                                            <span class="account-contract-listitem-tag">{{ item.version }}</span>
+                                            <span>요청일 {{ item.requestedAt }}</span>
+                                            <span class="account-contract-listitem-deadline">체결마감 {{ item.deadlineAt }}</span>
                                         </div>
                                     </div>
-                                    <div class="account-contract-card-actions">
-                                        <button type="button" class="account-btn-outline account-btn-outline-sm" @click="viewContract">계약서 확인</button>
-                                        <button type="button"
+                                    <div class="account-contract-listitem-actions">
+                                        <button type="button" class="account-btn-outline account-btn-outline-sm" @click="openContractViewer(item)">
+                                            <i class="bi bi-search"></i> 계약서 확인
+                                        </button>
+                                        <button v-if="needsSigning(item.status)"
+                                                type="button"
                                                 class="account-btn-primary account-btn-primary-sm"
-                                                :disabled="!contract.agreement.viewed && !contract.agreement.signed"
-                                                @click="signContract">
-                                            <i class="bi bi-shield-check"></i>
-                                            {{ contract.agreement.signed ? '재서명' : '전자서명(공인인증서)' }}
+                                                @click="openSignWizard(item)">
+                                            <i class="bi bi-pencil-square"></i> 계약체결하기
                                         </button>
                                     </div>
-                                </div>
-
-                                <p class="account-contract-card-hint" v-if="!contract.agreement.viewed && !contract.agreement.signed">
-                                    <i class="bi bi-info-circle"></i>
-                                    계약서 확인 후 전자서명을 진행할 수 있습니다.
-                                </p>
-                            </div>
+                                </li>
+                            </ul>
                         </div>
 
-                        <!-- 사업자등록증 -->
+                        <!-- ============================== -->
+                        <!-- 가입서류 첨부 -->
+                        <!-- ============================== -->
                         <div class="account-section">
                             <div class="account-section-head">
-                                <h2 class="account-section-title">사업자등록증</h2>
-                                <div class="account-section-help">JPG, PNG, PDF · 최대 10MB</div>
+                                <h2 class="account-section-title">가입서류 첨부</h2>
+                                <div class="account-section-help">PDF 파일만 첨부 가능합니다 · 최대 10MB</div>
                             </div>
 
-                            <div class="account-contract-card">
-                                <div class="account-contract-card-row" v-if="contract.bizCert.file">
-                                    <div class="account-contract-card-icon">
-                                        <i class="bi bi-file-earmark-pdf"></i>
-                                    </div>
-                                    <div class="account-contract-card-body">
-                                        <div class="account-contract-card-title">{{ contract.bizCert.file.name }}</div>
-                                        <div class="account-contract-card-meta">
-                                            <span class="account-status-badge is-success">
-                                                <i class="bi bi-check-circle-fill"></i> 업로드 완료
-                                            </span>
-                                            <span class="account-contract-card-name">{{ formatFileSize(contract.bizCert.file.size) }} · {{ contract.bizCert.uploadedAt }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="account-contract-card-actions">
-                                        <button type="button" class="account-btn-outline account-btn-outline-sm" @click="triggerBizCertUpload">파일 변경</button>
-                                        <button type="button" class="account-btn-outline account-btn-outline-sm account-btn-danger" @click="removeBizCert">삭제</button>
-                                    </div>
+                            <!-- 사업자등록증 -->
+                            <div class="account-cert-block">
+                                <div class="account-cert-block-head">
+                                    <h3 class="account-cert-block-title">사업자등록증</h3>
+                                    <span class="account-cert-block-tag">필수</span>
+                                    <button type="button" class="account-btn-primary account-btn-primary-sm account-cert-block-upload" @click="askBizCertUpload">
+                                        <i class="bi bi-cloud-arrow-up"></i> 사업자등록증 업로드
+                                    </button>
                                 </div>
 
-                                <div v-else class="account-upload-area" @click="triggerBizCertUpload" @dragover.prevent @drop.prevent="onBizCertDrop">
-                                    <i class="bi bi-cloud-arrow-up"></i>
-                                    <div class="account-upload-text">사업자등록증 파일을 여기에 끌어 놓거나 <span class="account-upload-link">파일 선택</span></div>
-                                    <div class="account-upload-help">JPG, PNG, PDF · 최대 10MB</div>
+                                <input ref="bizCertInput" type="file" hidden accept=".pdf,application/pdf" @change="onBizCertChange">
+
+                                <!-- 현재 첨부된 사업자등록증 -->
+                                <div v-if="contract.bizCert.current" class="account-cert-current">
+                                    <ul class="account-cert-history-list">
+                                        <li class="account-cert-history-item">
+                                            <i class="bi bi-file-earmark-pdf"></i>
+                                            <div class="account-cert-history-item-body">
+                                                <div class="account-cert-history-item-title">{{ contract.bizCert.current.name }}</div>
+                                                <div class="account-cert-history-item-meta">
+                                                    <span>{{ formatFileSize(contract.bizCert.current.size) }}</span>
+                                                    <span>첨부일자 {{ contract.bizCert.current.uploadedAt }}</span>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="account-btn-outline account-btn-outline-sm" @click="openCertViewer('biz', contract.bizCert.current)">확인</button>
+                                        </li>
+                                    </ul>
                                 </div>
 
-                                <input ref="bizCertInput" type="file" hidden accept=".jpg,.jpeg,.png,.pdf" @change="onBizCertChange">
+                                <!-- 첨부 이력 -->
+                                <div v-if="contract.bizCert.history.length" class="account-cert-history">
+                                    <ul class="account-cert-history-list">
+                                        <li v-for="item in contract.bizCert.history" :key="item.id" class="account-cert-history-item">
+                                            <i class="bi bi-file-earmark-pdf"></i>
+                                            <div class="account-cert-history-item-body">
+                                                <div class="account-cert-history-item-title">{{ item.name }}</div>
+                                                <div class="account-cert-history-item-meta">
+                                                    <span>{{ formatFileSize(item.size) }}</span>
+                                                    <span>첨부일자 {{ item.uploadedAt }}</span>
+                                                </div>
+                                            </div>
+                                            <button type="button" class="account-btn-outline account-btn-outline-sm" @click="openCertViewer('biz', item)">확인</button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- 대부업등록증 (해당업체에 한함) -->
+                            <div class="account-cert-block">
+                                <div class="account-cert-block-head">
+                                    <h3 class="account-cert-block-title">대부업등록증</h3>
+                                    <span class="account-cert-block-tag account-cert-block-tag-soft">해당업체</span>
+                                    <label class="account-cert-block-toggle">
+                                        <input type="checkbox" v-model="contract.lendingCert.applicable">
+                                        <span>대부업 해당</span>
+                                    </label>
+                                    <button v-if="contract.lendingCert.applicable"
+                                            type="button"
+                                            class="account-btn-primary account-btn-primary-sm account-cert-block-upload"
+                                            @click="askLendingCertUpload">
+                                        <i class="bi bi-cloud-arrow-up"></i> 대부업등록증 업로드
+                                    </button>
+                                </div>
+
+                                <template v-if="contract.lendingCert.applicable">
+                                    <input ref="lendingCertInput" type="file" hidden accept=".pdf,application/pdf" @change="onLendingCertChange">
+
+                                    <!-- 현재 첨부된 대부업등록증 -->
+                                    <div v-if="contract.lendingCert.current" class="account-cert-current">
+                                        <ul class="account-cert-history-list">
+                                            <li class="account-cert-history-item">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                                <div class="account-cert-history-item-body">
+                                                    <div class="account-cert-history-item-title">{{ contract.lendingCert.current.name }}</div>
+                                                    <div class="account-cert-history-item-meta">
+                                                        <span>{{ formatFileSize(contract.lendingCert.current.size) }}</span>
+                                                        <span>첨부일자 {{ contract.lendingCert.current.uploadedAt }}</span>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="account-btn-outline account-btn-outline-sm" @click="openCertViewer('lending', contract.lendingCert.current)">확인</button>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- 첨부 이력 -->
+                                    <div v-if="contract.lendingCert.history.length" class="account-cert-history">
+                                        <ul class="account-cert-history-list">
+                                            <li v-for="item in contract.lendingCert.history" :key="item.id" class="account-cert-history-item">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                                <div class="account-cert-history-item-body">
+                                                    <div class="account-cert-history-item-title">{{ item.name }}</div>
+                                                    <div class="account-cert-history-item-meta">
+                                                        <span>{{ formatFileSize(item.size) }}</span>
+                                                        <span>첨부일자 {{ item.uploadedAt }}</span>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="account-btn-outline account-btn-outline-sm" @click="openCertViewer('lending', item)">확인</button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </template>
+
+                                <p v-else class="account-cert-empty">
+                                    <i class="bi bi-info-circle"></i>
+                                    대부업에 해당하는 업체만 등록증을 첨부하시면 됩니다. 좌측 체크박스를 선택하여 첨부 인터페이스를 활성화해 주세요.
+                                </p>
                             </div>
                         </div>
 
@@ -567,7 +666,311 @@
                     <p v-if="alertState.desc" class="account-alert-desc">{{ alertState.desc }}</p>
                 </div>
                 <div class="account-alert-actions">
-                    <button type="button" class="charge-modal-btn charge-modal-btn-primary account-alert-btn" data-bs-dismiss="modal">확인</button>
+                    <button type="button" class="charge-modal-btn charge-modal-btn-primary account-alert-btn" @click="runAlertAction">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 온라인 계약체결 마법사 모달 (Large) -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="signModal">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable account-sign-modal-dialog">
+            <div class="modal-content account-sign-modal">
+
+                <!-- 헤더 -->
+                <div class="account-sign-header">
+                    <div class="account-sign-header-meta">
+                        <span class="account-sign-header-tag">전자 계약체결</span>
+                        <h2 class="account-sign-header-title">표준 이용계약서</h2>
+                        <p class="account-sign-header-desc">아래 단계별 계약 내용을 끝까지 확인하신 후 ‘확인하였음’ 버튼을 눌러 다음 단계로 이동해 주세요.</p>
+                    </div>
+                    <button type="button" class="account-sign-header-close" @click="closeSignWizard">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <!-- 스텝 인디케이터 -->
+                <div class="account-sign-steps">
+                    <div v-for="s in signWizard.steps"
+                         :key="s.id"
+                         class="account-sign-step"
+                         :class="{
+                            'is-active': signWizard.step === s.id,
+                            'is-done': s.confirmed
+                         }">
+                        <div class="account-sign-step-circle">
+                            <i v-if="s.confirmed" class="bi bi-check-lg"></i>
+                            <span v-else>{{ s.id }}</span>
+                        </div>
+                        <div class="account-sign-step-label">
+                            <div class="account-sign-step-num">STEP {{ s.id }}</div>
+                            <div class="account-sign-step-title">{{ s.title }}</div>
+                        </div>
+                        <div v-if="s.id < 3" class="account-sign-step-bar"></div>
+                    </div>
+                </div>
+
+                <!-- 본문 -->
+                <div class="account-sign-body">
+
+                    <!-- 1단계: 총칙 및 서비스 이용 -->
+                    <div v-if="signWizard.step === 1" class="account-sign-doc" ref="signDoc" @scroll="onSignDocScroll">
+                        <h3 class="account-sign-doc-h1">맑은소프트 쏠쏠 표준 이용계약서</h3>
+                        <p class="account-sign-doc-meta">제1장 총칙 · 제1조 ~ 제8조</p>
+
+                        <h4 class="account-sign-doc-h2">제1조 (목적)</h4>
+                        <p class="account-sign-doc-p">본 계약은 (주)맑은소프트(이하 "회사")가 제공하는 메시징 서비스 "쏠쏠"(이하 "서비스")의 이용과 관련하여, 회사와 이용자 간의 권리, 의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제2조 (용어의 정의)</h4>
+                        <p class="account-sign-doc-p">① "이용자"라 함은 본 계약에 따라 회사와 서비스 이용 계약을 체결한 법인 또는 개인 사업자를 말합니다.<br>② "서비스"라 함은 회사가 제공하는 SMS, LMS, 알림톡, 친구톡, RCS, 푸시, 이메일 등 일체의 메시징 발송 서비스를 의미합니다.<br>③ "발송 데이터"라 함은 이용자가 서비스 이용 과정에서 회사 시스템에 전송·등록한 모든 정보를 의미합니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제3조 (계약의 성립)</h4>
+                        <p class="account-sign-doc-p">① 본 계약은 이용자가 회사가 정한 절차에 따라 신청서를 제출하고, 회사가 이를 승낙하여 본 계약서에 전자서명함으로써 성립합니다.<br>② 회사는 다음 각 호의 사유가 있는 경우 신청을 승낙하지 아니하거나 사후에 이용 계약을 해지할 수 있습니다.<br>&nbsp;&nbsp;&nbsp;1. 신청 내용에 허위, 기재 누락, 오기가 있는 경우<br>&nbsp;&nbsp;&nbsp;2. 사회 질서 또는 미풍양속에 반하거나, 법령을 위반할 우려가 있다고 판단되는 경우<br>&nbsp;&nbsp;&nbsp;3. 기타 회사가 정한 신청 요건을 충족하지 못하는 경우</p>
+
+                        <h4 class="account-sign-doc-h2">제4조 (서비스의 제공)</h4>
+                        <p class="account-sign-doc-p">① 회사는 이용자가 신청한 서비스 종류에 따라 메시징 발송, 발송 결과 리포트, 수신자 관리 등의 기능을 제공합니다.<br>② 서비스는 연중무휴 24시간 제공함을 원칙으로 하며, 정기점검, 시스템 장애, 통신사 사정 등 불가피한 사유가 있는 경우 일시 중단될 수 있습니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제5조 (이용자의 의무)</h4>
+                        <p class="account-sign-doc-p">① 이용자는 관계 법령(정보통신망법, 개인정보보호법 등) 및 본 계약에서 정한 사항을 준수하여야 합니다.<br>② 이용자는 회사 시스템에 발송 데이터를 전송할 때, 수신자의 사전 동의를 적법하게 확보하여야 하며, 광고성 정보 전송 시 정보통신망법에서 정한 표시 의무를 준수하여야 합니다.<br>③ 이용자가 본 조의 의무를 위반하여 회사에 손해가 발생한 경우, 그 손해를 배상할 책임이 있습니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제6조 (회사의 의무)</h4>
+                        <p class="account-sign-doc-p">회사는 안정적인 서비스 제공을 위하여 보안 시스템 구축, 서비스 품질 모니터링, 이용자 문의 대응 체계를 운영하며, 이용자의 정보를 관계 법령에 따라 보호합니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제7조 (개인정보의 보호)</h4>
+                        <p class="account-sign-doc-p">회사는 관련 법령에 따라 이용자 및 수신자의 개인정보 보호에 최선을 다하며, 자세한 사항은 회사가 별도로 게시하는 개인정보처리방침에 따릅니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제8조 (지적재산권)</h4>
+                        <p class="account-sign-doc-p">서비스에 포함된 모든 콘텐츠, 소프트웨어, 디자인 등 지적재산권은 회사 또는 정당한 권리자에게 귀속되며, 이용자는 회사의 사전 서면 동의 없이 이를 복제, 배포, 변경, 2차 가공할 수 없습니다.</p>
+
+                        <p class="account-sign-doc-end">— 제1장 끝 —</p>
+                    </div>
+
+                    <!-- 2단계: 이용요금 및 결제 -->
+                    <div v-if="signWizard.step === 2" class="account-sign-doc" ref="signDoc" @scroll="onSignDocScroll">
+                        <h3 class="account-sign-doc-h1">맑은소프트 쏠쏠 표준 이용계약서</h3>
+                        <p class="account-sign-doc-meta">제2장 이용요금 및 결제 · 제9조 ~ 제16조</p>
+
+                        <h4 class="account-sign-doc-h2">제9조 (이용요금의 산정)</h4>
+                        <p class="account-sign-doc-p">① 이용요금은 이용자가 신청한 요금제(Free, Basic, Growth, Advanced, Enterprise)에 따라 정액 구독료와 메시지 발송 단가를 합산하여 산정합니다.<br>② 회사는 시장 상황 및 통신사 정책 변경에 따라 단가를 조정할 수 있으며, 변경 시 30일 전 이용자에게 사전 고지합니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제10조 (결제 수단 및 결제일)</h4>
+                        <p class="account-sign-doc-p">① 정기 구독료는 신용카드 자동결제를 원칙으로 합니다.<br>② 발송 단가에 따른 사용료는 후불 결제 또는 충전금에서 차감되는 방식으로 정산되며, 매월 1일 기준 전월 사용분이 정산됩니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제11조 (결제 실패 및 미납)</h4>
+                        <p class="account-sign-doc-p">결제 실패 시 회사는 3일간 1일 2회씩 자동 재시도(총 6회)를 진행하며, 그 이후에도 결제가 이루어지지 않는 경우 27일간의 결제유예 기간을 부여합니다. 유예기간 종료 시까지 결제가 완료되지 않으면 해당 상품은 자동 해지됩니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제12조 (해지 및 환불)</h4>
+                        <p class="account-sign-doc-p">① 이용자는 언제든지 서비스 해지를 신청할 수 있으며, 해지 방식은 (1) 잔여기간 종료 후 해지 (2) 즉시 취소 및 환불 중 선택할 수 있습니다.<br>② 환불은 결제일로부터 7일 이내·미사용인 경우 전액 환불하며, 그 외에는 잔여기간을 일할 계산한 금액의 70%(위약금 30% 차감)를 환불합니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제13조 (요금제 변경)</h4>
+                        <p class="account-sign-doc-p">요금제 상위 변경은 즉시 적용되며, 미사용 기간을 일할 계산하여 차액을 차감합니다. 결제 주기 변경(월→연)은 즉시, 결제 주기 변경(연→월)은 현재 구독기간 종료 후 적용됩니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제14조 (영수증)</h4>
+                        <p class="account-sign-doc-p">신용카드 결제분은 신용카드 매출전표로 영수증을 갈음하며, 별도의 세금계산서를 발행하지 않습니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제15조 (책임의 제한)</h4>
+                        <p class="account-sign-doc-p">회사는 통신사 장애, 천재지변, 정전, 전쟁 등 불가항력적 사유로 발생한 서비스 중단에 대하여 책임을 지지 않습니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제16조 (분쟁의 해결)</h4>
+                        <p class="account-sign-doc-p">본 계약과 관련하여 발생한 분쟁에 대하여는 대한민국 법령을 적용하며, 관할 법원은 회사 본점 소재지를 관할하는 법원으로 합니다.</p>
+
+                        <p class="account-sign-doc-end">— 제2장 끝 —</p>
+                    </div>
+
+                    <!-- 3단계: 전자서명 -->
+                    <div v-if="signWizard.step === 3" class="account-sign-stage3">
+
+                        <div class="account-sign-method-tabs">
+                            <button type="button"
+                                    class="account-sign-method-tab"
+                                    :class="{ 'is-active': signWizard.signMethod === 'sign' }"
+                                    @click="signWizard.signMethod = 'sign'">
+                                <i class="bi bi-pencil-fill"></i> 전자 서명
+                            </button>
+                            <button type="button"
+                                    class="account-sign-method-tab"
+                                    :class="{ 'is-active': signWizard.signMethod === 'cert' }"
+                                    @click="signWizard.signMethod = 'cert'">
+                                <i class="bi bi-shield-lock-fill"></i> 공인인증서
+                            </button>
+                        </div>
+
+                        <div class="account-sign-summary">
+                            <div class="account-sign-summary-row">
+                                <div class="account-sign-summary-label">계약 명</div>
+                                <div class="account-sign-summary-value">맑은소프트 쏠쏠 표준 이용계약서</div>
+                            </div>
+                            <div class="account-sign-summary-row">
+                                <div class="account-sign-summary-label">사업자명</div>
+                                <div class="account-sign-summary-value">{{ profile.companyName }} ({{ profile.bizNo }})</div>
+                            </div>
+                            <div class="account-sign-summary-row">
+                                <div class="account-sign-summary-label">대표자</div>
+                                <div class="account-sign-summary-value">{{ profile.ceoName }}</div>
+                            </div>
+                            <div class="account-sign-summary-row">
+                                <div class="account-sign-summary-label">서명자명 <span class="account-required">*</span></div>
+                                <div class="account-sign-summary-value">
+                                    <input type="text"
+                                           class="account-form-input account-form-input-md"
+                                           v-model="signWizard.signerName"
+                                           placeholder="서명자 이름을 입력해 주세요">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 서명 패드 -->
+                        <div v-if="signWizard.signMethod === 'sign'" class="account-sign-pad-block">
+                            <div class="account-sign-pad-head">
+                                <span class="account-sign-pad-title">아래 영역에 마우스 또는 손가락으로 서명해 주세요.</span>
+                                <button type="button" class="account-sign-pad-clear" @click="clearSignature">
+                                    <i class="bi bi-arrow-counterclockwise"></i> 다시 서명
+                                </button>
+                            </div>
+                            <div class="account-sign-pad">
+                                <canvas ref="signCanvas"
+                                        width="700"
+                                        height="220"
+                                        class="account-sign-pad-canvas"
+                                        @mousedown="startSignDraw"
+                                        @mousemove="moveSignDraw"
+                                        @mouseup="endSignDraw"
+                                        @mouseleave="endSignDraw"
+                                        @touchstart="startSignDraw"
+                                        @touchmove="moveSignDraw"
+                                        @touchend="endSignDraw"></canvas>
+                                <div v-if="!signWizard.hasSignature" class="account-sign-pad-placeholder">
+                                    Sign here
+                                </div>
+                            </div>
+                            <p class="account-sign-pad-hint">
+                                <i class="bi bi-info-circle"></i>
+                                서명은 전자서명법에 따라 본인의 의사 표시로 간주됩니다.
+                            </p>
+                        </div>
+
+                        <!-- 공인인증서 -->
+                        <div v-else class="account-sign-cert-block">
+                            <div class="account-sign-cert-icon">
+                                <i class="bi bi-shield-lock"></i>
+                            </div>
+                            <div class="account-sign-cert-title">공인인증서로 서명하기</div>
+                            <div class="account-sign-cert-desc">
+                                인증서 모듈을 호출하여 사업자명의의 공인인증서로 전자서명을 진행합니다.
+                            </div>
+                            <button type="button" class="account-btn-primary account-btn-primary-md" @click="useCertificate">
+                                <i class="bi bi-shield-lock-fill"></i> 공인인증서 호출
+                            </button>
+                            <div v-if="signWizard.signMethod === 'cert' && signWizard.hasSignature"
+                                 class="account-sign-cert-done">
+                                <i class="bi bi-check-circle-fill"></i> 공인인증서 서명 완료
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 푸터 -->
+                <div class="account-sign-footer">
+                    <button type="button"
+                            class="account-btn-outline account-btn-outline-md"
+                            :disabled="signWizard.step === 1"
+                            @click="prevSignStep">
+                        <i class="bi bi-arrow-left"></i> 이전 단계
+                    </button>
+
+                    <div class="account-sign-footer-progress">
+                        <div class="account-sign-footer-progress-bar">
+                            <div class="account-sign-footer-progress-fill" :style="{ width: signProgressPercent + '%' }"></div>
+                        </div>
+                        <span class="account-sign-footer-progress-text">{{ signProgressPercent }}%</span>
+                    </div>
+
+                    <button type="button"
+                            class="account-btn-primary account-btn-primary-md"
+                            :disabled="!canConfirmCurrentStep"
+                            @click="confirmSignStep">
+                        <template v-if="signWizard.step < 3">
+                            <i class="bi bi-check2"></i>
+                            확인하였음
+                            <span v-if="!currentSignStep || !currentSignStep.scrolledToEnd" class="account-sign-footer-hint">(끝까지 스크롤)</span>
+                        </template>
+                        <template v-else>
+                            <i class="bi bi-shield-check"></i>
+                            서명 완료
+                        </template>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 문서 뷰어 모달 (계약서 / 사업자등록증) -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="docViewerModal">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable account-doc-modal-dialog">
+            <div class="modal-content account-doc-modal">
+                <div class="account-doc-modal-header">
+                    <div>
+                        <h2 class="account-doc-modal-title">{{ docViewer.title }}</h2>
+                        <p class="account-doc-modal-subtitle">{{ docViewer.subtitle }}</p>
+                    </div>
+                    <button type="button" class="account-doc-modal-close" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div class="account-doc-modal-body">
+                    <!-- PDF (사업자등록증/대부업등록증) -->
+                    <div v-if="docViewer.kind === 'pdf'" class="account-doc-pdf">
+                        <div class="account-doc-pdf-frame">
+                            <i class="bi bi-file-earmark-pdf-fill"></i>
+                            <div class="account-doc-pdf-name">{{ docViewer.fileName }}</div>
+                            <div class="account-doc-pdf-hint">PDF 미리보기 영역 (실제 환경에서는 PDF.js 또는 iframe으로 렌더링됩니다.)</div>
+                        </div>
+                    </div>
+
+                    <!-- 계약서 본문 -->
+                    <div v-else class="account-doc-contract">
+                        <div class="account-doc-contract-cover">
+                            <h3 class="account-doc-contract-h1">{{ docViewer.contract && docViewer.contract.title }}</h3>
+                            <div class="account-doc-contract-meta">
+                                <span>버전 {{ docViewer.contract && docViewer.contract.version }}</span>
+                                <span>·</span>
+                                <span>서명자 {{ docViewer.contract && docViewer.contract.signer }}</span>
+                                <span>·</span>
+                                <span>체결 {{ docViewer.contract && docViewer.contract.signedAt }}</span>
+                            </div>
+                        </div>
+
+                        <h4 class="account-sign-doc-h2">제1조 (목적)</h4>
+                        <p class="account-sign-doc-p">본 계약은 (주)맑은소프트가 제공하는 메시징 서비스 "쏠쏠"의 이용과 관련하여, 회사와 이용자 간의 권리, 의무 및 책임 사항을 규정함을 목적으로 합니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제2조 (서비스의 제공)</h4>
+                        <p class="account-sign-doc-p">회사는 SMS, LMS, 알림톡, 친구톡, RCS, 푸시, 이메일 등 메시징 발송 서비스를 제공하며, 본 계약서에 명시된 조건에 따라 이용자에게 서비스를 제공합니다.</p>
+
+                        <h4 class="account-sign-doc-h2">제3조 (이용요금 및 결제)</h4>
+                        <p class="account-sign-doc-p">이용요금 및 결제 조건은 본문 제2장에서 정한 바에 따르며, 별도 부속 합의서가 있는 경우 해당 합의서가 우선합니다.</p>
+
+                        <div class="account-doc-contract-signatures">
+                            <div class="account-doc-contract-signbox">
+                                <div class="account-doc-contract-signlabel">"회사"</div>
+                                <div class="account-doc-contract-signname">(주)맑은소프트 · 대표 하근호</div>
+                                <div class="account-doc-contract-signstamp">(인)</div>
+                            </div>
+                            <div class="account-doc-contract-signbox">
+                                <div class="account-doc-contract-signlabel">"이용자"</div>
+                                <div class="account-doc-contract-signname">{{ profile.companyName }} · 대표 {{ docViewer.contract && docViewer.contract.signer }}</div>
+                                <div class="account-doc-contract-signstamp">(전자서명 완료)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="account-doc-modal-footer">
+                    <button type="button" class="account-btn-outline account-btn-outline-md" data-bs-dismiss="modal">닫기</button>
                 </div>
             </div>
         </div>

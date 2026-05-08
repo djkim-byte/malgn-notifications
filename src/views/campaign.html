@@ -1,0 +1,883 @@
+<div class="campaign-page">
+    <div class="container py-5">
+        <h2 class="history-page-title">{{ mode === 'list' ? '캠페인 관리' : '캠페인 등록' }}</h2>
+
+        <!-- ==================== 목록 모드 ==================== -->
+        <template v-if="mode === 'list'">
+            <!-- 안내 배너 -->
+            <div class="campaign-info-banner">
+                <i class="bi bi-info-circle"></i>
+                <span>캠페인을 통해 이메일, 문자, 알림톡 등 다양한 채널로 맞춤 메시지 전송 및 캠페인 효과를 확대하실 수 있습니다.</span>
+            </div>
+
+            <!-- 검색 + 필터 + 생성 버튼 -->
+            <div class="campaign-toolbar">
+                <div class="campaign-search">
+                    <i class="bi bi-search campaign-search-icon"></i>
+                    <input type="text" class="form-control campaign-search-input" v-model="search.keyword" @keyup.enter="onSearch" placeholder="캠페인명으로 검색...">
+                </div>
+                <div class="campaign-filters">
+                    <select class="form-select campaign-filter-select" v-model="search.status">
+                        <option value="">전체</option>
+                        <option value="in_progress">진행</option>
+                        <option value="pending">대기</option>
+                        <option value="completed">종료</option>
+                        <option value="draft">임시</option>
+                        <option value="stopped">중지</option>
+                    </select>
+                    <select class="form-select campaign-filter-select" v-model="search.channel">
+                        <option value="">전체</option>
+                        <option value="sms">문자메시지</option>
+                        <option value="kakao">알림톡</option>
+                        <option value="rcs">RCS</option>
+                        <option value="email">이메일</option>
+                        <option value="push">PUSH</option>
+                    </select>
+                    <select class="form-select campaign-filter-select" v-model="search.purpose">
+                        <option value="">전체</option>
+                        <option value="notice">공지</option>
+                        <option value="purchase">구매유도</option>
+                        <option value="promotion">프로모션</option>
+                        <option value="etc">기타</option>
+                    </select>
+                </div>
+                <button type="button" class="campaign-btn-primary" @click="goCreate">캠페인 생성하기</button>
+            </div>
+
+            <!-- 통계 카드 -->
+            <div class="campaign-stats">
+                <div class="campaign-stat-card">
+                    <div class="campaign-stat-label">진행중인 캠페인</div>
+                    <div class="campaign-stat-value">{{ stats.inProgress.toLocaleString() }}</div>
+                </div>
+                <div class="campaign-stat-card">
+                    <div class="campaign-stat-label">총 발송수</div>
+                    <div class="campaign-stat-value">{{ stats.totalSent.toLocaleString() }}</div>
+                </div>
+                <div class="campaign-stat-card">
+                    <div class="campaign-stat-label">도달 성공률</div>
+                    <div class="campaign-stat-value">{{ stats.deliveryRate }}%</div>
+                </div>
+                <div class="campaign-stat-card">
+                    <div class="campaign-stat-label">유효 반응률</div>
+                    <div class="campaign-stat-value">{{ stats.responseRate }}%</div>
+                </div>
+            </div>
+
+            <!-- 캠페인 목록 -->
+            <section class="history-card campaign-list-card">
+                <div class="campaign-list-header">
+                    <div class="campaign-list-header-left">
+                        <h3 class="campaign-list-title">캠페인 목록</h3>
+                        <button type="button" class="campaign-btn-outline" :disabled="selectedIds.length === 0" @click="openCopyConfirm">복사</button>
+                        <button type="button" class="campaign-btn-outline" :disabled="selectedIds.length === 0" @click="openDeleteConfirm">삭제</button>
+                    </div>
+                    <div class="campaign-list-header-right">
+                        <select class="form-select campaign-sort-select" v-model="search.sort">
+                            <option value="default">기본 순</option>
+                            <option value="latest">최신 순</option>
+                            <option value="name">이름 순</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="history-table-wrap">
+                    <table class="history-table campaign-table">
+                        <thead>
+                            <tr>
+                                <th class="history-th-check">
+                                    <input type="checkbox" :checked="isAllSelected" @change="toggleAllRows">
+                                </th>
+                                <th class="text-start ps-3">캠페인명</th>
+                                <th>발송 상태</th>
+                                <th>총 발송수</th>
+                                <th>총 수신자수</th>
+                                <th>채널</th>
+                                <th>목적</th>
+                                <th>아이디</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in pagedRows" :key="row.id">
+                                <td class="history-th-check">
+                                    <input type="checkbox" :value="row.id" v-model="selectedIds">
+                                </td>
+                                <td class="text-start ps-3">
+                                    <a class="history-id-link" href="javascript:void(0)" @click="goEdit(row)">{{ row.name }}</a>
+                                </td>
+                                <td>
+                                    <span class="history-status" :class="getStatusClass(row.status)">{{ getStatusLabel(row.status) }}</span>
+                                </td>
+                                <td>{{ row.totalSent === null ? '—' : row.totalSent.toLocaleString() }}</td>
+                                <td>{{ row.totalReceiver === null ? '—' : row.totalReceiver.toLocaleString() }}</td>
+                                <td>
+                                    <span class="campaign-channel" :class="'campaign-channel-' + row.channel">
+                                        <i class="bi" :class="getChannelIcon(row.channel)"></i>
+                                        {{ getChannelLabel(row.channel) }}
+                                    </span>
+                                </td>
+                                <td>{{ getPurposeLabel(row.purpose) }}</td>
+                                <td class="campaign-author-id">{{ row.authorId }}</td>
+                            </tr>
+                            <tr v-if="pagedRows.length === 0">
+                                <td colspan="8" class="history-empty">검색 결과가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="history-pagination" v-if="totalPages > 1">
+                    <button type="button" class="history-page-btn" @click="goPage(1)" :disabled="page === 1">«</button>
+                    <button type="button" class="history-page-btn" @click="goPage(page - 1)" :disabled="page === 1">‹</button>
+                    <button v-for="p in pageRange" :key="p" type="button"
+                        class="history-page-btn"
+                        :class="{ active: p === page }"
+                        @click="goPage(p)">{{ p }}</button>
+                    <button type="button" class="history-page-btn" @click="goPage(page + 1)" :disabled="page === totalPages">›</button>
+                    <button type="button" class="history-page-btn" @click="goPage(totalPages)" :disabled="page === totalPages">»</button>
+                </div>
+            </section>
+        </template>
+
+        <!-- ==================== 생성/수정 모드 ==================== -->
+        <template v-else>
+            <div class="campaign-info-banner">
+                <i class="bi bi-info-circle"></i>
+                <span>수신자 그룹은 <b>주소록 &gt; 그룹 관리</b> 메뉴에서 그룹을 추가·편집할 수 있습니다.</span>
+            </div>
+
+            <!-- 기존 캠페인 불러오기 -->
+            <div class="campaign-load-row">
+                <button type="button" class="campaign-btn-load" @click="openLoadCampaignModal">
+                    <i class="bi bi-arrow-repeat"></i> 기존 캠페인 불러오기
+                </button>
+                <span v-if="form.copyFromId" class="campaign-load-hint">
+                    <i class="bi bi-check-circle-fill"></i>
+                    <b>{{ getCampaignName(form.copyFromId) }}</b>의 정보를 불러왔습니다.
+                </span>
+            </div>
+
+            <!-- 기본 정보 -->
+            <section class="history-card campaign-form-card">
+                <h3 class="campaign-section-title">기본 정보</h3>
+
+                <div class="campaign-form-row">
+                    <label class="campaign-form-label">캠페인명 <span class="campaign-required">*</span></label>
+                    <div class="campaign-form-control">
+                        <input type="text" class="form-control history-input campaign-input-full" v-model="form.name" placeholder="캠페인명을 입력하세요">
+                    </div>
+                </div>
+
+                <div class="campaign-form-row campaign-form-row-top">
+                    <label class="campaign-form-label">설명</label>
+                    <div class="campaign-form-control">
+                        <div class="campaign-textarea-wrap">
+                            <textarea class="form-control campaign-textarea" v-model="form.description" maxlength="200" rows="3" placeholder="캠페인 목적 및 내용을 간략히 기재하세요"></textarea>
+                            <span class="campaign-byte-counter">{{ form.description.length }}자 / 200자</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="campaign-form-row">
+                    <label class="campaign-form-label">발송 목적 <span class="campaign-required">*</span></label>
+                    <div class="campaign-form-control">
+                        <div class="campaign-chip-group">
+                            <button v-for="p in purposeChips" :key="p.value" type="button"
+                                class="campaign-chip"
+                                :class="{ 'is-active': form.purpose === p.value }"
+                                @click="form.purpose = p.value">{{ p.label }}</button>
+                            <input type="text" class="form-control history-input campaign-purpose-custom" v-model="form.purposeCustom" placeholder="">
+                            <button type="button" class="campaign-btn-add" @click="addCustomPurpose">+ 목적 추가</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 수신자 설정 -->
+            <section class="history-card campaign-form-card">
+                <h3 class="campaign-section-title campaign-section-title-toggle">
+                    <span>수신자 설정 <span class="campaign-required">*</span></span>
+                    <button type="button" class="sms-toggle-btn" @click="recipientOpen = !recipientOpen">
+                        {{ recipientOpen ? '닫기' : '열기' }}
+                        <i class="bi" :class="recipientOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+                    </button>
+                </h3>
+
+                <div v-show="recipientOpen">
+                    <div class="sms-action-row">
+                        <button type="button" class="sms-btn-dark" @click="addRecipientManually">+ 직접입력</button>
+                        <button type="button" class="sms-btn-dark" @click="openAddressBook">+ 주소록에서 선택</button>
+                        <button type="button" class="sms-btn-disabled" :disabled="selectedRecipientIds.length === 0" @click="editRecipient">수신자 정보 수정</button>
+                        <button type="button" class="sms-btn-danger" :disabled="selectedRecipientIds.length === 0" @click="deleteRecipients">수신자 정보 삭제</button>
+                    </div>
+
+                    <!-- 치환자 입력 -->
+                    <div class="campaign-template-vars">
+                        <div class="sms-form-row">
+                            <label class="sms-form-label">치환자 입력 방식</label>
+                            <div class="sms-form-control">
+                                <div class="sms-radio-group">
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="varInputMode" value="individual">
+                                        <span>개별</span>
+                                    </label>
+                                    <label class="sms-radio">
+                                        <input type="radio" v-model="varInputMode" value="common">
+                                        <span>공통</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="varInputMode === 'common'" class="sms-form-row">
+                            <label class="sms-form-label">공통 치환자</label>
+                            <div class="sms-form-control">
+                                <input type="text" class="form-control sms-input" v-model="commonVar" placeholder="{{%name%}}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 수신자 테이블 -->
+                    <div v-if="recipients.length > 0" class="sms-recipient-table-wrap">
+                        <table class="sms-recipient-table">
+                            <thead>
+                                <tr>
+                                    <th class="sms-th-check">
+                                        <input type="checkbox" :checked="isAllRecipientsSelected" @change="toggleAllRecipients">
+                                    </th>
+                                    <th>수신자 별칭</th>
+                                    <th>휴대폰 번호</th>
+                                    <th v-if="varInputMode === 'individual'">치환자</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="r in recipients" :key="r.id">
+                                    <td class="sms-th-check">
+                                        <input type="checkbox" :value="r.id" v-model="selectedRecipientIds">
+                                    </td>
+                                    <td>{{ r.name }}</td>
+                                    <td>{{ r.phone }}</td>
+                                    <td v-if="varInputMode === 'individual'">
+                                        <input type="text" class="form-control sms-input" v-model="r.varValue" placeholder="치환자 값">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 발송 채널 및 메시지 -->
+            <section class="history-card campaign-form-card">
+                <h3 class="campaign-section-title">발송 채널 및 메시지</h3>
+
+                <div class="campaign-form-row">
+                    <label class="campaign-form-label">발송 채널 <span class="campaign-required">*</span></label>
+                    <div class="campaign-form-control">
+                        <div class="campaign-checkbox-group">
+                            <label class="campaign-checkbox">
+                                <input type="checkbox" value="sms" v-model="form.channels">
+                                <span>문자메시지</span>
+                            </label>
+                            <label class="campaign-checkbox">
+                                <input type="checkbox" value="kakao" v-model="form.channels">
+                                <span>알림톡</span>
+                            </label>
+                            <label class="campaign-checkbox">
+                                <input type="checkbox" value="rcs" v-model="form.channels">
+                                <span>RCS</span>
+                            </label>
+                            <label class="campaign-checkbox">
+                                <input type="checkbox" value="email" v-model="form.channels">
+                                <span>이메일</span>
+                            </label>
+                            <label class="campaign-checkbox">
+                                <input type="checkbox" value="push" v-model="form.channels">
+                                <span>PUSH</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="campaign-form-row">
+                    <label class="campaign-form-label">메시지 템플릿</label>
+                    <div class="campaign-form-control">
+                        <select class="form-select history-input campaign-input-full" v-model="form.templateId">
+                            <option value="">— 템플릿을 선택하세요 (선택사항) —</option>
+                            <option v-for="t in templates" :key="t.id" :value="t.id">{{ t.name }}</option>
+                        </select>
+                        <p class="campaign-form-hint campaign-form-hint-sm">
+                            <i class="bi bi-info-circle"></i> 템플릿 선택 시 본문이 자동으로 채워집니다. 이후 내용을 수정할 수 있습니다.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="campaign-add-row">
+                    <button type="button" class="campaign-btn-add-form" @click="openSurveyFormModal">
+                        <i class="bi bi-plus-lg"></i> 설문폼 추가
+                    </button>
+                </div>
+
+                <div v-if="form.surveyForms.length > 0" class="campaign-attached-forms">
+                    <a v-for="f in form.surveyForms" :key="f.id" href="javascript:void(0)" class="campaign-attached-form">
+                        {{ f.name }}
+                        <button type="button" class="campaign-attached-form-remove" @click="removeSurveyForm(f.id)" aria-label="삭제">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </a>
+                </div>
+            </section>
+
+            <!-- 발송 옵션 -->
+            <section class="history-card campaign-form-card">
+                <h3 class="campaign-section-title">발송 옵션</h3>
+
+                <div class="campaign-form-row">
+                    <label class="campaign-form-label">발송 시점 <span class="campaign-required">*</span></label>
+                    <div class="campaign-form-control">
+                        <div class="campaign-radio-group">
+                            <label class="campaign-radio">
+                                <input type="radio" v-model="form.timingType" value="immediate">
+                                <span>즉시 발송</span>
+                            </label>
+                            <label class="campaign-radio">
+                                <input type="radio" v-model="form.timingType" value="reserve">
+                                <span>예약 발송</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="form.timingType === 'reserve'" class="campaign-form-row">
+                    <label class="campaign-form-label">예약 일시 <span class="campaign-required">*</span></label>
+                    <div class="campaign-form-control">
+                        <div class="campaign-datetime-input campaign-datetime-input-wide">
+                            <input type="datetime-local" class="form-control history-input" v-model="form.reserveDateTime" placeholder="년-월-일 --:--">
+                            <i class="bi bi-calendar3 campaign-datetime-icon-trail"></i>
+                        </div>
+                        <p class="campaign-form-hint campaign-form-hint-sm">
+                            현재 시각 기준 <b>최소 10분 이후</b>로 설정해 주세요.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 발송 시뮬레이션 -->
+            <section class="history-card campaign-form-card">
+                <h3 class="campaign-section-title">발송 시뮬레이션</h3>
+
+                <div class="campaign-sim-grid">
+                    <div class="campaign-sim-row">
+                        <span class="campaign-sim-label">선택된 그룹</span>
+                        <span class="campaign-sim-value">{{ simulation.groupNames || '—' }}</span>
+                    </div>
+                    <div class="campaign-sim-row">
+                        <span class="campaign-sim-label">채널</span>
+                        <span class="campaign-sim-value campaign-sim-value-strong">{{ simulation.channelNames || '—' }}</span>
+                    </div>
+                    <div class="campaign-sim-row">
+                        <span class="campaign-sim-label">현재 잔액</span>
+                        <span class="campaign-sim-value">{{ simulation.balance.toLocaleString() }} <i class="bi bi-coin campaign-sim-coin"></i></span>
+                    </div>
+                    <div class="campaign-sim-row">
+                        <span class="campaign-sim-label">총 수신자 수</span>
+                        <span class="campaign-sim-value campaign-sim-value-accent">{{ simulation.totalReceiver.toLocaleString() }}명</span>
+                    </div>
+                    <div class="campaign-sim-row">
+                        <span class="campaign-sim-label">건당 단가</span>
+                        <span class="campaign-sim-value">
+                            <template v-for="(unit, idx) in simulation.unitPrices" :key="unit.label">
+                                <span v-if="idx > 0" class="campaign-sim-divider"></span>
+                                <span class="campaign-sim-unit-strong">{{ unit.label }} : {{ unit.price }}</span>
+                                <i class="bi bi-coin campaign-sim-coin"></i>
+                            </template>
+                            <span v-if="simulation.unitPrices.length === 0">—</span>
+                        </span>
+                    </div>
+                    <div class="campaign-sim-row">
+                        <span class="campaign-sim-label">발송 후 잔액</span>
+                        <span class="campaign-sim-value">{{ simulation.balanceAfter.toLocaleString() }}</span>
+                    </div>
+                    <div class="campaign-sim-row">
+                        <span class="campaign-sim-label">예상 비용</span>
+                        <span class="campaign-sim-value">{{ simulation.expectedCost.toLocaleString() }}</span>
+                    </div>
+                </div>
+
+                <p class="campaign-sim-hint">
+                    <i class="bi bi-info-circle"></i> 발송을 위해 크레딧 충전이 필요합니다. 크레딧 충전은 <b>크레딧 관리</b> 메뉴에서 가능합니다. 중간에 빠지기, 건, 임시 저장을 클릭해주세요.
+                </p>
+            </section>
+
+            <!-- 액션 바 -->
+            <div class="campaign-form-actions">
+                <button v-if="form.status === 'pending' || form.status === 'in_progress'" type="button" class="campaign-btn-stop" @click="openStopConfirm">중지</button>
+                <button type="button" class="campaign-btn-save" @click="saveCampaign">저장</button>
+                <button type="button" class="campaign-btn-test" @click="openTestSendModal">테스트 발송</button>
+                <button type="button" class="campaign-btn-send" @click="onSendClick">발송</button>
+            </div>
+            <p class="campaign-form-actions-hint"><i class="bi bi-info-circle"></i> 메시지 발송 시 크레딧이 차감됩니다.</p>
+        </template>
+    </div>
+
+    <!-- ==================== 모달 ==================== -->
+
+    <!-- 수신자 직접입력 모달 (W480) -->
+    <div class="modal fade" ref="recipientInputModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('recipientInput')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title sms-modal-title-sm">수신자 정보</h4>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">수신자 별칭</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientInputModal.name" placeholder="별칭 입력 (선택)">
+                    </div>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">휴대폰 번호</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientInputModal.phone" placeholder="-없이 숫자 입력" maxlength="11">
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('recipientInput')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmRecipientInput">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 주소록(수신자 선택) 모달 (W800) -->
+    <div class="modal fade" ref="addressBookModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('addressBook')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">수신자 선택</h4>
+                    <div class="sms-modal-search-row">
+                        <div class="sms-modal-search">
+                            <input type="text" class="form-control" v-model="addressBookModal.search" @input="addressBookModal.page = 1" placeholder="수신자 별칭을 입력하세요.">
+                            <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
+                        </div>
+                        <div class="sms-modal-count">총 <strong>{{ addressBookModal.selectedIds.length }}</strong>개 선택</div>
+                    </div>
+                    <table class="sms-modal-table">
+                        <thead>
+                            <tr>
+                                <th class="sms-th-check">
+                                    <input type="checkbox" :checked="isAddressBookAllSelected" @change="toggleAddressBookAll">
+                                </th>
+                                <th>수신자 별칭</th>
+                                <th>휴대폰 번호</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="c in pagedAddressBook" :key="c.id">
+                                <td class="sms-th-check">
+                                    <input type="checkbox" :value="c.id" v-model="addressBookModal.selectedIds">
+                                </td>
+                                <td>{{ c.name }}</td>
+                                <td>{{ c.phone }}</td>
+                            </tr>
+                            <tr v-if="pagedAddressBook.length === 0">
+                                <td colspan="3" class="sms-modal-empty">검색 결과가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="sms-modal-pagination" v-if="addressBookTotalPages > 1">
+                        <button type="button" class="sms-page-btn" @click="addressBookModal.page = 1" :disabled="addressBookModal.page === 1">«</button>
+                        <button type="button" class="sms-page-btn" @click="addressBookModal.page > 1 && (addressBookModal.page -= 1)" :disabled="addressBookModal.page === 1">‹</button>
+                        <button v-for="p in addressBookTotalPages" :key="p" type="button" class="sms-page-btn" :class="{ active: p === addressBookModal.page }" @click="addressBookModal.page = p">{{ p }}</button>
+                        <button type="button" class="sms-page-btn" @click="addressBookModal.page < addressBookTotalPages && (addressBookModal.page += 1)" :disabled="addressBookModal.page === addressBookTotalPages">›</button>
+                        <button type="button" class="sms-page-btn" @click="addressBookModal.page = addressBookTotalPages" :disabled="addressBookModal.page === addressBookTotalPages">»</button>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('addressBook')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmAddressBook">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 기존 캠페인 불러오기 모달 -->
+    <div class="modal fade" ref="loadCampaignModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('loadCampaign')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">기존 캠페인 불러오기</h4>
+                    <div class="campaign-modal-info-banner">
+                        <i class="bi bi-info-circle"></i>
+                        <span>기존 캠페인을 선택하면 해당 캠페인의 정보가 아래 폼에 채워집니다. 이후 자유롭게 수정할 수 있습니다.</span>
+                    </div>
+                    <div class="campaign-modal-search-row">
+                        <div class="sms-modal-search">
+                            <input type="text" class="form-control" v-model="loadCampaignModal.search" placeholder="캠페인명 검색">
+                            <button type="button" class="sms-modal-search-btn" aria-label="검색"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+                    <table class="sms-modal-table campaign-modal-table">
+                        <thead>
+                            <tr>
+                                <th class="sms-th-radio"></th>
+                                <th class="text-start ps-3">캠페인명</th>
+                                <th>채널</th>
+                                <th>목적</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="c in filteredLoadCampaigns" :key="c.id" :class="{ 'is-active': loadCampaignModal.selectedId === c.id }" @click="loadCampaignModal.selectedId = c.id">
+                                <td class="sms-th-radio">
+                                    <input type="radio" name="load-campaign" :value="c.id" :checked="loadCampaignModal.selectedId === c.id" @change="loadCampaignModal.selectedId = c.id">
+                                </td>
+                                <td class="text-start ps-3">{{ c.name }}</td>
+                                <td>{{ getChannelLabel(c.channel) }}</td>
+                                <td>{{ getPurposeLabel(c.purpose) }}</td>
+                                <td>
+                                    <span class="history-status" :class="getStatusClass(c.status)">{{ getStatusLabel(c.status) }}</span>
+                                </td>
+                            </tr>
+                            <tr v-if="filteredLoadCampaigns.length === 0">
+                                <td colspan="5" class="sms-modal-empty">검색 결과가 없습니다.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('loadCampaign')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmLoadCampaign">불러오기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 설문폼 추가 모달 -->
+    <div class="modal fade" ref="surveyFormModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('surveyForm')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">설문폼 추가</h4>
+                    <div class="campaign-modal-info-banner">
+                        <i class="bi bi-info-circle"></i>
+                        <span>폼은 복수 선택할 수 있으며, 메세지에 URL 형태로 추가됩니다.<br>폼은 <b>폼 관리</b> 메뉴에서 신규 생성 및 수정이 가능합니다.</span>
+                    </div>
+                    <div class="campaign-modal-search-row">
+                        <div class="sms-modal-search">
+                            <input type="text" class="form-control" v-model="surveyFormModal.search" placeholder="설문폼명 검색">
+                            <button type="button" class="sms-modal-search-btn" aria-label="검색"><i class="bi bi-search"></i></button>
+                        </div>
+                        <select class="form-select campaign-modal-sort" v-model="surveyFormModal.sort">
+                            <option value="latest">최신순</option>
+                            <option value="name">가나다순</option>
+                        </select>
+                    </div>
+                    <ul class="campaign-survey-form-list">
+                        <li v-for="f in filteredSurveyForms" :key="f.id" class="campaign-survey-form-item">
+                            <label class="campaign-group-check">
+                                <input type="checkbox" :value="f.id" v-model="surveyFormModal.selectedIds">
+                                <span>{{ f.name }}</span>
+                            </label>
+                            <span class="campaign-group-count">{{ f.count.toLocaleString() }}명</span>
+                        </li>
+                        <li v-if="filteredSurveyForms.length === 0" class="campaign-survey-form-empty">검색 결과가 없습니다.</li>
+                    </ul>
+                </div>
+                <div class="campaign-modal-actions-single">
+                    <button type="button" class="campaign-btn-modal-confirm-full" @click="confirmSurveyForm">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 테스트 발송 모달 -->
+    <div class="modal fade" ref="testSendModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('testSend')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">테스트 발송</h4>
+                    <div class="campaign-modal-info-banner">
+                        <i class="bi bi-info-circle"></i>
+                        <span>작성 중인 캠페인 내용을 실제 발송 전 미리 확인해 볼 수 있습니다.</span>
+                    </div>
+
+                    <div class="campaign-test-section">
+                        <div class="campaign-test-row">
+                            <label class="campaign-test-label">발송 채널 <span class="campaign-required">*</span></label>
+                            <div class="campaign-checkbox-group">
+                                <label class="campaign-checkbox">
+                                    <input type="checkbox" value="sms" v-model="testSendModal.channels">
+                                    <span>문자메시지</span>
+                                </label>
+                                <label class="campaign-checkbox">
+                                    <input type="checkbox" value="kakao" v-model="testSendModal.channels">
+                                    <span>알림톡</span>
+                                </label>
+                                <label class="campaign-checkbox">
+                                    <input type="checkbox" value="rcs" v-model="testSendModal.channels">
+                                    <span>RCS</span>
+                                </label>
+                                <label class="campaign-checkbox">
+                                    <input type="checkbox" value="email" v-model="testSendModal.channels">
+                                    <span>이메일</span>
+                                </label>
+                                <label class="campaign-checkbox">
+                                    <input type="checkbox" value="push" v-model="testSendModal.channels">
+                                    <span>PUSH</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="campaign-test-section">
+                        <h5 class="campaign-test-section-title">발송 시뮬레이션</h5>
+                        <div class="campaign-test-info-row">
+                            <span class="campaign-test-info-label">이메일</span>
+                            <span class="campaign-test-info-value">{{ currentUser.email }}</span>
+                        </div>
+                        <div class="campaign-test-info-row">
+                            <span class="campaign-test-info-label">휴대폰 번호</span>
+                            <span class="campaign-test-info-value">{{ currentUser.phone }}</span>
+                        </div>
+                        <div class="campaign-test-info-row">
+                            <span class="campaign-test-info-label">현재 보유 크레딧</span>
+                            <span class="campaign-test-info-value">{{ simulation.balance.toLocaleString() }} <i class="bi bi-coin campaign-sim-coin"></i></span>
+                        </div>
+                        <div class="campaign-test-info-row">
+                            <span class="campaign-test-info-label">예상 차감 크레딧</span>
+                            <span class="campaign-test-info-value">{{ testSendModal.expectedDeduct.toLocaleString() }} <i class="bi bi-coin campaign-sim-coin"></i></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="campaign-modal-actions-single">
+                    <button type="button" class="campaign-btn-modal-confirm-full" @click="confirmTestSend">테스트 발송</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 발송 정상 컨펌 (W400) -->
+    <div class="modal fade" ref="sendConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('sendConfirm')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-exclamation"></i></div>
+                    <p class="sms-modal-confirm-text">
+                        <b>{{ simulation.groupNames || '수신자그룹' }}</b> 총 <b>{{ simulation.totalReceiver.toLocaleString() }}명</b>에게 발송하시겠습니까?<br>
+                        크레딧 <b>{{ simulation.expectedCost.toLocaleString() }}</b> <i class="bi bi-coin campaign-sim-coin"></i>이 차감됩니다.
+                    </p>
+                </div>
+                <div class="campaign-modal-actions-double">
+                    <button type="button" class="campaign-btn-modal-cancel" @click="closeModal('sendConfirm')">취소</button>
+                    <button type="button" class="campaign-btn-modal-confirm" @click="confirmSend">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 크레딧 부족 컨펌 (W400) -->
+    <div class="modal fade" ref="creditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('credit')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-exclamation"></i></div>
+                    <p class="sms-modal-confirm-text">
+                        발송을 위해 <b>{{ creditModal.shortage.toLocaleString() }}</b> <i class="bi bi-coin campaign-sim-coin"></i>이 필요합니다.<br>
+                        크레딧을 충전할까요?
+                    </p>
+                </div>
+                <div class="campaign-modal-actions-double">
+                    <button type="button" class="campaign-btn-modal-cancel" @click="closeModal('credit')">취소</button>
+                    <button type="button" class="campaign-btn-modal-confirm" @click="goCharge">크레딧 충전하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 필수 정보 미입력 알림 (W400) -->
+    <div class="modal fade" ref="requiredModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('required')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-exclamation"></i></div>
+                    <p class="sms-modal-confirm-text">
+                        미입력 된 필수정보가 있습니다.<br>
+                        입력하신 후 발송 버튼을 눌러주세요.
+                    </p>
+                </div>
+                <div class="campaign-modal-actions-single">
+                    <button type="button" class="campaign-btn-modal-confirm-full" @click="closeModal('required')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 예약 상태 - 기존 예약 취소 후 발송 (W400) -->
+    <div class="modal fade" ref="reReserveModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('reReserve')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-exclamation"></i></div>
+                    <p class="sms-modal-confirm-text">
+                        <b>{{ form.reserveDateTime || '예약 시각' }}</b>에 발송 대기중입니다.<br>
+                        기존 예약을 취소한 후, 수정된 내용으로 발송하시겠습니까?
+                    </p>
+                </div>
+                <div class="campaign-modal-actions-double">
+                    <button type="button" class="campaign-btn-modal-cancel" @click="closeModal('reReserve')">취소</button>
+                    <button type="button" class="campaign-btn-modal-confirm" @click="confirmReReserve">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 이미 발송 완료 - 복제 안내 (W400) -->
+    <div class="modal fade" ref="completedModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('completed')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-exclamation"></i></div>
+                    <p class="sms-modal-confirm-text">
+                        <b>발송 완료</b>된 캠페인입니다.<br>
+                        동일한 캠페인은 복제 후 재발송 할 수 있습니다.<br>
+                        복제하시겠습니까?
+                    </p>
+                </div>
+                <div class="campaign-modal-actions-double">
+                    <button type="button" class="campaign-btn-modal-cancel" @click="closeModal('completed')">취소</button>
+                    <button type="button" class="campaign-btn-modal-confirm" @click="confirmDuplicate">복제하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 중지 - 대기중인 캠페인 (W400) -->
+    <div class="modal fade" ref="stopPendingModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('stopPending')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-exclamation"></i></div>
+                    <p class="sms-modal-confirm-text">
+                        <b>{{ form.reserveDateTime || '예약 시각' }}</b>에 발송 대기중입니다.<br>
+                        캠페인을 중지하시겠습니까?
+                    </p>
+                </div>
+                <div class="campaign-modal-actions-double">
+                    <button type="button" class="campaign-btn-modal-cancel" @click="closeModal('stopPending')">취소</button>
+                    <button type="button" class="campaign-btn-modal-confirm" @click="confirmStopPending">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 중지 - 진행중인 캠페인 (W400) -->
+    <div class="modal fade" ref="stopRunningModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('stopRunning')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-exclamation"></i></div>
+                    <p class="sms-modal-confirm-text">
+                        캠페인이 <b>{{ simulation.groupNames || '수신자그룹' }} {{ simulation.totalReceiver.toLocaleString() }}명</b>에게 <b>발송중</b>입니다.<br>
+                        정말 중지하시겠습니까?
+                    </p>
+                </div>
+                <div class="campaign-modal-actions-double">
+                    <button type="button" class="campaign-btn-modal-cancel" @click="closeModal('stopRunning')">취소</button>
+                    <button type="button" class="campaign-btn-modal-confirm" @click="confirmStopRunning">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 목록 - 복사 확인 (W400) -->
+    <div class="modal fade" ref="copyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('copy')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-exclamation"></i></div>
+                    <p class="sms-modal-confirm-text">
+                        선택한 <b>{{ selectedIds.length }}건</b>의 캠페인을 복사하시겠습니까?
+                    </p>
+                </div>
+                <div class="campaign-modal-actions-double">
+                    <button type="button" class="campaign-btn-modal-cancel" @click="closeModal('copy')">취소</button>
+                    <button type="button" class="campaign-btn-modal-confirm" @click="confirmCopy">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 목록 - 삭제 확인 (W400) -->
+    <div class="modal fade" ref="deleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('delete')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-exclamation"></i></div>
+                    <p class="sms-modal-confirm-text">
+                        선택한 <b>{{ selectedIds.length }}건</b>의 캠페인을 삭제하시겠습니까?<br>
+                        <span class="campaign-modal-text-sub">삭제된 캠페인은 복구할 수 없습니다.</span>
+                    </p>
+                </div>
+                <div class="campaign-modal-actions-double">
+                    <button type="button" class="campaign-btn-modal-cancel" @click="closeModal('delete')">취소</button>
+                    <button type="button" class="campaign-btn-modal-confirm" @click="confirmDelete">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 알림 (간단) -->
+    <div class="modal fade" ref="alertModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w400">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('alert')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body sms-modal-body-confirm">
+                    <div class="sms-modal-icon"><i class="bi bi-check-lg"></i></div>
+                    <p class="sms-modal-confirm-text">{{ alertText }}</p>
+                </div>
+                <div class="campaign-modal-actions-single">
+                    <button type="button" class="campaign-btn-modal-confirm-full" @click="closeModal('alert')">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
