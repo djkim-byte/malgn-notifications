@@ -202,6 +202,12 @@
                         <div class="sms-form-row">
                             <label class="sms-form-label">내용 <span class="sms-required">*</span></label>
                             <div class="sms-form-control">
+                                <div class="email-ai-toolbar">
+                                    <button type="button" class="email-ai-rewrite-btn" :disabled="isTemplateLocked" @click="openAiRewrite">
+                                        <i class="bi bi-stars"></i>
+                                        AI 문장 다듬기
+                                    </button>
+                                </div>
                                 <div class="sms-textarea-wrap">
                                     <textarea class="form-control sms-textarea" v-model="form.content" rows="10" maxlength="100" :disabled="isTemplateLocked"></textarea>
                                     <div class="sms-byte-counter sms-byte-counter-textarea">{{ form.content.length }}/100</div>
@@ -666,6 +672,112 @@
                 <div class="sms-modal-actions">
                     <button type="button" class="sms-btn-modal-cancel" @click="closeSendConfirm">취소</button>
                     <button type="button" class="sms-btn-modal-confirm" @click="confirmSend">발송하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI 문장 다듬기 모달 (W1200, 좌측 AI 대화창 + 우측 미리보기) -->
+    <div class="modal fade" ref="aiRewriteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered email-modal-ai">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('aiRewrite')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">
+                        <i class="bi bi-stars email-ai-title-icon"></i>
+                        AI 문장 다듬기
+                    </h4>
+                    <div class="email-ai-modal-grid">
+                        <!-- 좌측: AI 대화창 -->
+                        <div class="email-ai-chat">
+                            <div class="email-ai-chat-messages" ref="aiChatMessages">
+                                <div
+                                    v-for="(msg, idx) in aiRewriteModal.messages"
+                                    :key="idx"
+                                    class="email-ai-message"
+                                    :class="msg.role === 'user' ? 'is-user' : 'is-bot'"
+                                >
+                                    <div v-if="msg.role === 'bot'" class="email-ai-message-avatar">
+                                        <i class="bi bi-stars"></i>
+                                    </div>
+                                    <div class="email-ai-message-bubble">{{ msg.text }}</div>
+                                </div>
+                                <div v-if="aiRewriteModal.loading" class="email-ai-message is-bot">
+                                    <div class="email-ai-message-avatar">
+                                        <i class="bi bi-stars"></i>
+                                    </div>
+                                    <div class="email-ai-message-bubble email-ai-message-typing">
+                                        <span></span><span></span><span></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="email-ai-quick-row" v-if="aiRewriteModal.messages.length <= 1">
+                                <button type="button" class="email-ai-quick-btn" @click="sendAiQuickPrompt('더 친근한 톤으로 다듬어 주세요.')">친근한 톤</button>
+                                <button type="button" class="email-ai-quick-btn" @click="sendAiQuickPrompt('더 간결하게 다듬어 주세요.')">간결하게</button>
+                                <button type="button" class="email-ai-quick-btn" @click="sendAiQuickPrompt('정중한 비즈니스 톤으로 다듬어 주세요.')">정중한 비즈니스</button>
+                                <button type="button" class="email-ai-quick-btn" @click="sendAiQuickPrompt('맞춤법과 어색한 표현을 교정해 주세요.')">맞춤법 교정</button>
+                            </div>
+                            <div class="email-ai-chat-input-wrap">
+                                <textarea
+                                    class="form-control email-ai-chat-input"
+                                    rows="2"
+                                    v-model="aiRewriteModal.input"
+                                    placeholder="원하는 톤이나 다듬을 방향을 입력하세요. (예: 더 친근한 톤으로, 인사말만 추가)"
+                                    @keydown.enter.exact.prevent="sendAiPrompt"
+                                ></textarea>
+                                <button
+                                    type="button"
+                                    class="email-ai-chat-send"
+                                    :disabled="!aiRewriteModal.input.trim() || aiRewriteModal.loading"
+                                    @click="sendAiPrompt"
+                                    aria-label="전송"
+                                >
+                                    <i class="bi bi-arrow-up"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- 우측: RCS 미리보기 -->
+                        <div class="email-ai-preview-col sms-ai-preview-col">
+                            <div class="email-ai-preview-label">미리보기</div>
+                            <div class="sms-ai-preview-inner">
+                                <div class="rcs-phone">
+                                    <div class="rcs-phone-header">
+                                        <i class="bi bi-chevron-left"></i>
+                                        <span class="rcs-phone-avatar"><i class="bi bi-chat-dots-fill"></i></span>
+                                        <span class="rcs-phone-name">{{ selectedBrand ? selectedBrand.name : '브랜드' }}</span>
+                                        <i class="bi bi-three-dots-vertical"></i>
+                                    </div>
+                                    <div class="rcs-phone-sub">
+                                        <span class="rcs-phone-web-tag">Web 메시지(2)</span>
+                                    </div>
+                                    <div class="rcs-phone-body">
+                                        <div v-if="form.purpose === 'ad'" class="rcs-phone-optout">무료 수신 거부</div>
+                                        <div v-if="aiPreviewContent" class="rcs-phone-bubble">
+                                            <div class="rcs-phone-text">{{ aiPreviewContent }}</div>
+                                            <div v-if="form.buttons.length > 0" class="rcs-phone-buttons">
+                                                <button v-for="(b, i) in form.buttons" :key="i" type="button" class="rcs-phone-btn">
+                                                    {{ b.name || buttonTypeLabel(b.type) }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div v-else class="rcs-phone-empty">AI가 다듬은 결과가<br>이곳에 표시됩니다.</div>
+                                    </div>
+                                    <div class="rcs-phone-footer">
+                                        <i class="bi bi-plus"></i>
+                                        <span class="rcs-phone-input-mock">메시지 입력</span>
+                                        <i class="bi bi-send-fill"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('aiRewrite')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" :disabled="!aiRewriteModal.draftContent" @click="applyAiRewrite">적용</button>
                 </div>
             </div>
         </div>

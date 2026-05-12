@@ -21,7 +21,7 @@
                 <li v-for="(item, idx) in serviceFlow" :key="item.key" class="signup-flow-item">
                     <div class="signup-flow-card">
                         <div class="signup-flow-cap">{{ item.cap }}</div>
-                        <div class="signup-flow-name">{{ item.name }}</div>
+                        <div class="signup-flow-name" v-html="item.name"></div>
                     </div>
                     <i v-if="idx < serviceFlow.length - 1" class="bi bi-chevron-right signup-flow-arrow"></i>
                 </li>
@@ -30,7 +30,7 @@
             <h2 class="signup-section-title mt-5">서비스 신청 서류</h2>
             <div class="signup-doc-table">
                 <div class="signup-doc-head">
-                    <div class="signup-doc-col">사업자</div>
+                    <div class="signup-doc-col">구분</div>
                     <div class="signup-doc-col">가입 서류</div>
                     <div class="signup-doc-col">이용 방식</div>
                 </div>
@@ -48,6 +48,32 @@
                         <div>카드 등록 후 충전 이용방식</div>
                     </div>
                 </div>
+                <div class="signup-doc-row">
+                    <div class="signup-doc-col">
+                        <div>개인</div>
+                    </div>
+                    <div class="signup-doc-col">
+                        <div>가입신청서(계약서)</div>
+                    </div>
+                    <div class="signup-doc-col">
+                        <div>카드 등록 후 충전 이용방식</div>
+                    </div>
+                </div>
+                <div class="signup-doc-row">
+                    <div class="signup-doc-col">
+                        <div>법인 사업자</div>
+                        <div>개인 사업자</div>
+                    </div>
+                    <div class="signup-doc-col">
+                        <div>사업자 등록증</div>
+                        <div>대부업등록증(해당업체)</div>
+                        <div>가입신청서(계약서)</div>
+                        <div>지급이행보증보험증권</div>
+                    </div>
+                    <div class="signup-doc-col">
+                        <div>후불 계약</div>
+                    </div>
+                </div>
             </div>
 
             <div class="signup-actions">
@@ -59,31 +85,46 @@
         <!-- Step 2: 기업 정보 확인 -->
         <!-- ============================== -->
         <section v-if="currentStep === 2" class="signup-section">
-            <h2 class="signup-form-title">기업 정보 확인</h2>
-            <p class="signup-form-desc">
+            <h2 class="signup-form-title">정보 확인</h2>
+            <p class="signup-form-desc" v-if="company.type !== 'person'">
                 사업자등록번호 입력 후 기업 정보를 확인해 주세요. (비영리 단체일 경우는 고유번호 입력)<br>
                 <strong>증빙서류와 동일한 사업자등록번호(고유번호)를 입력해 주세요.</strong>
+            </p>
+            <p class="signup-form-desc" v-else>
+                이름과 주소를 입력해 주세요.
             </p>
             <hr class="signup-divider">
 
             <!-- 이미 가입 상태 -->
             <div v-if="company.alreadyRegistered" class="signup-form-block">
                 <div class="signup-form-row">
-                    <label class="signup-form-label">사업자 유형</label>
-                    <div class="signup-form-value">{{ company.type === 'corp' ? '법인사업자' : '개인사업자' }}</div>
+                    <label class="signup-form-label">사용자 유형</label>
+                    <div class="signup-form-value">{{ userTypeLabel }}</div>
                 </div>
-                <div class="signup-form-row">
-                    <label class="signup-form-label">사업자 등록 번호</label>
-                    <div class="signup-form-value">{{ formattedBizNo }}</div>
-                </div>
-                <div class="signup-form-row">
-                    <label class="signup-form-label">회사명</label>
-                    <div class="signup-form-value">{{ company.name }}</div>
-                </div>
-                <div class="signup-form-row">
-                    <label class="signup-form-label">대표자명</label>
-                    <div class="signup-form-value">{{ company.ceo }}</div>
-                </div>
+                <template v-if="company.type !== 'person'">
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">사업자 등록 번호</label>
+                        <div class="signup-form-value">{{ formattedBizNo }}</div>
+                    </div>
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">회사명</label>
+                        <div class="signup-form-value">{{ company.name }}</div>
+                    </div>
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">대표자명</label>
+                        <div class="signup-form-value">{{ company.ceo }}</div>
+                    </div>
+                </template>
+                <template v-else>
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">이름</label>
+                        <div class="signup-form-value">{{ company.name }}</div>
+                    </div>
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">주소</label>
+                        <div class="signup-form-value">{{ company.address }}</div>
+                    </div>
+                </template>
                 <div class="signup-actions">
                     <button type="button" class="signup-btn signup-btn-link-vivid" @click="goLogin">
                         <i class="bi bi-info-circle-fill me-2"></i>로그인 하기
@@ -94,7 +135,7 @@
             <!-- 입력 폼 -->
             <form v-else class="signup-form-block" @submit.prevent="submitCompany">
                 <div class="signup-form-row">
-                    <label class="signup-form-label">사업자 유형</label>
+                    <label class="signup-form-label">사용자 유형</label>
                     <div class="signup-form-control">
                         <div class="signup-radio-group">
                             <label class="signup-radio">
@@ -105,45 +146,70 @@
                                 <input type="radio" v-model="company.type" value="indiv">
                                 <span>개인사업자</span>
                             </label>
+                            <label class="signup-radio">
+                                <input type="radio" v-model="company.type" value="person">
+                                <span>개인</span>
+                            </label>
                         </div>
                     </div>
                 </div>
 
-                <div class="signup-form-row">
-                    <label class="signup-form-label">사업자 등록 번호</label>
-                    <div class="signup-form-control">
-                        <div class="signup-bizno-row">
-                            <input type="text" maxlength="3" inputmode="numeric"
-                                class="signup-input signup-input-bizno"
-                                v-model="company.bizNo1">
-                            <span class="signup-bizno-dash">-</span>
-                            <input type="text" maxlength="2" inputmode="numeric"
-                                class="signup-input signup-input-bizno"
-                                v-model="company.bizNo2">
-                            <span class="signup-bizno-dash">-</span>
-                            <input type="text" maxlength="5" inputmode="numeric"
-                                class="signup-input signup-input-bizno-last"
-                                v-model="company.bizNo3">
+                <template v-if="company.type !== 'person'">
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">사업자 등록 번호</label>
+                        <div class="signup-form-control">
+                            <div class="signup-bizno-row">
+                                <input type="text" maxlength="3" inputmode="numeric"
+                                    class="signup-input signup-input-bizno"
+                                    v-model="company.bizNo1">
+                                <span class="signup-bizno-dash">-</span>
+                                <input type="text" maxlength="2" inputmode="numeric"
+                                    class="signup-input signup-input-bizno"
+                                    v-model="company.bizNo2">
+                                <span class="signup-bizno-dash">-</span>
+                                <input type="text" maxlength="5" inputmode="numeric"
+                                    class="signup-input signup-input-bizno-last"
+                                    v-model="company.bizNo3">
+                            </div>
+                            <div v-if="errors.bizNo" class="signup-error-text">사업자 등록번호가 맞지 않네요. 다시 입력해 주세요</div>
                         </div>
-                        <div v-if="errors.bizNo" class="signup-error-text">사업자 등록번호가 맞지 않네요. 다시 입력해 주세요</div>
                     </div>
-                </div>
 
-                <div class="signup-form-row">
-                    <label class="signup-form-label">회사명</label>
-                    <div class="signup-form-control">
-                        <input type="text" class="signup-input signup-input-wide" v-model="company.name">
-                        <div v-if="errors.name" class="signup-error-text">회사명이 입력되지 않았네요. 다시 입력해 주세요</div>
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">회사명</label>
+                        <div class="signup-form-control">
+                            <input type="text" class="signup-input signup-input-wide" v-model="company.name">
+                            <div v-if="errors.name" class="signup-error-text">회사명이 입력되지 않았네요. 다시 입력해 주세요</div>
+                        </div>
                     </div>
-                </div>
 
-                <div class="signup-form-row">
-                    <label class="signup-form-label">대표자명</label>
-                    <div class="signup-form-control">
-                        <input type="text" class="signup-input signup-input-wide" v-model="company.ceo">
-                        <div v-if="errors.ceo" class="signup-error-text">대표자명이 입력되지 않았네요. 다시 입력해 주세요</div>
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">대표자명</label>
+                        <div class="signup-form-control">
+                            <input type="text" class="signup-input signup-input-wide" v-model="company.ceo">
+                            <div v-if="errors.ceo" class="signup-error-text">대표자명이 입력되지 않았네요. 다시 입력해 주세요</div>
+                        </div>
                     </div>
-                </div>
+                </template>
+
+                <template v-else>
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">이름</label>
+                        <div class="signup-form-control">
+                            <input type="text" class="signup-input signup-input-wide" v-model="company.name">
+                            <div v-if="errors.name" class="signup-error-text">이름이 입력되지 않았네요. 다시 입력해 주세요</div>
+                        </div>
+                    </div>
+
+                    <div class="signup-form-row">
+                        <label class="signup-form-label">주소</label>
+                        <div class="signup-form-control">
+                            <input type="text" class="signup-input signup-input-wide"
+                                placeholder="주소를 입력해 주세요." v-model="company.address">
+                            <div v-if="errors.address" class="signup-error-text">주소가 입력되지 않았네요. 다시 입력해 주세요</div>
+                        </div>
+                    </div>
+                </template>
 
                 <div class="signup-actions">
                     <button type="submit" class="signup-btn"
@@ -345,21 +411,34 @@
                     <div class="signup-summary-label">아이디</div>
                     <div class="signup-summary-value">{{ account.email || 'user@example.com' }}</div>
                 </div>
-                <div class="signup-summary-row">
-                    <div class="signup-summary-label">사업자등록번호</div>
-                    <div class="signup-summary-value">{{ formattedBizNo }}</div>
-                </div>
-                <div class="signup-summary-row">
-                    <div class="signup-summary-label">회사명</div>
-                    <div class="signup-summary-value">{{ company.name }}</div>
-                </div>
-                <div class="signup-summary-row">
-                    <div class="signup-summary-label">대표자명</div>
-                    <div class="signup-summary-value">{{ company.ceo }}</div>
-                </div>
+                <template v-if="company.type === 'person'">
+                    <div class="signup-summary-row">
+                        <div class="signup-summary-label">이름</div>
+                        <div class="signup-summary-value">{{ company.name }}</div>
+                    </div>
+                    <div class="signup-summary-row">
+                        <div class="signup-summary-label">주소</div>
+                        <div class="signup-summary-value">{{ company.address }}</div>
+                    </div>
+                </template>
+                <template v-else>
+                    <div class="signup-summary-row">
+                        <div class="signup-summary-label">사업자등록번호</div>
+                        <div class="signup-summary-value">{{ formattedBizNo }}</div>
+                    </div>
+                    <div class="signup-summary-row">
+                        <div class="signup-summary-label">회사명</div>
+                        <div class="signup-summary-value">{{ company.name }}</div>
+                    </div>
+                    <div class="signup-summary-row">
+                        <div class="signup-summary-label">대표자명</div>
+                        <div class="signup-summary-value">{{ company.ceo }}</div>
+                    </div>
+                </template>
             </div>
 
-            <p class="signup-welcome-note">최초 로그인 시 사업자등록증 업로드와 가입신청서를 작성하신 후 사용하실 수 있습니다</p>
+            <p class="signup-welcome-note" v-if="company.type !== 'person'">최초 로그인 시 사업자등록증 업로드와 가입신청서를 작성하신 후 사용하실 수 있습니다</p>
+            <p class="signup-welcome-note" v-else>최초 로그인 시 가입신청서를 작성하신 후 사용하실 수 있습니다</p>
 
             <div class="signup-actions">
                 <button type="button" class="signup-btn signup-btn-link-vivid" @click="goLogin">

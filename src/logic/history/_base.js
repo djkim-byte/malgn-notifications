@@ -219,6 +219,7 @@ export function createHistoryPage({ defaultChannel }) {
                 if (this.$refs.templatePickerModal) {
                     this.modals.templatePicker = new bootstrap.Modal(this.$refs.templatePickerModal);
                 }
+                window.openPopupFromQuery && window.openPopupFromQuery(this);
             });
         },
 

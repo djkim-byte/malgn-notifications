@@ -401,6 +401,7 @@ export default {
                 deleteConfirm: new bootstrap.Modal(this.$refs.deleteConfirmModal),
                 tokenSent: new bootstrap.Modal(this.$refs.tokenSentModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

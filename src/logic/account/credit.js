@@ -156,6 +156,7 @@ export default {
             this.detailModal        = new bootstrap.Modal(this.$refs.detailModal);
             this.cancelConfirmModal = new bootstrap.Modal(this.$refs.cancelConfirmModal);
             this.cancelDoneModal    = new bootstrap.Modal(this.$refs.cancelDoneModal);
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

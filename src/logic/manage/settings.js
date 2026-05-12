@@ -145,6 +145,7 @@ export default {
                 alert: new bootstrap.Modal(this.$refs.alertModal),
                 substitution: new bootstrap.Modal(this.$refs.substitutionModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

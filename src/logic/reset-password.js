@@ -27,6 +27,7 @@ export default {
 
         this.$nextTick(() => {
             this.sentModal = new bootstrap.Modal(this.$refs.sentModal);
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

@@ -56,6 +56,7 @@ export default {
         this.$nextTick(() => {
             this.confirmModal = new bootstrap.Modal(this.$refs.confirmModal);
             this.addCardModal = new bootstrap.Modal(this.$refs.addCardModal);
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

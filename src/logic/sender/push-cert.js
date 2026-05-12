@@ -73,6 +73,7 @@ export default {
             this.modals = {
                 result: new bootstrap.Modal(this.$refs.resultModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

@@ -71,6 +71,7 @@ export default {
                 dkim: new bootstrap.Modal(this.$refs.dkimModal),
                 deleteConfirm: new bootstrap.Modal(this.$refs.deleteConfirmModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

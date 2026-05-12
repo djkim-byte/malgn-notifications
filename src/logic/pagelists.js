@@ -50,14 +50,15 @@ export default {
                 { category: '메시지 발송', title: '버튼 PU', url: '#/send/rcs', description: 'RCS 버튼 추가/편집 팝업' },
                 { category: '메시지 발송', title: '발송 컨펌 PU', url: '#/send/rcs', description: '발송 확인 컨펌 팝업' },
                 { category: '메시지 발송', title: '초기화 확인 PU', url: '#/send/rcs', description: '발송 폼 초기화 확인 팝업' },
-                { category: '메시지 발송', title: '이메일 발송', url: '#/send/email', description: '이메일 발송 폼' },
-                { category: '메시지 발송', title: '템플릿 선택 PU', url: '#/send/email', description: '이메일 템플릿 선택 팝업' },
-                { category: '메시지 발송', title: '수신자 정보 PU', url: '#/send/email', description: '수신자 정보 입력 팝업' },
-                { category: '메시지 발송', title: '수신자 정보 수정 PU', url: '#/send/email', description: '수신자 정보 수정 팝업' },
-                { category: '메시지 발송', title: '수신자 선택 PU', url: '#/send/email', description: '주소록에서 수신자 선택 팝업' },
-                { category: '메시지 발송', title: '광고 수신 알림 PU', url: '#/send/email', description: '광고 수신 동의 안내 팝업' },
-                { category: '메시지 발송', title: '발송 컨펌 PU', url: '#/send/email', description: '발송 확인 컨펌 팝업' },
-                { category: '메시지 발송', title: '초기화 확인 PU', url: '#/send/email', description: '발송 폼 초기화 확인 팝업' },
+                { category: '메시지 발송', title: '이메일 발송', url: '#/send/email-ai', description: '이메일 발송 폼 (AI 문장 다듬기 지원)' },
+                { category: '메시지 발송', title: '템플릿 선택 PU', url: '#/send/email-ai', description: '이메일 템플릿 선택 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 PU', url: '#/send/email-ai', description: '수신자 정보 입력 팝업' },
+                { category: '메시지 발송', title: '수신자 정보 수정 PU', url: '#/send/email-ai', description: '수신자 정보 수정 팝업' },
+                { category: '메시지 발송', title: '수신자 선택 PU', url: '#/send/email-ai', description: '주소록에서 수신자 선택 팝업' },
+                { category: '메시지 발송', title: '광고 수신 알림 PU', url: '#/send/email-ai', description: '광고 수신 동의 안내 팝업' },
+                { category: '메시지 발송', title: 'AI 문장 다듬기 PU', url: '#/send/email-ai', description: 'AI 문장 다듬기 모달 (대화창 + 미리보기)' },
+                { category: '메시지 발송', title: '발송 컨펌 PU', url: '#/send/email-ai', description: '발송 확인 컨펌 팝업' },
+                { category: '메시지 발송', title: '초기화 확인 PU', url: '#/send/email-ai', description: '발송 폼 초기화 확인 팝업' },
                 { category: '메시지 발송', title: 'PUSH 발송', url: '#/send/push', description: '앱 푸시 발송 폼' },
                 { category: '메시지 발송', title: '템플릿 선택 PU', url: '#/send/push', description: '푸시 템플릿 선택 팝업' },
                 { category: '메시지 발송', title: '수신자 정보 PU', url: '#/send/push', description: '수신자 정보 입력 팝업' },
@@ -207,6 +208,10 @@ export default {
                 { category: '메시지관리', title: 'AI 템플릿 PU', url: '#/manage/push', description: 'AI 템플릿 생성 팝업' },
                 { category: '메시지관리', title: '삭제 확인 PU', url: '#/manage/push', description: '템플릿 삭제 확인 팝업' },
                 { category: '메시지관리', title: '알림 PU', url: '#/manage/push', description: '알림 메시지 팝업' },
+                { category: '메시지관리', title: '랜딩페이지', url: '#/manage/landing-page', description: '랜딩페이지 목록/생성/수정' },
+                { category: '메시지관리', title: '미리보기 PU', url: '#/manage/landing-page', description: '랜딩페이지 미리보기 팝업(큰 모달)' },
+                { category: '메시지관리', title: '삭제 확인 PU', url: '#/manage/landing-page', description: '랜딩페이지 삭제 확인 팝업' },
+                { category: '메시지관리', title: '알림 PU', url: '#/manage/landing-page', description: '알림 메시지 팝업' },
                 { category: '메시지관리', title: '상세 설정', url: '#/manage/settings', description: '메시지 발송 상세 설정' },
                 { category: '메시지관리', title: '알림 PU', url: '#/manage/settings', description: '알림 메시지 팝업' },
                 { category: '메시지관리', title: '대체 문자 설정 PU', url: '#/manage/settings', description: '대체 문자 설정 팝업' },
@@ -299,15 +304,241 @@ export default {
         },
         totalPages() {
             return this.pages.length;
+        },
+        popupKeyMap() {
+            const history = {
+                '일괄 취소 PU': 'cancelAll',
+                '다운로드 요청 PU': 'downloadRequest',
+                '채널 알림 PU': 'channelAlert',
+                '템플릿 선택 PU': 'templatePicker',
+                '다운로드 요청 목록 PU': 'downloadList'
+            };
+            const manageBase = {
+                '카테고리 추가 PU': 'addCategory',
+                '카테고리 이름 수정 PU': 'editCategory',
+                '템플릿 상세 보기 PU': 'templateDetail',
+                '샘플 템플릿 PU': 'sample',
+                'AI 템플릿 PU': 'aiTemplate',
+                '삭제 확인 PU': 'delete',
+                '알림 PU': 'alert'
+            };
+            return {
+                '#/send/sms': {
+                    '샘플 템플릿 선택 PU': 'template',
+                    '수신자 정보 PU': 'recipientInput',
+                    '수신자 선택 PU': 'addressBook',
+                    '광고 수신 알림 PU': 'adAlert',
+                    '발송 컨펌 PU': 'sendConfirm',
+                    '초기화 확인 PU': 'reset'
+                },
+                '#/send/kakao': {
+                    '템플릿 선택 PU': 'template',
+                    '수신자 정보 PU': 'recipientInput',
+                    '수신자 선택 PU': 'addressBook',
+                    '수신자 정보 수정 PU': 'recipientEdit',
+                    '발송 컨펌 PU': 'sendConfirm',
+                    '초기화 확인 PU': 'reset'
+                },
+                '#/send/rcs': {
+                    '템플릿 선택 PU': 'template',
+                    '수신자 정보 PU': 'recipientInput',
+                    '수신자 정보 수정 PU': 'recipientEdit',
+                    '수신자 선택 PU': 'addressBook',
+                    '버튼 PU': 'button',
+                    '발송 컨펌 PU': 'sendConfirm',
+                    '초기화 확인 PU': 'reset'
+                },
+                '#/send/email-ai': {
+                    '템플릿 선택 PU': 'template',
+                    '수신자 정보 PU': 'recipientInput',
+                    '수신자 정보 수정 PU': 'recipientEdit',
+                    '수신자 선택 PU': 'addressBook',
+                    '광고 수신 알림 PU': 'adAlert',
+                    'AI 문장 다듬기 PU': 'aiRewrite',
+                    '발송 컨펌 PU': 'sendConfirm',
+                    '초기화 확인 PU': 'reset'
+                },
+                '#/send/push': {
+                    '템플릿 선택 PU': 'template',
+                    '수신자 정보 PU': 'recipientInput',
+                    '수신자 선택 PU': 'addressBook',
+                    '수신자 정보 수정 PU': 'recipientEdit',
+                    '버튼 PU': 'button',
+                    '미디어 PU': 'media',
+                    'Android 큰 아이콘 PU': 'largeIcon',
+                    '그룹 PU': 'group',
+                    '발송 컨펌 PU': 'sendConfirm',
+                    '초기화 확인 PU': 'reset'
+                },
+                '#/send/flow': {
+                    'Flow 매니저 PU': 'flowMgr',
+                    '템플릿 선택 PU': 'templatePicker',
+                    '수신자 정보 PU': 'recipientInput',
+                    '수신자 선택 PU': 'addressBook',
+                    '수신자 정보 수정 PU': 'recipientEdit',
+                    '발송 컨펌 PU': 'sendConfirm',
+                    '초기화 확인 PU': 'reset'
+                },
+                '#/history/sms': history,
+                '#/history/kakao': history,
+                '#/history/rcs': history,
+                '#/history/email': history,
+                '#/history/push': history,
+                '#/contacts/list': {
+                    '연락처 추가/변경 PU': 'contactForm',
+                    '연락처 삭제 확인 PU': 'deleteConfirm',
+                    '다운로드 요청 PU': 'downloadRequest',
+                    '다운로드 요청 목록 PU': 'downloadList'
+                },
+                '#/contacts/groups': {
+                    '그룹 추가 PU': 'groupAdd',
+                    '그룹 이름 변경 PU': 'groupRename',
+                    '그룹 삭제 확인 PU': 'groupDelete',
+                    '그룹 연락처 추가 PU': 'contactAdd',
+                    '다운로드 요청 목록 PU': 'downloadList'
+                },
+                '#/contacts/optout': {
+                    '수신거부 추가 PU': 'add',
+                    '취소 확인 PU': 'cancel',
+                    '다운로드 요청 PU': 'downloadRequest',
+                    '다운로드 요청 목록 PU': 'downloadList'
+                },
+                '#/sender/numbers': {
+                    '개인정보 수집 동의 PU': 'agree',
+                    '발신 정보 등록 PU': 'register',
+                    '삭제 확인 PU': 'deleteConfirm',
+                    '등록 안내 PU': 'guide'
+                },
+                '#/sender/brands': {
+                    '연결 확인 PU': 'linkConfirm',
+                    '연결 완료 PU': 'linkDone'
+                },
+                '#/sender/domains': {
+                    '도메인 등록 PU': 'register',
+                    'DKIM 설정 PU': 'dkim',
+                    '삭제 확인 PU': 'deleteConfirm'
+                },
+                '#/sender/push-cert': {
+                    '결과 알림 PU': 'result'
+                },
+                '#/sender/profiles': {
+                    '발신프로필 등록 PU': 'register',
+                    '그룹 관리 PU': 'group',
+                    '삭제 확인 PU': 'deleteConfirm',
+                    '토큰 발송 알림 PU': 'tokenSent'
+                },
+                '#/sender/optout-080': {
+                    '080 신청 PU': 'apply',
+                    '취소 확인 PU': 'cancelConfirm'
+                },
+                '#/manage/sms': {
+                    ...manageBase,
+                    '광고 수신 알림 PU': 'adAlert'
+                },
+                '#/manage/kakao': {
+                    ...manageBase,
+                    '대표 링크 PU': 'link',
+                    '버튼 PU': 'button',
+                    '바로 연결 PU': 'quick',
+                    '아이템 리스트 PU': 'itemList'
+                },
+                '#/manage/rcs': {
+                    ...manageBase,
+                    '버튼 PU': 'button'
+                },
+                '#/manage/email': {
+                    ...manageBase,
+                    '광고 수신 알림 PU': 'adAlert'
+                },
+                '#/manage/push': {
+                    ...manageBase,
+                    '버튼 PU': 'button',
+                    '미디어(공통) PU': 'media',
+                    '미디어(Android) PU': 'androidMedia',
+                    '미디어(iOS) PU': 'iosMedia',
+                    'Android 큰 아이콘 PU': 'androidLargeIcon',
+                    '그룹 PU': 'group'
+                },
+                '#/manage/settings': {
+                    '알림 PU': 'alert',
+                    '대체 문자 설정 PU': 'substitution'
+                },
+                '#/manage/landing-page': {
+                    '미리보기 PU': 'preview',
+                    '삭제 확인 PU': 'delete',
+                    '알림 PU': 'alert'
+                },
+                '#/inquiry': {
+                    '파일 오류 알림 PU': 'fileError'
+                },
+                '#/login/security': {
+                    '인증코드 알림 PU': 'codeAlert'
+                },
+                '#/reset-password': {
+                    '메일 발송 완료 PU': 'sent'
+                },
+                '#/reset-password/new': {
+                    '재설정 완료 PU': 'done'
+                },
+                '#/signup': {
+                    'OTP 인증 알림 PU': 'otpAlert',
+                    '휴대폰 인증 알림 PU': 'phoneAlert',
+                    '이용약관 PU': 'terms'
+                },
+                '#/campaign': {
+                    '설문폼 추가 PU': 'surveyForm',
+                    '테스트 발송 PU': 'testSend',
+                    '발송 컨펌 PU': 'sendConfirm',
+                    '크레딧 부족 PU': 'credit',
+                    '필수 정보 미입력 알림 PU': 'required',
+                    '예약 재발송 PU': 'reReserve',
+                    '발송 완료 복제 PU': 'completed',
+                    '대기 중 캠페인 중지 PU': 'stopPending',
+                    '진행 중 캠페인 중지 PU': 'stopRunning',
+                    '복사 확인 PU': 'copy',
+                    '삭제 확인 PU': 'delete'
+                },
+                '#/charge': {
+                    '카드 추가 PU': 'addCard',
+                    '결제 확인 PU': 'confirm'
+                },
+                '#/account/credit': {
+                    '영수증 PU': 'receipt',
+                    '크레딧 상세내용 PU': 'detail',
+                    '취소 확인 PU': 'cancelConfirm',
+                    '취소 완료 PU': 'cancelDone'
+                },
+                '#/account/inquiries': {
+                    '삭제 확인 PU': 'delete'
+                },
+                '#/account/inquiries/detail': {
+                    '삭제 확인 PU': 'delete'
+                },
+                '#/account/settings': {
+                    '알림 PU': 'alert',
+                    '서명 등록 PU': 'sign',
+                    '문서 뷰어 PU': 'docViewer',
+                    '확인 PU': 'confirm'
+                }
+            };
         }
     },
     methods: {
-        getFullUrl(url) {
-            if (!url) return '';
-            if (url.startsWith('#/')) {
-                return this.baseUrl + '/' + url;
-            }
-            return this.baseUrl + '/' + url;
+        isPopup(page) {
+            return typeof page.title === 'string' && page.title.endsWith(' PU');
+        },
+        getPopupKey(page) {
+            if (!this.isPopup(page)) return null;
+            const urlMap = this.popupKeyMap[page.url];
+            if (urlMap && urlMap[page.title]) return urlMap[page.title];
+            return null;
+        },
+        getFullUrl(page) {
+            if (!page || !page.url) return '';
+            let url = this.baseUrl + '/' + page.url;
+            const popupKey = this.getPopupKey(page);
+            if (popupKey) url += '?popup=' + popupKey;
+            return url;
         },
         getStatusKey(page) {
             return page.category + '::' + page.title + '::' + page.url;
@@ -334,7 +565,7 @@ export default {
                 '#/send/sms': '문자메시지',
                 '#/send/kakao': '알림톡',
                 '#/send/rcs': 'RCS',
-                '#/send/email': '이메일',
+                '#/send/email-ai': '이메일',
                 '#/send/push': 'PUSH',
                 '#/send/flow': '복합(플로우)',
                 // 발송 조회/통계 — 채널별
@@ -361,6 +592,7 @@ export default {
                 '#/manage/rcs': 'RCS',
                 '#/manage/email': '이메일',
                 '#/manage/push': 'PUSH',
+                '#/manage/landing-page': '랜딩페이지',
                 '#/manage/settings': '상세 설정'
             };
             return map[page.url] || page.category;

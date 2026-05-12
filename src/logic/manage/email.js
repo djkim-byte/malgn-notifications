@@ -149,6 +149,7 @@ export default {
                 delete: new bootstrap.Modal(this.$refs.deleteModal),
                 alert: new bootstrap.Modal(this.$refs.alertModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

@@ -70,7 +70,9 @@
                             <td class="contacts-th-check">
                                 <input type="checkbox" :value="row.id" v-model="selectedRowIds">
                             </td>
-                            <td>{{ row.alias }}</td>
+                            <td>
+                                <a href="javascript:void(0)" class="contacts-alias-link" @click="openChannelPicker(row)">{{ row.alias }}</a>
+                            </td>
                             <td class="contacts-id-cell">{{ row.userId }}</td>
                             <td>{{ row.phone || '' }}</td>
                             <td class="contacts-email-cell">
@@ -316,6 +318,42 @@
                 <div class="sms-modal-actions contacts-modal-actions">
                     <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('downloadRequest')">취소</button>
                     <button type="button" class="contacts-btn-modal-confirm" @click="confirmDownloadRequest">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메시지 채널 선택 모달 (W480) -->
+    <div class="modal fade" ref="channelPickerModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('channelPicker')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title">메시지 채널 선택</h4>
+                    <p class="contacts-channel-desc">
+                        <strong>{{ channelPicker.row ? channelPicker.row.alias : '' }}</strong> 님께 발송할 메시지 채널을 선택하세요.
+                    </p>
+                    <ul class="contacts-channel-list">
+                        <li v-for="ch in channelOptions" :key="ch.value">
+                            <label class="contacts-channel-item"
+                                   :class="{ 'is-disabled': !ch.enabled, 'is-selected': channelPicker.selected === ch.value }">
+                                <input type="radio" :value="ch.value" v-model="channelPicker.selected" :disabled="!ch.enabled">
+                                <span class="contacts-channel-icon"><i :class="ch.icon"></i></span>
+                                <span class="contacts-channel-text">
+                                    <span class="contacts-channel-name">{{ ch.label }}</span>
+                                    <span class="contacts-channel-hint">{{ ch.hint }}</span>
+                                </span>
+                                <span v-if="!ch.enabled" class="contacts-channel-badge">선택불가</span>
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+                <div class="sms-modal-actions contacts-modal-actions">
+                    <button type="button" class="contacts-btn-modal-cancel" @click="closeModal('channelPicker')">취소</button>
+                    <button type="button" class="contacts-btn-modal-confirm"
+                            :disabled="!channelPicker.selected" @click="confirmChannelPick">확인</button>
                 </div>
             </div>
         </div>

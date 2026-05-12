@@ -113,6 +113,12 @@ export default {
             },
             adAlertModal: { selected080: '' },
             optout080Numbers: ['080-123-4567', '080-987-6543'],
+            aiRewriteModal: {
+                input: '',
+                loading: false,
+                messages: [],
+                draftContent: ''
+            },
             sendDemoStep: 0
         };
     },
@@ -126,8 +132,11 @@ export default {
                 addressBook: new bootstrap.Modal(this.$refs.addressBookModal),
                 adAlert: new bootstrap.Modal(this.$refs.adAlertModal),
                 reset: new bootstrap.Modal(this.$refs.resetModal),
-                sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal)
+                sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal),
+                aiRewrite: new bootstrap.Modal(this.$refs.aiRewriteModal)
             };
+            this.applyRecipientFromQuery();
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 
@@ -152,6 +161,9 @@ export default {
         },
         previewText() {
             return this.form.content;
+        },
+        aiPreviewContent() {
+            return this.aiRewriteModal.draftContent || this.form.content;
         },
         filteredTemplates() {
             const q = this.templateModal.search.trim().toLowerCase();
@@ -225,6 +237,47 @@ export default {
     },
 
     methods: {
+        applyRecipientFromQuery() {
+            if (this.getParam('source') === 'group') {
+                this.applyGroupRecipients();
+                return;
+            }
+            const phone = this.getParam('phone');
+            const name = this.getParam('name');
+            if (!phone) return;
+            const exists = this.recipients.some(r => r.phone === phone);
+            if (exists) return;
+            this.recipients.push({
+                id: Date.now() + Math.random(),
+                name: name || '직접입력',
+                phone
+            });
+        },
+
+        applyGroupRecipients() {
+            let payload = null;
+            try {
+                const raw = sessionStorage.getItem('pendingRecipients');
+                if (!raw) return;
+                payload = JSON.parse(raw);
+            } catch (e) {
+                return;
+            } finally {
+                try { sessionStorage.removeItem('pendingRecipients'); } catch (e) { /* noop */ }
+            }
+            if (!payload || !Array.isArray(payload.recipients)) return;
+            const existing = new Set(this.recipients.map(r => r.phone));
+            payload.recipients.forEach(c => {
+                if (!c.phone || existing.has(c.phone)) return;
+                this.recipients.push({
+                    id: Date.now() + Math.random(),
+                    name: c.name || '직접입력',
+                    phone: c.phone
+                });
+                existing.add(c.phone);
+            });
+        },
+
         checkLoginGuard() {
             const token = localStorage.getItem('auth_token');
             if (!token) {
@@ -289,6 +342,82 @@ export default {
             this.form.title = tpl.title;
             this.form.content = tpl.content;
             this.closeModal('template');
+        },
+
+        // ===== AI 문장 다듬기 =====
+        openAiRewrite() {
+            if (this.isTemplateLocked) return;
+            this.aiRewriteModal.input = '';
+            this.aiRewriteModal.loading = false;
+            this.aiRewriteModal.draftContent = '';
+            this.aiRewriteModal.messages = [
+                {
+                    role: 'bot',
+                    text: this.form.content.trim()
+                        ? '안녕하세요! 작성하신 메시지를 분석했습니다. 어떤 방향으로 다듬어 드릴까요? 예) "더 친근한 톤으로", "간결하게", "맞춤법 교정".'
+                        : '메시지 내용이 비어있습니다. 원하는 주제와 톤을 알려주시면 초안을 작성해 드릴게요. 예) "신규 가입 환영 문자, 친근한 톤".'
+                }
+            ];
+            this.showModal('aiRewrite');
+        },
+
+        sendAiQuickPrompt(prompt) {
+            this.aiRewriteModal.input = prompt;
+            this.sendAiPrompt();
+        },
+
+        async sendAiPrompt() {
+            const prompt = this.aiRewriteModal.input.trim();
+            if (!prompt || this.aiRewriteModal.loading) return;
+            this.aiRewriteModal.messages.push({ role: 'user', text: prompt });
+            this.aiRewriteModal.input = '';
+            this.aiRewriteModal.loading = true;
+            this.scrollAiChatToBottom();
+
+            await new Promise(resolve => setTimeout(resolve, 900));
+
+            const rewritten = this.simulateAiRewrite(prompt, this.aiRewriteModal.draftContent || this.form.content);
+            this.aiRewriteModal.draftContent = rewritten;
+            this.aiRewriteModal.messages.push({
+                role: 'bot',
+                text: '요청하신 방향으로 다듬어 보았습니다. 우측 미리보기에서 결과를 확인해 보세요. 더 수정이 필요하면 추가로 알려주세요.'
+            });
+            this.aiRewriteModal.loading = false;
+            this.scrollAiChatToBottom();
+        },
+
+        scrollAiChatToBottom() {
+            this.$nextTick(() => {
+                const el = this.$refs.aiChatMessages;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
+        },
+
+        simulateAiRewrite(prompt, baseContent) {
+            const base = (baseContent && baseContent.trim())
+                ? baseContent.trim()
+                : '안녕하세요 #{name}님,\n새로운 소식을 안내드립니다.\n자세한 내용은 링크를 확인해 주세요.';
+            const p = prompt.toLowerCase();
+            if (p.includes('친근')) {
+                return `안녕하세요 #{name}님! 😊\n${base.replace(/^안녕하세요[^,\n]*[,\n]?/, '').trim()}\n언제든 편하게 문의 주세요~`;
+            }
+            if (p.includes('간결')) {
+                const lines = base.split('\n').map(l => l.trim()).filter(Boolean);
+                return lines.slice(0, Math.min(2, lines.length)).join('\n');
+            }
+            if (p.includes('정중') || p.includes('비즈니스')) {
+                return `${base.replace(/~+/g, '').trim()}\n감사합니다.`;
+            }
+            if (p.includes('맞춤법') || p.includes('교정')) {
+                return base.replace(/\s+([.,!?])/g, '$1').replace(/[ \t]{2,}/g, ' ').trim();
+            }
+            return `${base}\n(AI 제안: ${prompt})`;
+        },
+
+        applyAiRewrite() {
+            if (!this.aiRewriteModal.draftContent) return;
+            this.form.content = this.aiRewriteModal.draftContent;
+            this.closeModal('aiRewrite');
         },
 
         // ===== 직접입력 =====

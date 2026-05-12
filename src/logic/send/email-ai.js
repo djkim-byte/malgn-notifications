@@ -60,7 +60,7 @@ const SAMPLE_HTML_3 = `<!DOCTYPE html>
 </div></body></html>`;
 
 export default {
-    name: 'EmailSend',
+    name: 'EmailSendAI',
     layout: 'default',
 
     data() {
@@ -74,6 +74,14 @@ export default {
 
             previewMode: 'html',
             modalPreviewMode: 'html',
+            aiPreviewMode: 'html',
+
+            aiRewriteModal: {
+                input: '',
+                loading: false,
+                messages: [],
+                draftContent: ''
+            },
 
             form: {
                 senderEmail: '',
@@ -184,7 +192,8 @@ export default {
                 addressBook: new bootstrap.Modal(this.$refs.addressBookModal),
                 adAlert: new bootstrap.Modal(this.$refs.adAlertModal),
                 reset: new bootstrap.Modal(this.$refs.resetModal),
-                sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal)
+                sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal),
+                aiRewrite: new bootstrap.Modal(this.$refs.aiRewriteModal)
             };
             this.applyRecipientFromQuery();
             window.openPopupFromQuery && window.openPopupFromQuery(this);
@@ -224,6 +233,12 @@ export default {
         },
         modalPreviewPlainText() {
             return this.modalPreviewTemplate ? this.htmlToPlainText(this.modalPreviewTemplate.content) : '';
+        },
+        aiPreviewContent() {
+            return this.aiRewriteModal.draftContent || this.form.content;
+        },
+        aiPreviewPlainText() {
+            return this.htmlToPlainText(this.aiPreviewContent);
         },
         filteredAddressBook() {
             const q = this.addressBookModal.search.trim().toLowerCase();
@@ -371,6 +386,71 @@ export default {
             this.form.subject = tpl.subject;
             this.form.content = tpl.content;
             this.closeModal('template');
+        },
+
+        // ===== AI 문장 다듬기 =====
+        openAiRewrite() {
+            if (this.isTemplateLocked) return;
+            this.aiRewriteModal.input = '';
+            this.aiRewriteModal.loading = false;
+            this.aiRewriteModal.draftContent = '';
+            this.aiPreviewMode = 'html';
+            this.aiRewriteModal.messages = [
+                {
+                    role: 'bot',
+                    text: this.form.content.trim()
+                        ? '안녕하세요! 작성하신 본문을 분석했습니다. 어떤 방향으로 다듬어 드릴까요? 예) "더 친근한 톤으로", "간결하게", "맞춤법 교정".'
+                        : '본문이 비어있습니다. 원하는 주제와 톤을 알려주시면 초안을 작성해 드릴게요. 예) "신규 가입자 환영 메일, 친근한 톤".'
+                }
+            ];
+            this.showModal('aiRewrite');
+        },
+
+        sendAiQuickPrompt(prompt) {
+            this.aiRewriteModal.input = prompt;
+            this.sendAiPrompt();
+        },
+
+        async sendAiPrompt() {
+            const prompt = this.aiRewriteModal.input.trim();
+            if (!prompt || this.aiRewriteModal.loading) return;
+            this.aiRewriteModal.messages.push({ role: 'user', text: prompt });
+            this.aiRewriteModal.input = '';
+            this.aiRewriteModal.loading = true;
+            this.scrollAiChatToBottom();
+
+            await new Promise(resolve => setTimeout(resolve, 900));
+
+            const rewritten = this.simulateAiRewrite(prompt, this.aiRewriteModal.draftContent || this.form.content);
+            this.aiRewriteModal.draftContent = rewritten;
+            this.aiRewriteModal.messages.push({
+                role: 'bot',
+                text: '요청하신 방향으로 다듬어 보았습니다. 우측 미리보기에서 결과를 확인해 보세요. 더 수정이 필요하면 추가로 알려주세요.'
+            });
+            this.aiRewriteModal.loading = false;
+            this.scrollAiChatToBottom();
+        },
+
+        scrollAiChatToBottom() {
+            this.$nextTick(() => {
+                const el = this.$refs.aiChatMessages;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
+        },
+
+        simulateAiRewrite(prompt, baseContent) {
+            const base = baseContent && baseContent.trim()
+                ? baseContent
+                : `<p>안녕하세요 #{name}님,</p><p>요청하신 톤으로 작성된 샘플 본문입니다. 필요에 맞게 추가로 다듬어 주세요.</p>`;
+            const noteText = `AI가 "${prompt}" 방향으로 다듬은 결과입니다.`;
+            const annotated = `<div style="margin:0 0 16px; padding:12px 16px; background:#f1f5ff; border-left:3px solid #6366f1; color:#1e3a8a; font-size:13px; border-radius:4px;">${noteText}</div>`;
+            return annotated + base;
+        },
+
+        applyAiRewrite() {
+            if (!this.aiRewriteModal.draftContent) return;
+            this.form.content = this.aiRewriteModal.draftContent;
+            this.closeModal('aiRewrite');
         },
 
         // ===== 직접입력 =====

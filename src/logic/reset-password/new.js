@@ -38,6 +38,7 @@ export default {
     mounted() {
         this.$nextTick(() => {
             this.doneModal = new bootstrap.Modal(this.$refs.doneModal);
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

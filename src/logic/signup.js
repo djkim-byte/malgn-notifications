@@ -6,7 +6,7 @@ export default {
             currentStep: 1,
             steps: [
                 { key: 'guide',   label: '회원 가입 안내' },
-                { key: 'company', label: '기업 정보 확인' },
+                { key: 'company', label: '정보 확인' },
                 { key: 'account', label: '아이디 등록 및 약관 동의' },
                 { key: 'phone',   label: '본인 인증' },
                 { key: 'done',    label: '가입 완료' }
@@ -14,10 +14,9 @@ export default {
 
             serviceFlow: [
                 { key: 'join',     cap: '홈페이지',    name: '회원 가입' },
-                { key: 'consult',  cap: '영업사원',    name: '협의' },
                 { key: 'apply',    cap: '가입신청서',  name: '로그인 후 작성' },
                 { key: 'approve',  cap: '승인',        name: '정보 확인 후 승인' },
-                { key: 'use',      cap: '서비스 이용', name: '충전 후 사용' }
+                { key: 'use',      cap: '서비스 이용', name: '충전 후 사용<br>사용 후 후불 정산' }
             ],
 
             company: {
@@ -27,6 +26,7 @@ export default {
                 bizNo3: '',
                 name: '',
                 ceo: '',
+                address: '',
                 alreadyRegistered: false
             },
 
@@ -65,6 +65,7 @@ export default {
                 bizNo: false,
                 name: false,
                 ceo: false,
+                address: false,
                 email: false,
                 otpEmpty: false,
                 otpInvalid: false,
@@ -89,8 +90,17 @@ export default {
         },
 
         canSubmitCompany() {
+            if (this.company.type === 'person') {
+                return !!(this.company.name && this.company.address);
+            }
             return !!(this.company.bizNo1 && this.company.bizNo2 && this.company.bizNo3
                 && this.company.name && this.company.ceo);
+        },
+
+        userTypeLabel() {
+            if (this.company.type === 'corp')  return '법인사업자';
+            if (this.company.type === 'indiv') return '개인사업자';
+            return '개인';
         },
 
         canVerifyOtp() {
@@ -115,6 +125,9 @@ export default {
         },
 
         hasCompanyError() {
+            if (this.company.type === 'person') {
+                return this.errors.name || this.errors.address;
+            }
             return this.errors.bizNo || this.errors.name || this.errors.ceo;
         },
 
@@ -284,6 +297,7 @@ export default {
         'company.bizNo3'(v) { if (v) this.errors.bizNo = false; },
         'company.name'(v)   { if (v) this.errors.name = false; },
         'company.ceo'(v)    { if (v) this.errors.ceo = false; },
+        'company.address'(v) { if (v) this.errors.address = false; },
         'account.email'(v)  { if (v) this.errors.email = false; },
         'account.password'() { this.errors.passwordMismatch = false; },
         'account.passwordConfirm'() { this.errors.passwordMismatch = false; },
@@ -304,6 +318,7 @@ export default {
             this.otpAlertModal = new bootstrap.Modal(this.$refs.otpAlertModal);
             this.termsModal = new bootstrap.Modal(this.$refs.termsModal);
             this.phoneAlertModal = new bootstrap.Modal(this.$refs.phoneAlertModal);
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 
@@ -314,10 +329,16 @@ export default {
         },
 
         submitCompany() {
-            this.errors.bizNo = !(this.company.bizNo1 && this.company.bizNo2 && this.company.bizNo3);
-            this.errors.name  = !this.company.name;
-            this.errors.ceo   = !this.company.ceo;
-            if (this.errors.bizNo || this.errors.name || this.errors.ceo) return;
+            if (this.company.type === 'person') {
+                this.errors.name    = !this.company.name;
+                this.errors.address = !this.company.address;
+                if (this.errors.name || this.errors.address) return;
+            } else {
+                this.errors.bizNo = !(this.company.bizNo1 && this.company.bizNo2 && this.company.bizNo3);
+                this.errors.name  = !this.company.name;
+                this.errors.ceo   = !this.company.ceo;
+                if (this.errors.bizNo || this.errors.name || this.errors.ceo) return;
+            }
 
             this.goToStep(3);
         },

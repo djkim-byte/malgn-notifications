@@ -110,6 +110,8 @@ export default {
                 reset: new bootstrap.Modal(this.$refs.resetModal),
                 sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal)
             };
+            this.applyRecipientFromQuery();
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 
@@ -198,6 +200,44 @@ export default {
     methods: {
         showModal(name) { if (this.modals && this.modals[name]) this.modals[name].show(); },
         closeModal(name) { if (this.modals && this.modals[name]) this.modals[name].hide(); },
+
+        applyRecipientFromQuery() {
+            if (this.getParam('source') === 'group') {
+                this.applyGroupRecipients();
+                return;
+            }
+            const phone = this.getParam('phone');
+            const name = this.getParam('name');
+            if (!phone) return;
+            this.recipients.push({
+                id: Date.now() + Math.random(),
+                name: name || '직접입력',
+                pushType: '',
+                token: ''
+            });
+        },
+
+        applyGroupRecipients() {
+            let payload = null;
+            try {
+                const raw = sessionStorage.getItem('pendingRecipients');
+                if (!raw) return;
+                payload = JSON.parse(raw);
+            } catch (e) {
+                return;
+            } finally {
+                try { sessionStorage.removeItem('pendingRecipients'); } catch (e) { /* noop */ }
+            }
+            if (!payload || !Array.isArray(payload.recipients)) return;
+            payload.recipients.forEach(c => {
+                this.recipients.push({
+                    id: Date.now() + Math.random(),
+                    name: c.name || '직접입력',
+                    pushType: c.pushType || '',
+                    token: c.token || ''
+                });
+            });
+        },
 
         parseJsonField(key) {
             try {

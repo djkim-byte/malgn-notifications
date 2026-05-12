@@ -1,6 +1,6 @@
-<div class="sms-send-page">
-    <div class="container py-5">
-        <h2 class="page-title text-center fw-bold mb-5">문자 메시지 발송</h2>
+<div class="sms-send-page email-send-page">
+    <div class="container email-send-container py-5">
+        <h2 class="page-title text-center fw-bold mb-5">이메일 발송</h2>
 
         <!-- 템플릿 선택 -->
         <section class="sms-card mb-3">
@@ -47,36 +47,10 @@
                 <div class="sms-action-row">
                     <button type="button" class="sms-btn-dark" @click="addRecipientManually">+ 직접입력</button>
                     <button type="button" class="sms-btn-dark" @click="openAddressBook">+ 주소록에서 선택</button>
-                    <button type="button" class="sms-btn-disabled" :disabled="selectedRecipientIds.length === 0" @click="editRecipient">수신자 정보 수정</button>
+                    <button type="button" class="sms-btn-disabled" :disabled="selectedRecipientIds.length !== 1" @click="editRecipient">수신자 정보 수정</button>
                     <button type="button" class="sms-btn-danger" :disabled="selectedRecipientIds.length === 0" @click="deleteRecipients">수신자 정보 삭제</button>
                 </div>
 
-                <!-- 템플릿 사용 시 치환자 입력 -->
-                <div v-if="useTemplate && selectedTemplate" class="sms-template-vars">
-                    <div class="sms-form-row">
-                        <label class="sms-form-label">치환자 입력 방식</label>
-                        <div class="sms-form-control">
-                            <div class="sms-radio-group">
-                                <label class="sms-radio">
-                                    <input type="radio" v-model="varInputMode" value="individual">
-                                    <span>개별</span>
-                                </label>
-                                <label class="sms-radio">
-                                    <input type="radio" v-model="varInputMode" value="common">
-                                    <span>공통</span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                    <div v-if="varInputMode === 'common'" class="sms-form-row">
-                        <label class="sms-form-label">공통 치환자</label>
-                        <div class="sms-form-control">
-                            <input type="text" class="form-control sms-input" v-model="commonVar" placeholder="{{name}}">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 수신자 테이블 -->
                 <div v-if="useTemplate && !selectedTemplate" class="sms-empty-state">
                     템플릿을 선택하세요.
                 </div>
@@ -88,7 +62,7 @@
                                     <input type="checkbox" :checked="isAllSelected" @change="toggleAllRecipients">
                                 </th>
                                 <th>수신자 별칭</th>
-                                <th>휴대폰 번호</th>
+                                <th>이메일</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -97,11 +71,11 @@
                                     <input type="checkbox" :value="r.id" v-model="selectedRecipientIds">
                                 </td>
                                 <td>{{ r.name }}</td>
-                                <td>{{ r.phone }}</td>
+                                <td>{{ r.email }}</td>
                             </tr>
                         </tbody>
                     </table>
-                    <div v-else-if="!useTemplate && submitted" class="sms-error-message">
+                    <div v-else-if="submitted" class="sms-error-message">
                         수신자가 설정되지 않았습니다. 다시 수신자 설정 후 메시지 발송을 해 주세요.
                     </div>
                 </div>
@@ -117,69 +91,43 @@
                 <div v-if="useTemplate && !selectedTemplate" class="sms-empty-state sms-empty-state-tall">
                     템플릿을 선택하세요.
                 </div>
-                <div v-else class="content-2col">
+                <div v-else class="email-content-grid">
                     <div class="sms-message-fields">
-                        <div class="sms-form-row">
-                            <label class="sms-form-label">발신 번호 <span class="sms-required">*</span></label>
-                            <div class="sms-form-control">
-                                <select class="form-select sms-input sms-input-select" v-model="form.senderNumber" :disabled="isTemplateLocked">
-                                    <option value="">선택하세요</option>
-                                    <option value="1644-7143">1644-7143</option>
-                                    <option value="02-1234-5678">02-1234-5678</option>
-                                    <option value="010-1234-5678">010-1234-5678</option>
-                                </select>
-                                <p class="sms-help-text">전기통신사업법 관련 고시 준수를 위해 발신 번호 등록 시 발신 번호에 대한 명의자 인증이 필요합니다.<br>[발신 정보 &gt; 발신 번호 관리] 메뉴에서 발신 번호를 사전 등록하세요.</p>
-                            </div>
-                        </div>
-
                         <div class="sms-form-row">
                             <label class="sms-form-label">발송 목적 <span class="sms-required">*</span></label>
                             <div class="sms-form-control">
-                                <div class="sms-radio-group">
+                                <div v-if="isTemplateLocked" class="email-static-value">{{ purposeLabel }}</div>
+                                <div v-else class="sms-radio-group">
                                     <label class="sms-radio">
-                                        <input type="radio" name="purpose" :value="'general'" :checked="form.purpose === 'general'" @change="onPurposeSelect('general')" :disabled="isTemplateLocked">
+                                        <input type="radio" name="purpose" :value="'general'" :checked="form.purpose === 'general'" @change="onPurposeSelect('general')">
                                         <span>일반용</span>
                                     </label>
                                     <label class="sms-radio">
-                                        <input type="radio" name="purpose" :value="'auth'" :checked="form.purpose === 'auth'" @change="onPurposeSelect('auth')" :disabled="isTemplateLocked">
+                                        <input type="radio" name="purpose" :value="'auth'" :checked="form.purpose === 'auth'" @change="onPurposeSelect('auth')">
                                         <span>인증용</span>
                                     </label>
                                     <label class="sms-radio">
-                                        <input type="radio" name="purpose" :value="'ad'" :checked="form.purpose === 'ad'" @change="onPurposeSelect('ad')" :disabled="isTemplateLocked">
+                                        <input type="radio" name="purpose" :value="'ad'" :checked="form.purpose === 'ad'" @change="onPurposeSelect('ad')">
                                         <span>광고용</span>
                                     </label>
                                 </div>
-                                <p class="sms-help-text">광고성 정보 발송 시 수신자가 수신 거부나 수신 동의 철회를 무료로 할 수 있도록 무료 수신 거부 방법을 반드시 포함해야 합니다.</p>
                             </div>
                         </div>
 
                         <div class="sms-form-row">
-                            <label class="sms-form-label">발송 유형 <span class="sms-required">*</span></label>
+                            <label class="sms-form-label">발신 메일 <span class="sms-required">*</span></label>
                             <div class="sms-form-control">
-                                <div class="sms-radio-group">
-                                    <label class="sms-radio">
-                                        <input type="radio" v-model="form.messageType" value="SMS" :disabled="isTemplateLocked">
-                                        <span>SMS</span>
-                                    </label>
-                                    <label class="sms-radio">
-                                        <input type="radio" v-model="form.messageType" value="LMS" :disabled="isTemplateLocked">
-                                        <span>LMS</span>
-                                    </label>
-                                    <label class="sms-radio">
-                                        <input type="radio" v-model="form.messageType" value="MMS" :disabled="isTemplateLocked">
-                                        <span>MMS</span>
-                                    </label>
-                                </div>
-                                <p class="sms-help-text">광고성 정보 발송 시 수신자가 수신 거부나 수신 동의 철회를 무료로 할 수 있도록 무료 수신 거부 방법을 반드시 포함해야 합니다.</p>
+                                <div v-if="isTemplateLocked" class="email-static-value">{{ form.senderEmail }}</div>
+                                <input v-else type="email" class="form-control sms-input" v-model="form.senderEmail" placeholder="example@domain.com">
                             </div>
                         </div>
 
-                        <div v-if="form.messageType !== 'SMS'" class="sms-form-row">
+                        <div class="sms-form-row">
                             <label class="sms-form-label">제목 <span class="sms-required">*</span></label>
                             <div class="sms-form-control">
                                 <div class="sms-input-with-counter">
-                                    <input type="text" class="form-control sms-input" v-model="form.title" maxlength="40">
-                                    <span class="sms-byte-counter">{{ titleBytes }}/40 Bytes(EUC-KR)</span>
+                                    <input type="text" class="form-control sms-input" v-model="form.subject" maxlength="1000" :disabled="isTemplateLocked">
+                                    <span class="sms-byte-counter">{{ form.subject.length }}/1000</span>
                                 </div>
                             </div>
                         </div>
@@ -194,16 +142,7 @@
                                     </button>
                                 </div>
                                 <div class="sms-textarea-wrap">
-                                    <textarea class="form-control sms-textarea" v-model="form.content" rows="10"></textarea>
-                                    <div class="sms-byte-counter sms-byte-counter-textarea">
-                                        <template v-if="form.messageType === 'SMS'">
-                                            국내 SMS {{ contentBytes }}/90Bytes(EUC-KR)<br>
-                                            국제 SMS {{ contentChars }}/765자(GSM-7)
-                                        </template>
-                                        <template v-else>
-                                            {{ contentBytes }}/2000 Bytes(EUC-KR)
-                                        </template>
-                                    </div>
+                                    <textarea class="form-control sms-textarea email-textarea" v-model="form.content" rows="14" :disabled="isTemplateLocked"></textarea>
                                 </div>
                                 <p v-if="submitted && !form.content.trim()" class="sms-error-message mt-2">
                                     메시지 내용이 없습니다. 다시 작성하신 후 메시지 발송을 해 주세요.
@@ -211,45 +150,45 @@
                             </div>
                         </div>
 
-                        <div v-if="form.messageType === 'MMS'" class="sms-form-row">
+                        <div class="sms-form-row">
                             <label class="sms-form-label">첨부파일 <span class="sms-required">*</span></label>
                             <div class="sms-form-control">
                                 <div class="sms-file-row">
                                     <input type="text" class="form-control sms-input sms-file-display" :value="attachedFileNames" placeholder="파일을 업로드하세요." readonly>
                                     <button type="button" class="sms-btn-dark-sm" @click="triggerFileSelect"><i class="bi bi-paperclip"></i> 파일 선택</button>
-                                    <input ref="fileInput" type="file" class="d-none" accept=".jpg,.jpeg" multiple @change="onFilesSelected">
+                                    <input ref="fileInput" type="file" class="d-none" multiple @change="onFilesSelected">
                                 </div>
                                 <ul class="sms-file-guide">
-                                    <li>첨부 가능 파일 수: 최대 3개</li>
-                                    <li>지원 파일 형식: .jpg, .jpeg</li>
-                                    <li>파일 크기: 1개당 300KB 이하, 1개 이상인 경우 합산 800KB 이하</li>
-                                    <li>해상도: 가로 1000px, 세로 1000px 이하</li>
+                                    <li>첨부 가능 파일 수: 최대 10개</li>
+                                    <li>미지원 파일 형식: .js, .exe, .bat, .cmd, .com, .cpl, .scr, .vbs, .wsr</li>
+                                    <li>파일 용량: 합산 30MB 이하</li>
                                     <li>파일 이름 길이: 최대 45자</li>
                                 </ul>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 휴대폰 미리보기 -->
-                    <div class="content-2col-aside sms-preview-col">
-                        <div class="sms-phone">
-                            <div class="sms-phone-header">
-                                <i class="bi bi-chevron-left sms-phone-back"></i>
-                                <i class="bi bi-person-circle sms-phone-avatar"></i>
-                                <span class="sms-phone-name">{{ form.senderNumber ? form.senderNumber.replace(/-/g, '') : '' }}</span>
-                                <i class="bi bi-three-dots-vertical sms-phone-more"></i>
-                            </div>
-                            <div class="sms-phone-body">
-                                <div v-if="previewText" class="sms-phone-bubble">
-                                    <div v-if="form.messageType !== 'SMS' && form.title" class="sms-phone-title">[{{ form.title }}]</div>
-                                    <div class="sms-phone-text">{{ previewText }}</div>
+                    <!-- 이메일 미리보기 -->
+                    <div class="email-preview-col">
+                        <div class="email-preview-card">
+                            <div v-if="form.subject" class="email-preview-subject">{{ form.subject }}</div>
+                            <div class="email-preview-meta">
+                                <div class="email-preview-meta-row">
+                                    <span class="email-preview-meta-label">보낸사람</span>
+                                    <span class="email-preview-meta-value">{{ form.senderEmail }}</span>
                                 </div>
-                                <div v-else class="sms-phone-empty"></div>
+                                <div class="email-preview-meta-row">
+                                    <span class="email-preview-meta-label">첨부파일</span>
+                                    <span class="email-preview-meta-value">{{ attachedFileNames }}</span>
+                                </div>
                             </div>
-                            <div class="sms-phone-footer">
-                                <i class="bi bi-plus"></i>
-                                <span class="sms-phone-input-mock">메시지 입력</span>
-                                <i class="bi bi-send-fill"></i>
+                            <div class="email-preview-body">
+                                <iframe v-if="previewMode === 'html' && form.content" class="email-preview-iframe" :srcdoc="form.content" sandbox></iframe>
+                                <pre v-else-if="previewMode === 'text' && form.content" class="email-preview-text">{{ previewPlainText }}</pre>
+                            </div>
+                            <div class="email-preview-toggle">
+                                <button type="button" class="email-toggle-btn" :class="{ active: previewMode === 'text' }" @click="previewMode = 'text'">텍스트</button>
+                                <button type="button" class="email-toggle-btn" :class="{ active: previewMode === 'html' }" @click="previewMode = 'html'">HTML</button>
                             </div>
                         </div>
                     </div>
@@ -294,59 +233,38 @@
         </div>
     </div>
 
-    <!-- 템플릿 선택 모달 (W1000) -->
+    <!-- 템플릿 선택 모달 (W800, 좌측 리스트 + 우측 미리보기) -->
     <div class="modal fade" ref="templateModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered sms-modal-w1000 sms-modal-template">
+        <div class="modal-dialog modal-dialog-centered email-modal-template">
             <div class="modal-content sms-modal">
                 <button type="button" class="sms-modal-close" @click="closeModal('template')" aria-label="닫기">
                     <i class="bi bi-x-lg"></i>
                 </button>
                 <div class="sms-modal-body">
-                    <h4 class="sms-modal-title">샘플 템플릿 선택</h4>
-
-                    <!-- SMS / LMS / MMS 탭 -->
-                    <div class="sms-template-tabs" role="tablist">
-                        <button type="button" class="sms-template-tab" :class="{ 'is-active': templateModal.activeTab === 'SMS' }" @click="switchTemplateTab('SMS')">
-                            SMS <span class="sms-template-tab-sub">(단문)</span>
-                        </button>
-                        <button type="button" class="sms-template-tab" :class="{ 'is-active': templateModal.activeTab === 'LMS' }" @click="switchTemplateTab('LMS')">
-                            LMS <span class="sms-template-tab-sub">(장문)</span>
-                        </button>
-                        <button type="button" class="sms-template-tab" :class="{ 'is-active': templateModal.activeTab === 'MMS' }" @click="switchTemplateTab('MMS')">
-                            MMS <span class="sms-template-tab-sub">(포토)</span>
-                        </button>
-                    </div>
-
-                    <div class="sms-template-modal-grid">
-                        <div class="sms-template-modal-list">
+                    <h4 class="sms-modal-title">템플릿 선택</h4>
+                    <div class="email-template-modal-grid">
+                        <div class="email-template-modal-list">
                             <div class="sms-modal-search-row">
                                 <div class="sms-modal-search">
                                     <input type="text" class="form-control" v-model="templateModal.search" @input="templateModal.page = 1" placeholder="템플릿 이름을 입력하세요.">
                                     <button type="button" class="sms-modal-search-btn"><i class="bi bi-search"></i></button>
                                 </div>
                             </div>
-
-                            <!-- SMS / LMS 카드 그리드 -->
-                            <div v-if="templateModal.activeTab !== 'MMS'" class="sms-template-card-grid">
-                                <div v-for="t in templateCardsWithBytes" :key="t.id" class="sms-template-card" :class="{ 'is-active': templateModal.selectedId === t.id }" @click="templateModal.selectedId = t.id">
-                                    <div class="sms-template-card-name">{{ t.name }}</div>
-                                    <div class="sms-template-card-text">{{ t.content }}</div>
-                                    <div class="sms-template-card-byte">{{ t.bytes }}byte</div>
-                                </div>
-                                <div v-if="filteredTemplates.length === 0" class="sms-template-card-empty">검색 결과가 없습니다.</div>
-                            </div>
-
-                            <!-- MMS 카드 그리드 (썸네일) -->
-                            <div v-else class="sms-template-card-grid sms-template-card-grid-photo">
-                                <div v-for="t in pagedTemplateList" :key="t.id" class="sms-template-photo-card" :class="{ 'is-active': templateModal.selectedId === t.id }" @click="templateModal.selectedId = t.id">
-                                    <div class="sms-template-photo-name">{{ t.name }}</div>
-                                    <div class="sms-template-photo-thumb">
-                                        <img :src="t.thumbnail" :alt="t.name">
-                                    </div>
-                                </div>
-                                <div v-if="filteredTemplates.length === 0" class="sms-template-card-empty">검색 결과가 없습니다.</div>
-                            </div>
-
+                            <table class="sms-modal-table">
+                                <thead>
+                                    <tr>
+                                        <th>템플릿 이름</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="t in pagedTemplateList" :key="t.id" :class="{ 'is-active': templateModal.selectedId === t.id }" @click="templateModal.selectedId = t.id">
+                                        <td class="text-start">{{ t.name }}</td>
+                                    </tr>
+                                    <tr v-if="filteredTemplates.length === 0">
+                                        <td class="sms-modal-empty">검색 결과가 없습니다.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                             <div class="sms-modal-pagination" v-if="templateTotalPages > 1">
                                 <button type="button" class="sms-page-btn" @click="templateModal.page = 1" :disabled="templateModal.page === 1">«</button>
                                 <button type="button" class="sms-page-btn" @click="templateModal.page > 1 && (templateModal.page -= 1)" :disabled="templateModal.page === 1">‹</button>
@@ -355,30 +273,26 @@
                                 <button type="button" class="sms-page-btn" @click="templateModal.page = templateTotalPages" :disabled="templateModal.page === templateTotalPages">»</button>
                             </div>
                         </div>
-
-                        <!-- 우측 미리보기 -->
-                        <div class="sms-template-modal-preview">
-                            <div class="sms-phone sms-phone-modal">
-                                <div class="sms-phone-header">
-                                    <i class="bi bi-chevron-left sms-phone-back"></i>
-                                    <i class="bi bi-person-circle sms-phone-avatar"></i>
-                                    <span class="sms-phone-name">{{ modalPreviewTemplate ? modalPreviewTemplate.senderNumber.replace(/-/g, '') : '' }}</span>
-                                    <i class="bi bi-three-dots-vertical sms-phone-more"></i>
-                                </div>
-                                <div class="sms-phone-body">
-                                    <div v-if="modalPreviewTemplate" class="sms-phone-bubble">
-                                        <div v-if="modalPreviewTemplate.title" class="sms-phone-title">[{{ modalPreviewTemplate.title }}]</div>
-                                        <div v-if="modalPreviewTemplate.thumbnail" class="sms-phone-image">
-                                            <img :src="modalPreviewTemplate.thumbnail" :alt="modalPreviewTemplate.name">
-                                        </div>
-                                        <div class="sms-phone-text">{{ modalPreviewTemplate.content }}</div>
+                        <div class="email-template-modal-preview">
+                            <div class="email-preview-card">
+                                <div v-if="modalPreviewTemplate && modalPreviewTemplate.subject" class="email-preview-subject">{{ modalPreviewTemplate.subject }}</div>
+                                <div class="email-preview-meta">
+                                    <div class="email-preview-meta-row">
+                                        <span class="email-preview-meta-label">보낸사람</span>
+                                        <span class="email-preview-meta-value">{{ modalPreviewTemplate ? modalPreviewTemplate.senderEmail : '' }}</span>
                                     </div>
-                                    <div v-else class="sms-phone-placeholder">템플릿을 선택하면 미리보기가 표시됩니다.</div>
+                                    <div class="email-preview-meta-row">
+                                        <span class="email-preview-meta-label">첨부파일</span>
+                                        <span class="email-preview-meta-value"></span>
+                                    </div>
                                 </div>
-                                <div class="sms-phone-footer">
-                                    <i class="bi bi-plus"></i>
-                                    <span class="sms-phone-input-mock">메시지 입력</span>
-                                    <i class="bi bi-send-fill"></i>
+                                <div class="email-preview-body">
+                                    <iframe v-if="modalPreviewMode === 'html' && modalPreviewTemplate" class="email-preview-iframe" :srcdoc="modalPreviewTemplate.content" sandbox></iframe>
+                                    <pre v-else-if="modalPreviewMode === 'text' && modalPreviewTemplate" class="email-preview-text">{{ modalPreviewPlainText }}</pre>
+                                </div>
+                                <div class="email-preview-toggle">
+                                    <button type="button" class="email-toggle-btn" :class="{ active: modalPreviewMode === 'text' }" @click="modalPreviewMode = 'text'">텍스트</button>
+                                    <button type="button" class="email-toggle-btn" :class="{ active: modalPreviewMode === 'html' }" @click="modalPreviewMode = 'html'">HTML</button>
                                 </div>
                             </div>
                         </div>
@@ -392,7 +306,7 @@
         </div>
     </div>
 
-    <!-- 수신자 정보 (직접입력) 모달 (W480) -->
+    <!-- 수신자 정보 (직접입력) 모달 (W400) -->
     <div class="modal fade" ref="recipientInputModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered sms-modal-w480">
             <div class="modal-content sms-modal">
@@ -402,13 +316,39 @@
                 <div class="sms-modal-body">
                     <h4 class="sms-modal-title sms-modal-title-sm">수신자 정보</h4>
                     <div class="sms-modal-form-row">
-                        <label class="sms-modal-form-label">휴대폰 번호</label>
-                        <input type="text" class="form-control sms-modal-input" v-model="recipientInputModal.phone" placeholder="-없이 숫자 입력" maxlength="11">
+                        <label class="sms-modal-form-label">이메일</label>
+                        <input type="email" class="form-control sms-modal-input" v-model="recipientInputModal.email" placeholder="이메일">
                     </div>
                 </div>
                 <div class="sms-modal-actions">
                     <button type="button" class="sms-btn-modal-cancel" @click="closeModal('recipientInput')">취소</button>
                     <button type="button" class="sms-btn-modal-confirm" @click="confirmRecipientInput">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 수신자 정보 수정 모달 (W480) -->
+    <div class="modal fade" ref="recipientEditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+            <div class="modal-content sms-modal">
+                <button type="button" class="sms-modal-close" @click="closeModal('recipientEdit')" aria-label="닫기">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <div class="sms-modal-body">
+                    <h4 class="sms-modal-title sms-modal-title-sm">수신자 정보 수정</h4>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">수신자 별칭</label>
+                        <input type="text" class="form-control sms-modal-input" v-model="recipientEditModal.name" placeholder="수신자 별칭">
+                    </div>
+                    <div class="sms-modal-form-row">
+                        <label class="sms-modal-form-label">이메일</label>
+                        <input type="email" class="form-control sms-modal-input" v-model="recipientEditModal.email" placeholder="이메일">
+                    </div>
+                </div>
+                <div class="sms-modal-actions">
+                    <button type="button" class="sms-btn-modal-cancel" @click="closeModal('recipientEdit')">취소</button>
+                    <button type="button" class="sms-btn-modal-confirm" @click="confirmRecipientEdit">확인</button>
                 </div>
             </div>
         </div>
@@ -442,7 +382,7 @@
                                         <input type="checkbox" :checked="isAddressBookAllSelected" @change="toggleAddressBookAll">
                                     </th>
                                     <th>수신자 별칭</th>
-                                    <th>휴대폰 번호</th>
+                                    <th>이메일</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -451,7 +391,7 @@
                                         <input type="checkbox" :value="c.id" v-model="addressBookModal.selectedIds">
                                     </td>
                                     <td>{{ c.name }}</td>
-                                    <td>{{ c.phone }}</td>
+                                    <td class="email-address-cell">{{ c.email }}</td>
                                 </tr>
                                 <tr v-if="pagedAddressBook.length === 0">
                                     <td colspan="3" class="sms-modal-empty">검색 결과가 없습니다.</td>
@@ -514,28 +454,44 @@
         </div>
     </div>
 
-    <!-- 광고용 알림 모달 (W480) -->
+    <!-- 광고용 알림 모달 (W800) -->
     <div class="modal fade" ref="adAlertModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
-        <div class="modal-dialog modal-dialog-centered sms-modal-w480">
+        <div class="modal-dialog modal-dialog-centered sms-modal-w800 email-modal-ad">
             <div class="modal-content sms-modal">
                 <button type="button" class="sms-modal-close" @click="cancelAdAlert" aria-label="닫기">
                     <i class="bi bi-x-lg"></i>
                 </button>
                 <div class="sms-modal-body">
                     <h4 class="sms-modal-title sms-modal-title-sm">알림</h4>
-                    <p class="sms-modal-text">광고성 문자 발송 시 발송 표기 의무 사항을 준수해야 합니다.<br>광고성 안내 문구를 추가하시겠습니까?</p>
-                    <ul class="sms-modal-bullet">
-                        <li>내용 맨 앞단 (광고) 문구 추가</li>
-                        <li>내용 하단 080 수신 거부 번호 추가</li>
+                    <p class="sms-modal-text">광고성 이메일 발송 시 정보통신망법을 준수해야 합니다. 광고 안내 문구를 추가하시겠습니까?</p>
+                    <ul class="email-ad-bullet">
+                        <li>제목에 (광고) 문구 추가</li>
+                        <li>이메일 하단 수신 거부 안내 문구 추가</li>
                     </ul>
-                    <p class="sms-modal-subhead">[080 수신 거부 번호]</p>
-                    <ul class="sms-modal-bullet">
-                        <li>080 수신 거부 번호는 [발신 정보 &gt; 080 수신 거부 관리] 메뉴에서 신청 가능합니다.</li>
-                    </ul>
-                    <select class="form-select sms-modal-input" v-model="adAlertModal.selected080">
-                        <option value="">080 수신 거부 번호 선택</option>
-                        <option v-for="n in optout080Numbers" :key="n" :value="n">{{ n }}</option>
-                    </select>
+                    <hr class="email-ad-divider">
+                    <h5 class="email-ad-section-title">수신 거부 안내 문구</h5>
+                    <div class="email-ad-option">
+                        <label class="sms-radio email-ad-option-radio">
+                            <input type="radio" v-model="adOption" value="default">
+                            <span>기본 문구 사용</span>
+                        </label>
+                        <textarea class="form-control email-ad-option-text" :value="adDefaultText" readonly></textarea>
+                    </div>
+                    <div class="email-ad-option">
+                        <label class="sms-radio email-ad-option-radio">
+                            <input type="radio" v-model="adOption" value="custom">
+                            <span>직접 입력</span>
+                            <i class="bi bi-question-circle email-ad-option-help" title="법령 요건에 맞는 안내 문구를 직접 입력해 주세요."></i>
+                        </label>
+                        <textarea class="form-control email-ad-option-text" v-model="adCustomText" :disabled="adOption !== 'custom'"></textarea>
+                    </div>
+                    <div class="email-ad-option email-ad-option-inline">
+                        <label class="sms-radio email-ad-option-radio">
+                            <input type="radio" v-model="adOption" value="none">
+                            <span>입력 안 함</span>
+                            <i class="bi bi-question-circle email-ad-option-help" title="수신 거부 안내 문구가 추가되지 않습니다."></i>
+                        </label>
+                    </div>
                 </div>
                 <div class="sms-modal-actions">
                     <button type="button" class="sms-btn-modal-cancel" @click="cancelAdAlert">취소</button>
@@ -565,11 +521,11 @@
                         </div>
                         <div class="sms-send-confirm-info-row">
                             <span class="sms-send-confirm-info-label">채널</span>
-                            <span class="sms-send-confirm-info-value">문자</span>
+                            <span class="sms-send-confirm-info-value">이메일</span>
                         </div>
                         <div class="sms-send-confirm-info-row">
                             <span class="sms-send-confirm-info-label">건당 단가</span>
-                            <span class="sms-send-confirm-info-value">SMS : 9.9 <i class="sms-credit-icon">C</i></span>
+                            <span class="sms-send-confirm-info-value">이메일 : 0.65 <i class="sms-credit-icon">C</i></span>
                         </div>
                     </div>
                     <div class="sms-send-confirm-cost">
@@ -661,29 +617,31 @@
                             </div>
                         </div>
 
-                        <!-- 우측: 휴대폰 미리보기 -->
-                        <div class="email-ai-preview-col sms-ai-preview-col">
+                        <!-- 우측: 미리보기 -->
+                        <div class="email-ai-preview-col">
                             <div class="email-ai-preview-label">미리보기</div>
-                            <div class="sms-ai-preview-inner">
-                                <div class="sms-phone sms-phone-modal">
-                                    <div class="sms-phone-header">
-                                        <i class="bi bi-chevron-left sms-phone-back"></i>
-                                        <i class="bi bi-person-circle sms-phone-avatar"></i>
-                                        <span class="sms-phone-name">{{ form.senderNumber ? form.senderNumber.replace(/-/g, '') : '' }}</span>
-                                        <i class="bi bi-three-dots-vertical sms-phone-more"></i>
+                            <div class="email-preview-card">
+                                <div v-if="form.subject" class="email-preview-subject">{{ form.subject }}</div>
+                                <div class="email-preview-meta">
+                                    <div class="email-preview-meta-row">
+                                        <span class="email-preview-meta-label">보낸사람</span>
+                                        <span class="email-preview-meta-value">{{ form.senderEmail }}</span>
                                     </div>
-                                    <div class="sms-phone-body">
-                                        <div v-if="aiPreviewContent" class="sms-phone-bubble">
-                                            <div v-if="form.messageType !== 'SMS' && form.title" class="sms-phone-title">[{{ form.title }}]</div>
-                                            <div class="sms-phone-text">{{ aiPreviewContent }}</div>
-                                        </div>
-                                        <div v-else class="sms-phone-placeholder">AI가 다듬은 결과가 이곳에 표시됩니다.</div>
+                                    <div class="email-preview-meta-row">
+                                        <span class="email-preview-meta-label">첨부파일</span>
+                                        <span class="email-preview-meta-value">{{ attachedFileNames }}</span>
                                     </div>
-                                    <div class="sms-phone-footer">
-                                        <i class="bi bi-plus"></i>
-                                        <span class="sms-phone-input-mock">메시지 입력</span>
-                                        <i class="bi bi-send-fill"></i>
+                                </div>
+                                <div class="email-preview-body">
+                                    <iframe v-if="aiPreviewMode === 'html' && aiPreviewContent" class="email-preview-iframe" :srcdoc="aiPreviewContent" sandbox></iframe>
+                                    <pre v-else-if="aiPreviewMode === 'text' && aiPreviewContent" class="email-preview-text">{{ aiPreviewPlainText }}</pre>
+                                    <div v-else class="email-ai-preview-empty">
+                                        AI가 다듬은 결과가 이곳에 표시됩니다.
                                     </div>
+                                </div>
+                                <div class="email-preview-toggle">
+                                    <button type="button" class="email-toggle-btn" :class="{ active: aiPreviewMode === 'text' }" @click="aiPreviewMode = 'text'">텍스트</button>
+                                    <button type="button" class="email-toggle-btn" :class="{ active: aiPreviewMode === 'html' }" @click="aiPreviewMode = 'html'">HTML</button>
                                 </div>
                             </div>
                         </div>

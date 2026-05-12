@@ -104,7 +104,12 @@ export default {
                 { id: '20260219161504G4e5JF8ii40', requestedAt: '2026-02-19 16:15', expireAt: '2026-02-26 16:15', status: 'expired' }
             ],
             downloadListPage: 1,
-            downloadListPageSize: 5
+            downloadListPageSize: 5,
+
+            channelPicker: {
+                row: null,
+                selected: ''
+            }
         };
     },
 
@@ -127,8 +132,10 @@ export default {
                 contactForm: new bootstrap.Modal(this.$refs.contactFormModal),
                 deleteConfirm: new bootstrap.Modal(this.$refs.deleteConfirmModal),
                 downloadRequest: new bootstrap.Modal(this.$refs.downloadRequestModal),
-                downloadList: new bootstrap.Modal(this.$refs.downloadListModal)
+                downloadList: new bootstrap.Modal(this.$refs.downloadListModal),
+                channelPicker: new bootstrap.Modal(this.$refs.channelPickerModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 
@@ -152,6 +159,18 @@ export default {
         pagedDownloadRequests() {
             const start = (this.downloadListPage - 1) * this.downloadListPageSize;
             return this.downloadRequests.slice(start, start + this.downloadListPageSize);
+        },
+        channelOptions() {
+            const row = this.channelPicker.row;
+            const hasPhone = !!(row && row.phone);
+            const hasEmail = !!(row && row.email);
+            return [
+                { value: 'sms', label: '문자메시지', icon: 'bi bi-chat-dots', hint: '휴대폰 번호로 SMS/LMS/MMS 발송', enabled: hasPhone },
+                { value: 'kakao', label: '알림톡', icon: 'bi bi-chat-square-text', hint: '카카오톡 알림톡 발송', enabled: hasPhone },
+                { value: 'rcs', label: 'RCS', icon: 'bi bi-chat-left-text', hint: '브랜드 RCS 메시지 발송', enabled: hasPhone },
+                { value: 'email', label: '이메일', icon: 'bi bi-envelope', hint: '이메일 주소로 발송', enabled: hasEmail },
+                { value: 'push', label: 'PUSH', icon: 'bi bi-bell', hint: '앱 푸시 알림 발송', enabled: hasPhone }
+            ];
         }
     },
 
@@ -336,6 +355,40 @@ export default {
 
         downloadFile(row) {
             alert(`다운로드: ${row.id}`);
+        },
+
+        // ===== 메시지 채널 선택 =====
+        openChannelPicker(row) {
+            this.channelPicker.row = row;
+            const hasPhone = !!row.phone;
+            const hasEmail = !!row.email;
+            if (!hasPhone && !hasEmail) {
+                alert('휴대폰 번호 또는 이메일이 등록되어 있어야 메시지를 발송할 수 있습니다.');
+                return;
+            }
+            this.channelPicker.selected = hasPhone ? 'sms' : 'email';
+            this.modals.channelPicker && this.modals.channelPicker.show();
+        },
+
+        confirmChannelPick() {
+            const channel = this.channelPicker.selected;
+            const row = this.channelPicker.row;
+            if (!channel || !row) return;
+            const routeMap = {
+                sms: '/send/sms',
+                kakao: '/send/kakao',
+                rcs: '/send/rcs',
+                email: '/send/email',
+                push: '/send/push'
+            };
+            const params = { contactId: row.id, name: row.alias };
+            if (channel === 'email') {
+                params.email = row.email;
+            } else {
+                params.phone = row.phone;
+            }
+            this.closeModal('channelPicker');
+            this.navigateTo(routeMap[channel], params);
         },
 
         closeModal(name) {

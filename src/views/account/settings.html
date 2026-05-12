@@ -18,7 +18,7 @@
             <template v-if="view === 'main'">
                 <!-- 탭 네비게이션 -->
                 <div class="account-tabs">
-                    <button v-for="tab in tabs"
+                    <button v-for="tab in visibleTabs"
                             :key="tab.value"
                             type="button"
                             class="account-tab"
@@ -373,6 +373,105 @@
                     </div>
                 </div>
 
+                <!-- =============== 멀티 계정 추가 (법인/개인사업자 전용) =============== -->
+                <div v-show="activeTab === 'multi'" class="account-tab-pane">
+                    <div class="account-multi">
+
+                        <!-- 상단 인증 버튼 -->
+                        <div class="account-multi-toolbar">
+                            <button type="button" class="account-multi-verify-btn" @click="openMultiAuth">
+                                휴대폰 본인 인증(필요 서류 첨부)
+                            </button>
+                        </div>
+
+                        <!-- 본인 인증 안내 -->
+                        <div class="account-section">
+                            <div class="account-section-head">
+                                <h2 class="account-section-title">본인 인증 안내</h2>
+                            </div>
+
+                            <ul class="account-multi-guide">
+                                <li>전기통신사업법 관련 고시 준수 및 어뷰징 방지 강화를 위해 본인 인증 후 서비스를 이용할 수 있습니다.</li>
+                                <li>회원 가입 시 입력한 회원 정보(이름, 휴대폰 번호)와 본인 인증 입력 정보가 일치해야 합니다.</li>
+                                <li>사업자 회원이 생성한 조직/프로젝트에 초대된 맑은메시지 계정 또는 사업자 회원이 생성한 조직에 초대된 멀티계정 계정은 서비스 이용을 위해 본인 인증을 진행해야 합니다.
+                                    <ul class="account-multi-guide-sub">
+                                        <li>초대된 맑은메시지 계정, 멀티계정 계정은 본인 인증 승인 시 회원 유형이 사업자로 구분됩니다.</li>
+                                    </ul>
+                                </li>
+                                <li>맑은메시지 개인 계정이 생성한 조직/프로젝트에서는 본인 인증 및 서비스 이용이 불가합니다.</li>
+                            </ul>
+
+                            <div class="account-multi-table-wrap">
+                                <table class="account-multi-table">
+                                    <thead>
+                                        <tr>
+                                            <th class="account-multi-table-col-classify">구분</th>
+                                            <th>인증 방법</th>
+                                            <th class="account-multi-table-col-docs">필요 서류</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td rowspan="2" class="account-multi-table-classify">사업자 회원</td>
+                                            <td>
+                                                <div class="account-multi-method-role">사업자 대표</div>
+                                                <div class="account-multi-method-text">사업자 대표 소유의 휴대폰 본인 인증</div>
+                                            </td>
+                                            <td>사업자등록증, 재직증명서</td>
+                                        </tr>
+                                        <tr>
+                                            <td>
+                                                <div class="account-multi-method-role">임직원(업무 담당 직원)</div>
+                                                <div class="account-multi-method-text">임직원 소유의 휴대폰 본인 인증</div>
+                                            </td>
+                                            <td>사업자등록증, 재직증명서</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 본인 인증 내역 -->
+                        <div class="account-section">
+                            <div class="account-section-head">
+                                <h2 class="account-section-title">본인 인증 내역</h2>
+                            </div>
+
+                            <div class="account-multi-table-wrap">
+                                <table class="account-multi-table account-multi-table-history">
+                                    <thead>
+                                        <tr>
+                                            <th>회원 유형</th>
+                                            <th>회원 이름(임직원 이름)</th>
+                                            <th>제출 서류</th>
+                                            <th>상태</th>
+                                            <th>인증 요청 일시</th>
+                                            <th>인증 일시</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr v-for="row in multiAuth.verifications" :key="row.id">
+                                            <td>{{ row.memberType }}</td>
+                                            <td>{{ row.memberName }}</td>
+                                            <td>{{ row.documents }}</td>
+                                            <td>
+                                                <span class="account-multi-status" :class="multiAuthStatusClass(row.status)">
+                                                    {{ multiAuthStatusLabel(row.status) }}
+                                                </span>
+                                            </td>
+                                            <td>{{ row.requestedAt }}</td>
+                                            <td>{{ row.verifiedAt }}</td>
+                                        </tr>
+                                        <tr v-if="!multiAuth.verifications.length">
+                                            <td colspan="6" class="account-multi-empty">등록된 본인 인증 내역이 없습니다.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- =============== 계약 관리 =============== -->
                 <div v-show="activeTab === 'contract'" class="account-tab-pane">
                     <div class="account-contract">
@@ -552,6 +651,67 @@
                                 <p v-else class="account-cert-empty">
                                     <i class="bi bi-info-circle"></i>
                                     대부업에 해당하는 업체만 등록증을 첨부하시면 됩니다. 좌측 체크박스를 선택하여 첨부 인터페이스를 활성화해 주세요.
+                                </p>
+                            </div>
+
+                            <!-- 지급이행보증보험증권 (후불 정산 해당업체에 한함) -->
+                            <div class="account-cert-block">
+                                <div class="account-cert-block-head">
+                                    <h3 class="account-cert-block-title">지급이행보증보험증권</h3>
+                                    <span class="account-cert-block-tag account-cert-block-tag-soft">해당업체</span>
+                                    <label class="account-cert-block-toggle">
+                                        <input type="checkbox" v-model="contract.paymentBondCert.applicable">
+                                        <span>후불 정산 해당</span>
+                                    </label>
+                                    <button v-if="contract.paymentBondCert.applicable"
+                                            type="button"
+                                            class="account-btn-primary account-btn-primary-sm account-cert-block-upload"
+                                            @click="askPaymentBondCertUpload">
+                                        <i class="bi bi-cloud-arrow-up"></i> 지급이행보증보험증권 업로드
+                                    </button>
+                                </div>
+
+                                <template v-if="contract.paymentBondCert.applicable">
+                                    <input ref="paymentBondCertInput" type="file" hidden accept=".pdf,application/pdf" @change="onPaymentBondCertChange">
+
+                                    <!-- 현재 첨부된 지급이행보증보험증권 -->
+                                    <div v-if="contract.paymentBondCert.current" class="account-cert-current">
+                                        <ul class="account-cert-history-list">
+                                            <li class="account-cert-history-item">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                                <div class="account-cert-history-item-body">
+                                                    <div class="account-cert-history-item-title">{{ contract.paymentBondCert.current.name }}</div>
+                                                    <div class="account-cert-history-item-meta">
+                                                        <span>{{ formatFileSize(contract.paymentBondCert.current.size) }}</span>
+                                                        <span>첨부일자 {{ contract.paymentBondCert.current.uploadedAt }}</span>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="account-btn-outline account-btn-outline-sm" @click="openCertViewer('bond', contract.paymentBondCert.current)">확인</button>
+                                            </li>
+                                        </ul>
+                                    </div>
+
+                                    <!-- 첨부 이력 -->
+                                    <div v-if="contract.paymentBondCert.history.length" class="account-cert-history">
+                                        <ul class="account-cert-history-list">
+                                            <li v-for="item in contract.paymentBondCert.history" :key="item.id" class="account-cert-history-item">
+                                                <i class="bi bi-file-earmark-pdf"></i>
+                                                <div class="account-cert-history-item-body">
+                                                    <div class="account-cert-history-item-title">{{ item.name }}</div>
+                                                    <div class="account-cert-history-item-meta">
+                                                        <span>{{ formatFileSize(item.size) }}</span>
+                                                        <span>첨부일자 {{ item.uploadedAt }}</span>
+                                                    </div>
+                                                </div>
+                                                <button type="button" class="account-btn-outline account-btn-outline-sm" @click="openCertViewer('bond', item)">확인</button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </template>
+
+                                <p v-else class="account-cert-empty">
+                                    <i class="bi bi-info-circle"></i>
+                                    후불 정산을 이용하는 업체만 보험증권을 첨부하시면 됩니다. 좌측 체크박스를 선택하여 첨부 인터페이스를 활성화해 주세요.
                                 </p>
                             </div>
                         </div>
@@ -992,6 +1152,123 @@
                 <div class="charge-modal-actions-pair account-alert-actions-pair">
                     <button type="button" class="charge-modal-btn charge-modal-btn-outline account-alert-btn-cancel" data-bs-dismiss="modal">취소</button>
                     <button type="button" class="charge-modal-btn charge-modal-btn-primary account-alert-btn-confirm" @click="confirmActionRun">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================== -->
+    <!-- 휴대폰 본인 인증 + 재직증명서 첨부 모달 -->
+    <!-- ============================== -->
+    <div class="modal fade" tabindex="-1" ref="multiAuthModal">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable account-multi-auth-modal-dialog">
+            <div class="modal-content account-multi-auth-modal">
+                <div class="account-multi-auth-header">
+                    <div>
+                        <h2 class="account-multi-auth-title">휴대폰 본인 인증</h2>
+                        <p class="account-multi-auth-subtitle">본인 명의 휴대폰 인증과 재직증명서 첨부를 진행해 주세요.</p>
+                    </div>
+                    <button type="button" class="account-multi-auth-close" @click="closeMultiAuth" aria-label="닫기">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+
+                <div class="account-multi-auth-body">
+
+                    <!-- 1. 회원 이름 -->
+                    <div class="account-multi-auth-section">
+                        <div class="account-multi-auth-section-title">회원 이름(임직원 이름) <span class="account-required">*</span></div>
+                        <input type="text"
+                               class="account-form-input"
+                               v-model="multiAuthForm.memberName"
+                               placeholder="이름을 입력해 주세요">
+                    </div>
+
+                    <!-- 2. 휴대폰 본인 인증 -->
+                    <div class="account-multi-auth-section">
+                        <div class="account-multi-auth-section-title">휴대폰 본인 인증 <span class="account-required">*</span></div>
+                        <div class="account-multi-auth-phone-row">
+                            <select class="account-form-input account-multi-auth-prefix" v-model="multiAuthForm.phonePrefix">
+                                <option>010</option>
+                                <option>011</option>
+                                <option>016</option>
+                                <option>017</option>
+                                <option>018</option>
+                                <option>019</option>
+                            </select>
+                            <span class="account-multi-auth-dash">-</span>
+                            <input type="text" maxlength="4" inputmode="numeric"
+                                   class="account-form-input account-multi-auth-phone"
+                                   v-model="multiAuthForm.phoneMid">
+                            <span class="account-multi-auth-dash">-</span>
+                            <input type="text" maxlength="4" inputmode="numeric"
+                                   class="account-form-input account-multi-auth-phone"
+                                   v-model="multiAuthForm.phoneLast">
+                            <button type="button"
+                                    class="account-btn-dark account-btn-dark-sm account-multi-auth-action"
+                                    @click="sendMultiAuthCode">
+                                {{ multiAuthForm.codeSent ? '재발송' : '인증요청' }}
+                            </button>
+                        </div>
+
+                        <div v-if="multiAuthForm.codeSent" class="account-multi-auth-code-row">
+                            <input type="text" inputmode="numeric"
+                                   class="account-form-input"
+                                   placeholder="인증번호를 입력해 주세요"
+                                   v-model="multiAuthForm.code">
+                            <button type="button"
+                                    class="account-btn-dark account-btn-dark-sm account-multi-auth-action"
+                                    :disabled="multiAuthForm.codeVerified"
+                                    @click="verifyMultiAuthCode">
+                                {{ multiAuthForm.codeVerified ? '인증완료' : '확인' }}
+                            </button>
+                        </div>
+                        <div v-if="multiAuthForm.codeVerified" class="account-multi-auth-verified">
+                            <i class="bi bi-check-circle-fill"></i> 휴대폰 인증이 완료되었습니다.
+                        </div>
+                    </div>
+
+                    <!-- 3. 재직증명서 첨부 -->
+                    <div class="account-multi-auth-section">
+                        <div class="account-multi-auth-section-title">재직증명서 첨부 <span class="account-required">*</span></div>
+
+                        <input ref="multiAuthCertInput" type="file" hidden
+                               accept=".pdf,application/pdf,image/*"
+                               @change="onMultiAuthCertChange">
+
+                        <div v-if="!multiAuthForm.certFile" class="account-multi-auth-upload">
+                            <button type="button"
+                                    class="account-btn-outline account-btn-outline-md"
+                                    @click="triggerMultiAuthCertUpload">
+                                <i class="bi bi-cloud-arrow-up"></i> 파일 선택
+                            </button>
+                            <span class="account-multi-auth-upload-hint">PDF, 이미지 · 최대 10MB</span>
+                        </div>
+
+                        <div v-else class="account-multi-auth-file">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                            <div class="account-multi-auth-file-body">
+                                <div class="account-multi-auth-file-name">{{ multiAuthForm.certFile.name }}</div>
+                                <div class="account-multi-auth-file-size">{{ formatFileSize(multiAuthForm.certFile.size) }}</div>
+                            </div>
+                            <button type="button" class="account-multi-auth-file-remove" @click="removeMultiAuthCert" aria-label="삭제">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+
+                        <div class="account-multi-auth-notice">
+                            <i class="bi bi-exclamation-circle-fill"></i>
+                            <span>재직증명서 첨부 시 <strong>주민번호 뒷자리는 *******로 표시</strong>되어야 합니다.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="account-multi-auth-footer">
+                    <button type="button" class="account-btn-outline account-btn-outline-md" @click="closeMultiAuth">취소</button>
+                    <button type="button"
+                            class="account-btn-primary account-btn-primary-md"
+                            :disabled="!canSubmitMultiAuth"
+                            @click="submitMultiAuth">등록하기</button>
                 </div>
             </div>
         </div>

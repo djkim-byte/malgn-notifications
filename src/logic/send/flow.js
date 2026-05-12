@@ -165,6 +165,7 @@ export default {
                 reset: new bootstrap.Modal(this.$refs.resetModal),
                 sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 
@@ -356,8 +357,9 @@ export default {
                     purpose: 'general',
                     sendMode: 'sequential',
                     steps: [
-                        { channel: '', templateId: '', templateName: '' },
-                        { channel: '', templateId: '', templateName: '' }
+                        { channel: 'kakao', templateId: '', templateName: '' },
+                        { channel: 'sms', templateId: '', templateName: '' },
+                        { channel: 'email', templateId: '', templateName: '' }
                     ]
                 };
             }

@@ -84,7 +84,14 @@ export default {
             // 다운로드 요청 목록
             downloadRequests: [
                 { id: '20260302113021abcd1234ef', requestedAt: '2026-03-02 11:30', expireAt: '2026-03-09 11:30', status: 'expired' }
-            ]
+            ],
+
+            // 메시지 채널 선택
+            channelPicker: {
+                row: null,
+                contacts: [],
+                selected: ''
+            }
         };
     },
 
@@ -97,8 +104,11 @@ export default {
                 groupRename: new bootstrap.Modal(this.$refs.groupRenameModal),
                 groupDelete: new bootstrap.Modal(this.$refs.groupDeleteModal),
                 contactAdd: new bootstrap.Modal(this.$refs.contactAddModal),
-                downloadList: new bootstrap.Modal(this.$refs.downloadListModal)
+                downloadList: new bootstrap.Modal(this.$refs.downloadListModal),
+                channelPicker: new bootstrap.Modal(this.$refs.channelPickerModal),
+                emptyGroupAlert: new bootstrap.Modal(this.$refs.emptyGroupAlertModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 
@@ -163,6 +173,20 @@ export default {
         isAllPickerSelected() {
             return this.pagedPickerContacts.length > 0 &&
                 this.pagedPickerContacts.every(c => this.contactPickerSelectedIds.includes(c.id));
+        },
+
+        // 메시지 채널 옵션 (그룹 연락처의 phone/email 보유 여부로 활성화 판정)
+        channelOptions() {
+            const contacts = this.channelPicker.contacts || [];
+            const phoneCount = contacts.filter(c => c.phone).length;
+            const emailCount = contacts.filter(c => c.email).length;
+            return [
+                { value: 'sms', label: '문자메시지', icon: 'bi bi-chat-dots', hint: '휴대폰 번호로 SMS/LMS/MMS 발송', enabled: phoneCount > 0, count: phoneCount },
+                { value: 'kakao', label: '알림톡', icon: 'bi bi-chat-square-text', hint: '카카오톡 알림톡 발송', enabled: phoneCount > 0, count: phoneCount },
+                { value: 'rcs', label: 'RCS', icon: 'bi bi-chat-left-text', hint: '브랜드 RCS 메시지 발송', enabled: phoneCount > 0, count: phoneCount },
+                { value: 'email', label: '이메일', icon: 'bi bi-envelope', hint: '이메일 주소로 발송', enabled: emailCount > 0, count: emailCount },
+                { value: 'push', label: 'PUSH', icon: 'bi bi-bell', hint: '앱 푸시 알림 발송', enabled: phoneCount > 0, count: phoneCount }
+            ];
         }
     },
 
@@ -374,6 +398,61 @@ export default {
                 if (target) target.count = this.groupContacts.length;
             }
             this.closeGroupsModal('contactAdd');
+        },
+
+        // ----- 메시지 채널 선택 -----
+        openChannelPicker(row) {
+            const contacts = this.buildSampleContacts(row);
+            this.channelPicker.row = row;
+            this.channelPicker.contacts = contacts;
+            const phoneCount = contacts.filter(c => c.phone).length;
+            const emailCount = contacts.filter(c => c.email).length;
+            if (phoneCount === 0 && emailCount === 0) {
+                this.modals.emptyGroupAlert && this.modals.emptyGroupAlert.show();
+                return;
+            }
+            this.channelPicker.selected = phoneCount > 0 ? 'sms' : 'email';
+            this.modals.channelPicker && this.modals.channelPicker.show();
+        },
+
+        confirmChannelPick() {
+            const channel = this.channelPicker.selected;
+            const row = this.channelPicker.row;
+            const contacts = this.channelPicker.contacts || [];
+            if (!channel || !row) return;
+
+            const routeMap = {
+                sms: '/send/sms',
+                kakao: '/send/kakao',
+                rcs: '/send/rcs',
+                email: '/send/email',
+                push: '/send/push'
+            };
+
+            const filtered = channel === 'email'
+                ? contacts.filter(c => c.email)
+                : contacts.filter(c => c.phone);
+
+            const recipients = filtered.map(c => ({
+                name: c.alias,
+                phone: c.phone || '',
+                email: c.email || '',
+                pushType: '',
+                token: c.token || ''
+            }));
+
+            try {
+                sessionStorage.setItem('pendingRecipients', JSON.stringify({
+                    channel,
+                    groupName: row.name,
+                    recipients
+                }));
+            } catch (e) {
+                console.warn('[channelPicker] sessionStorage write failed:', e);
+            }
+
+            this.closeGroupsModal('channelPicker');
+            this.navigateTo(routeMap[channel], { source: 'group', groupName: row.name });
         },
 
         // ----- 모달 닫기 헬퍼 -----

@@ -11,6 +11,7 @@ export default {
                 { value: 'cards',    label: '결제 카드 관리' },
                 { value: 'password', label: '비밀번호 변경' },
                 { value: 'security', label: '보안로그인 설정' },
+                { value: 'multi',    label: '멀티 계정 추가', businessOnly: true },
                 { value: 'contract', label: '계약 관리' }
             ],
             activeTab: 'profile',
@@ -22,6 +23,7 @@ export default {
                 bizNo: '110-86-39050',
                 ceoName: '하근호',
                 bizType: '법인 사업자',
+                userType: 'corp',  // 'corp' | 'indiv' | 'person'
                 industryType: '서비스',
                 industryItem: '소프트웨어자문, 개발및공급',
                 address: '087-97) 서울특별시 구로구 디지털로 288, 1701호(구로동, 대륭포스트타워1차)',
@@ -87,6 +89,12 @@ export default {
                     applicable: false,
                     current: null,
                     history: []
+                },
+                // 지급이행보증보험증권 (후불 정산 해당업체에 한함)
+                paymentBondCert: {
+                    applicable: false,
+                    current: null,
+                    history: []
                 }
             },
 
@@ -134,6 +142,34 @@ export default {
 
             signModal: null,
             docViewerModal: null,
+            multiAuthModal: null,
+
+            // ----- 멀티 계정 추가 (본인 인증 내역) -----
+            multiAuth: {
+                verifications: [
+                    {
+                        id: 'MA-0001',
+                        memberType: '사업자 멀티계정',
+                        memberName: '김덕조',
+                        documents: '사업자등록증, 재직증명서',
+                        status: 'approved',
+                        requestedAt: '2026-04-13 16:41',
+                        verifiedAt: '2026-04-13 18:52'
+                    }
+                ]
+            },
+
+            // ----- 멀티 계정 추가 - 휴대폰 본인인증 + 재직증명서 첨부 모달 폼 -----
+            multiAuthForm: {
+                memberName: '',
+                phonePrefix: '010',
+                phoneMid: '',
+                phoneLast: '',
+                code: '',
+                codeSent: false,
+                codeVerified: false,
+                certFile: null  // { name, size }
+            },
 
             // ----- 결제 이메일 변경 폼 -----
             paymentEmailForm: {
@@ -176,6 +212,14 @@ export default {
         isCodeFilled() {
             return this.paymentEmailForm.code.every(c => c && c.length === 1);
         },
+        visibleTabs() {
+            const isBusiness = this.profile.userType === 'corp' || this.profile.userType === 'indiv';
+            return this.tabs.filter(t => !t.businessOnly || isBusiness);
+        },
+        canSubmitMultiAuth() {
+            const f = this.multiAuthForm;
+            return !!(f.memberName.trim() && f.codeVerified && f.certFile);
+        },
         currentSignStep() {
             return this.signWizard.steps.find(s => s.id === this.signWizard.step);
         },
@@ -201,6 +245,8 @@ export default {
             this.confirmModal   = new bootstrap.Modal(this.$refs.confirmModal);
             this.signModal      = new bootstrap.Modal(this.$refs.signModal, { backdrop: 'static', keyboard: false });
             this.docViewerModal = new bootstrap.Modal(this.$refs.docViewerModal);
+            this.multiAuthModal = new bootstrap.Modal(this.$refs.multiAuthModal, { backdrop: 'static', keyboard: false });
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 
@@ -472,6 +518,7 @@ export default {
             ];
 
             this.contract.lendingCert.history = [];
+            this.contract.paymentBondCert.history = [];
         },
 
         // ----- 상태 표시 헬퍼 -----
@@ -707,8 +754,13 @@ export default {
         },
 
         openCertViewer(kind, item) {
+            const titleMap = {
+                lending: '대부업등록증',
+                bond: '지급이행보증보험증권',
+                biz: '사업자등록증'
+            };
             this.docViewer = {
-                title: kind === 'lending' ? '대부업등록증' : '사업자등록증',
+                title: titleMap[kind] || '사업자등록증',
                 subtitle: `${item.name} · ${item.uploadedAt}`,
                 fileName: item.name,
                 kind: 'pdf',
@@ -734,12 +786,23 @@ export default {
                 onConfirm: () => this.triggerLendingCertUpload()
             });
         },
+        askPaymentBondCertUpload() {
+            this.showAlert('지급이행보증보험증권 업로드 안내', {
+                desc: 'PDF 형식의 파일만 첨부할 수 있으며, 최대 10MB까지 업로드할 수 있습니다.\n[확인] 버튼을 클릭하시면 파일 선택 창이 열립니다.',
+                iconName: 'bi bi-file-earmark-pdf',
+                iconClass: 'is-info',
+                onConfirm: () => this.triggerPaymentBondCertUpload()
+            });
+        },
 
         triggerBizCertUpload() {
             if (this.$refs.bizCertInput) this.$refs.bizCertInput.click();
         },
         triggerLendingCertUpload() {
             if (this.$refs.lendingCertInput) this.$refs.lendingCertInput.click();
+        },
+        triggerPaymentBondCertUpload() {
+            if (this.$refs.paymentBondCertInput) this.$refs.paymentBondCertInput.click();
         },
 
         onBizCertChange(e) {
@@ -750,6 +813,11 @@ export default {
         onLendingCertChange(e) {
             const file = e.target.files && e.target.files[0];
             if (file) this.applyCertFile('lending', file);
+            e.target.value = '';
+        },
+        onPaymentBondCertChange(e) {
+            const file = e.target.files && e.target.files[0];
+            if (file) this.applyCertFile('bond', file);
             e.target.value = '';
         },
 
@@ -764,7 +832,12 @@ export default {
                 return;
             }
 
-            const target = kind === 'lending' ? this.contract.lendingCert : this.contract.bizCert;
+            const targetMap = {
+                lending: this.contract.lendingCert,
+                bond: this.contract.paymentBondCert,
+                biz: this.contract.bizCert
+            };
+            const target = targetMap[kind] || this.contract.bizCert;
             const next = {
                 id: kind.toUpperCase() + '-' + Date.now(),
                 name: file.name,
@@ -792,6 +865,14 @@ export default {
                 '현재 대부업등록증을 삭제하시겠어요?',
                 () => {
                     this.contract.lendingCert.current = null;
+                }
+            );
+        },
+        removePaymentBondCert() {
+            this.showConfirm(
+                '현재 지급이행보증보험증권을 삭제하시겠어요?',
+                () => {
+                    this.contract.paymentBondCert.current = null;
                 }
             );
         },
@@ -875,6 +956,134 @@ export default {
             }
             this.paymentEmailForm.codeVerified = true;
             this.showAlert('인증되었습니다.');
+        },
+
+        // ============== 멀티 계정 추가 ==============
+        multiAuthStatusLabel(status) {
+            switch (status) {
+                case 'approved': return '승인';
+                case 'pending':  return '심사중';
+                case 'rejected': return '반려';
+                default:         return '-';
+            }
+        },
+
+        multiAuthStatusClass(status) {
+            switch (status) {
+                case 'approved': return 'is-approved';
+                case 'pending':  return 'is-pending';
+                case 'rejected': return 'is-rejected';
+                default:         return '';
+            }
+        },
+
+        openMultiAuth() {
+            this.multiAuthForm = {
+                memberName: '',
+                phonePrefix: '010',
+                phoneMid: '',
+                phoneLast: '',
+                code: '',
+                codeSent: false,
+                codeVerified: false,
+                certFile: null
+            };
+            if (this.multiAuthModal) this.multiAuthModal.show();
+        },
+
+        closeMultiAuth() {
+            if (this.multiAuthModal) this.multiAuthModal.hide();
+        },
+
+        sendMultiAuthCode() {
+            const f = this.multiAuthForm;
+            if (!f.phoneMid || !f.phoneLast) {
+                this.showAlert('휴대폰 번호를 입력해 주세요.');
+                return;
+            }
+            f.codeSent = true;
+            f.codeVerified = false;
+            f.code = '';
+            this.showAlert('휴대폰으로 인증번호가 발송되었습니다.', {
+                desc: '3분내 인증번호를 입력해 주세요',
+                iconName: 'bi bi-phone-vibrate',
+                iconClass: 'is-info'
+            });
+        },
+
+        verifyMultiAuthCode() {
+            const f = this.multiAuthForm;
+            if (!f.code) {
+                this.showAlert('인증번호를 입력해 주세요.');
+                return;
+            }
+            f.codeVerified = true;
+            this.showAlert('휴대폰 인증이 완료되었습니다.', {
+                iconName: 'bi bi-check-circle-fill',
+                iconClass: 'is-success'
+            });
+        },
+
+        triggerMultiAuthCertUpload() {
+            if (this.$refs.multiAuthCertInput) this.$refs.multiAuthCertInput.click();
+        },
+
+        onMultiAuthCertChange(e) {
+            const file = e.target.files && e.target.files[0];
+            if (file) {
+                const isPdfOrImage = (file.type === 'application/pdf')
+                    || /\.pdf$/i.test(file.name)
+                    || /^image\//.test(file.type);
+                if (!isPdfOrImage) {
+                    this.showAlert('PDF 또는 이미지 파일만 첨부할 수 있습니다.');
+                    e.target.value = '';
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    this.showAlert('파일 용량이 10MB를 초과합니다.');
+                    e.target.value = '';
+                    return;
+                }
+                this.multiAuthForm.certFile = { name: file.name, size: file.size };
+            }
+            e.target.value = '';
+        },
+
+        removeMultiAuthCert() {
+            this.multiAuthForm.certFile = null;
+        },
+
+        submitMultiAuth() {
+            const f = this.multiAuthForm;
+            if (!f.memberName.trim()) {
+                this.showAlert('회원 이름(임직원 이름)을 입력해 주세요.');
+                return;
+            }
+            if (!f.codeVerified) {
+                this.showAlert('휴대폰 본인 인증을 먼저 완료해 주세요.');
+                return;
+            }
+            if (!f.certFile) {
+                this.showAlert('재직증명서를 첨부해 주세요.');
+                return;
+            }
+
+            this.multiAuth.verifications.unshift({
+                id: 'MA-' + Date.now(),
+                memberType: '사업자 멀티계정',
+                memberName: f.memberName.trim(),
+                documents: '사업자등록증, 재직증명서',
+                status: 'pending',
+                requestedAt: this.formatNow().replace(/\./g, '-'),
+                verifiedAt: '-'
+            });
+
+            this.closeMultiAuth();
+            this.showAlert('본인 인증 요청이 접수되었습니다.', {
+                desc: '관리자 승인 후 멀티 계정으로 등록됩니다.',
+                iconName: 'bi bi-clock-history',
+                iconClass: 'is-info'
+            });
         },
 
         submitPaymentEmail() {

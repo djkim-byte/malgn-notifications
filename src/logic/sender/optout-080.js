@@ -42,6 +42,7 @@ export default {
                 apply: new bootstrap.Modal(this.$refs.applyModal),
                 cancelConfirm: new bootstrap.Modal(this.$refs.cancelConfirmModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

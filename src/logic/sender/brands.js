@@ -43,6 +43,7 @@ export default {
                 linkConfirm: new bootstrap.Modal(this.$refs.linkConfirmModal),
                 linkDone: new bootstrap.Modal(this.$refs.linkDoneModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

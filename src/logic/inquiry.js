@@ -90,6 +90,7 @@ export default {
     mounted() {
         this.$nextTick(() => {
             this.fileErrorModal = new bootstrap.Modal(this.$refs.fileErrorModal);
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

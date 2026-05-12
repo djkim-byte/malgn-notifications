@@ -118,6 +118,19 @@
         // 개발 모드 플래그
         window.DEV_MODE = true;
 
+        // 페이지 목록(pagelists)에서 ?popup=<key> 쿼리로 진입했을 때,
+        // 해당 페이지가 등록한 모달을 자동으로 띄워주는 헬퍼.
+        // - this.modals[key] 패턴과 this[key + 'Modal'] 패턴 둘 다 지원.
+        window.openPopupFromQuery = function(component) {
+            if (!component) return;
+            const popupKey = typeof component.getParam === 'function' ? component.getParam('popup') : null;
+            if (!popupKey) return;
+            const modal = (component.modals && component.modals[popupKey]) || component[popupKey + 'Modal'];
+            if (modal && typeof modal.show === 'function') {
+                try { modal.show(); } catch (e) { console.warn('[openPopupFromQuery] failed:', e); }
+            }
+        };
+
         console.log('%c💬 맑은 메시징', 'font-size: 20px; font-weight: bold; color: #6366f1;');
         console.log('%c(주)맑은소프트 메시징 서비스', 'color: #10b981;');
         console.log('Version:', window.APP_VERSION);

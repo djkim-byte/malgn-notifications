@@ -127,9 +127,6 @@ data() {
             email: ''
         },
         errors: {},
-        isLoading: false
-    }
-},
 
 computed: {
     isEdit() {

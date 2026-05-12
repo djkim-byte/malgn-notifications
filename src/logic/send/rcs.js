@@ -128,6 +128,12 @@ export default {
                 ]
             },
             buttonModal: { editIndex: null, type: '', name: '', value: '' },
+            aiRewriteModal: {
+                input: '',
+                loading: false,
+                messages: [],
+                draftContent: ''
+            },
             sendDemoStep: 0
         };
     },
@@ -141,8 +147,11 @@ export default {
                 addressBook: new bootstrap.Modal(this.$refs.addressBookModal),
                 button: new bootstrap.Modal(this.$refs.buttonModal),
                 reset: new bootstrap.Modal(this.$refs.resetModal),
-                sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal)
+                sendConfirm: new bootstrap.Modal(this.$refs.sendConfirmModal),
+                aiRewrite: new bootstrap.Modal(this.$refs.aiRewriteModal)
             };
+            this.applyRecipientFromQuery();
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 
@@ -156,6 +165,11 @@ export default {
         previewText() {
             const value = this.varInputMode === 'common' && this.commonVar ? this.commonVar : '#{name}';
             return this.form.content.replace(/#\{name\}/g, value);
+        },
+        aiPreviewContent() {
+            const base = this.aiRewriteModal.draftContent || this.form.content;
+            const value = this.varInputMode === 'common' && this.commonVar ? this.commonVar : '#{name}';
+            return base.replace(/#\{name\}/g, value);
         },
         filteredBrands() {
             const q = this.brandSearch.trim().toLowerCase();
@@ -249,6 +263,49 @@ export default {
             if (this.modals && this.modals[name]) this.modals[name].hide();
         },
 
+        applyRecipientFromQuery() {
+            if (this.getParam('source') === 'group') {
+                this.applyGroupRecipients();
+                return;
+            }
+            const phone = this.getParam('phone');
+            const name = this.getParam('name');
+            if (!phone) return;
+            const exists = this.recipients.some(r => r.phone === phone);
+            if (exists) return;
+            this.recipients.push({
+                id: Date.now() + Math.random(),
+                name: name || '직접입력',
+                phone,
+                varValue: ''
+            });
+        },
+
+        applyGroupRecipients() {
+            let payload = null;
+            try {
+                const raw = sessionStorage.getItem('pendingRecipients');
+                if (!raw) return;
+                payload = JSON.parse(raw);
+            } catch (e) {
+                return;
+            } finally {
+                try { sessionStorage.removeItem('pendingRecipients'); } catch (e) { /* noop */ }
+            }
+            if (!payload || !Array.isArray(payload.recipients)) return;
+            const existing = new Set(this.recipients.map(r => r.phone));
+            payload.recipients.forEach(c => {
+                if (!c.phone || existing.has(c.phone)) return;
+                this.recipients.push({
+                    id: Date.now() + Math.random(),
+                    name: c.name || '직접입력',
+                    phone: c.phone,
+                    varValue: ''
+                });
+                existing.add(c.phone);
+            });
+        },
+
         buttonTypeLabel(value) {
             const opt = this.buttonTypeOptions.find(o => o.value === value);
             return opt ? opt.label : value;
@@ -292,6 +349,82 @@ export default {
             this.form.content = tpl.content;
             this.form.buttons = JSON.parse(JSON.stringify(tpl.buttons || []));
             this.closeModal('template');
+        },
+
+        // ===== AI 문장 다듬기 =====
+        openAiRewrite() {
+            if (this.isTemplateLocked) return;
+            this.aiRewriteModal.input = '';
+            this.aiRewriteModal.loading = false;
+            this.aiRewriteModal.draftContent = '';
+            this.aiRewriteModal.messages = [
+                {
+                    role: 'bot',
+                    text: this.form.content.trim()
+                        ? '안녕하세요! 작성하신 RCS 메시지를 분석했습니다. 어떤 방향으로 다듬어 드릴까요? 예) "더 친근한 톤으로", "간결하게", "맞춤법 교정".'
+                        : '메시지 내용이 비어있습니다. 원하는 주제와 톤을 알려주시면 초안을 작성해 드릴게요. 예) "신규 가입 환영 RCS, 친근한 톤".'
+                }
+            ];
+            this.showModal('aiRewrite');
+        },
+
+        sendAiQuickPrompt(prompt) {
+            this.aiRewriteModal.input = prompt;
+            this.sendAiPrompt();
+        },
+
+        async sendAiPrompt() {
+            const prompt = this.aiRewriteModal.input.trim();
+            if (!prompt || this.aiRewriteModal.loading) return;
+            this.aiRewriteModal.messages.push({ role: 'user', text: prompt });
+            this.aiRewriteModal.input = '';
+            this.aiRewriteModal.loading = true;
+            this.scrollAiChatToBottom();
+
+            await new Promise(resolve => setTimeout(resolve, 900));
+
+            const rewritten = this.simulateAiRewrite(prompt, this.aiRewriteModal.draftContent || this.form.content);
+            this.aiRewriteModal.draftContent = rewritten;
+            this.aiRewriteModal.messages.push({
+                role: 'bot',
+                text: '요청하신 방향으로 다듬어 보았습니다. 우측 미리보기에서 결과를 확인해 보세요. 더 수정이 필요하면 추가로 알려주세요.'
+            });
+            this.aiRewriteModal.loading = false;
+            this.scrollAiChatToBottom();
+        },
+
+        scrollAiChatToBottom() {
+            this.$nextTick(() => {
+                const el = this.$refs.aiChatMessages;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
+        },
+
+        simulateAiRewrite(prompt, baseContent) {
+            const base = (baseContent && baseContent.trim())
+                ? baseContent.trim()
+                : '#{name}님, 새로운 소식을 안내드립니다.';
+            const p = prompt.toLowerCase();
+            if (p.includes('친근')) {
+                return `#{name}님 안녕하세요! 😊 ${base.replace(/^#\{name\}[^,\n]*[,\n]?\s*/, '').trim()} 편하게 문의 주세요~`.slice(0, 100);
+            }
+            if (p.includes('간결')) {
+                const lines = base.split('\n').map(l => l.trim()).filter(Boolean);
+                return lines.slice(0, Math.min(2, lines.length)).join('\n').slice(0, 100);
+            }
+            if (p.includes('정중') || p.includes('비즈니스')) {
+                return `${base.replace(/~+/g, '').trim()} 감사합니다.`.slice(0, 100);
+            }
+            if (p.includes('맞춤법') || p.includes('교정')) {
+                return base.replace(/\s+([.,!?])/g, '$1').replace(/[ \t]{2,}/g, ' ').trim().slice(0, 100);
+            }
+            return `${base} (AI: ${prompt})`.slice(0, 100);
+        },
+
+        applyAiRewrite() {
+            if (!this.aiRewriteModal.draftContent) return;
+            this.form.content = this.aiRewriteModal.draftContent;
+            this.closeModal('aiRewrite');
         },
 
         // ===== 발신 브랜드 =====

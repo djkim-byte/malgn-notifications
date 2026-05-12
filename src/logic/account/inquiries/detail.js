@@ -88,6 +88,7 @@ export default {
     mounted() {
         this.$nextTick(() => {
             this.deleteModal = new bootstrap.Modal(this.$refs.deleteModal);
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

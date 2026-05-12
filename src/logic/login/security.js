@@ -33,6 +33,7 @@ export default {
     mounted() {
         this.$nextTick(() => {
             this.codeAlertModal = new bootstrap.Modal(this.$refs.codeAlertModal);
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 

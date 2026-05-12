@@ -66,11 +66,39 @@ const SAMPLE_ROWS = [
     }
 ];
 
+const CARRIERS = [
+    { value: 'SKT', label: 'SKT' },
+    { value: 'KT', label: 'KT' },
+    { value: 'LGU', label: 'LG U+' },
+    { value: 'SKT_MVNO', label: 'SKT 알뜰폰' },
+    { value: 'KT_MVNO', label: 'KT 알뜰폰' },
+    { value: 'LGU_MVNO', label: 'LG U+ 알뜰폰' }
+];
+
+const PHONE_CODE_SECONDS = 180;
+
 function emptyForm() {
     return {
         type: 'owner_business',
         number: '',
         files: {}
+    };
+}
+
+function emptyPhoneAuth() {
+    return {
+        carrier: '',
+        name: '',
+        birth: '',
+        genderDigit: '',
+        foreigner: 'native',
+        phonePrefix: '010',
+        phoneMid: '',
+        phoneLast: '',
+        code: '',
+        codeSent: false,
+        verified: false,
+        secondsLeft: 0
     };
 }
 
@@ -84,6 +112,7 @@ export default {
         return {
             typeOptions: TYPE_OPTIONS,
             docsByType: DOCS_BY_TYPE,
+            carriers: CARRIERS,
 
             rows: SAMPLE_ROWS.slice(),
             page: 1,
@@ -91,20 +120,31 @@ export default {
             selectedRowIds: [],
 
             modals: {},
+
+            // 등록 위저드 상태
+            currentStep: 1,
             agreed: false,
-            form: emptyForm()
+            registerMethod: '',
+            form: emptyForm(),
+            phoneAuth: emptyPhoneAuth(),
+
+            _phoneTimer: null
         };
     },
 
     mounted() {
         this.$nextTick(() => {
             this.modals = {
-                agree: new bootstrap.Modal(this.$refs.agreeModal),
                 register: new bootstrap.Modal(this.$refs.registerModal),
                 deleteConfirm: new bootstrap.Modal(this.$refs.deleteConfirmModal),
                 guide: new bootstrap.Modal(this.$refs.guideModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
+    },
+
+    beforeUnmount() {
+        this.clearPhoneTimer();
     },
 
     computed: {
@@ -124,6 +164,30 @@ export default {
         },
         requiredDocs() {
             return DOCS_BY_TYPE[this.form.type] || [];
+        },
+        step3Title() {
+            return this.registerMethod === 'phone' ? '휴대폰 본인인증' : '발신 정보 등록 및 서류 인증';
+        },
+        canSendPhoneCode() {
+            const p = this.phoneAuth;
+            return !!(p.carrier && p.name.trim() && p.birth.length === 6 && p.genderDigit && p.phoneMid.length >= 3 && p.phoneLast.length === 4 && !p.verified);
+        },
+        canVerifyPhoneCode() {
+            return this.phoneAuth.codeSent && this.phoneAuth.code.length === 6 && !this.phoneAuth.verified;
+        },
+        phoneTimerLabel() {
+            const s = Math.max(0, this.phoneAuth.secondsLeft);
+            const m = Math.floor(s / 60);
+            const r = s % 60;
+            return `${m}:${String(r).padStart(2, '0')}`;
+        },
+        canSubmitStep3() {
+            if (this.registerMethod === 'phone') return this.phoneAuth.verified;
+            if (this.registerMethod === 'docs') {
+                if (!this.form.number.trim()) return false;
+                return this.requiredDocs.every(d => this.form.files[d.key]);
+            }
+            return false;
         }
     },
 
@@ -152,21 +216,47 @@ export default {
             }
         },
 
-        // ===== 등록 플로우 =====
+        // ===== 등록 위저드 =====
         openRegisterFlow() {
+            this.currentStep = 1;
             this.agreed = false;
+            this.registerMethod = '';
             this.form = emptyForm();
-            this.modals.agree && this.modals.agree.show();
+            this.phoneAuth = emptyPhoneAuth();
+            this.clearPhoneTimer();
+            this.modals.register && this.modals.register.show();
         },
 
-        goRegisterStep() {
-            if (!this.agreed) return;
-            this.closeModal('agree');
-            this.$nextTick(() => {
-                this.modals.register && this.modals.register.show();
-            });
+        canGoNext() {
+            if (this.currentStep === 1) return this.agreed;
+            if (this.currentStep === 2) return !!this.registerMethod;
+            return false;
         },
 
+        goNext() {
+            if (!this.canGoNext()) return;
+            if (this.currentStep < 3) this.currentStep++;
+        },
+
+        goPrev() {
+            if (this.currentStep > 1) {
+                this.currentStep--;
+                if (this.currentStep < 3) {
+                    // Step 3에서 뒤로 가면 인증 진행 상태는 리셋
+                    this.clearPhoneTimer();
+                    this.phoneAuth.codeSent = false;
+                    this.phoneAuth.code = '';
+                    this.phoneAuth.verified = false;
+                    this.phoneAuth.secondsLeft = 0;
+                }
+            }
+        },
+
+        selectMethod(method) {
+            this.registerMethod = method;
+        },
+
+        // ----- Step 3a: 서류 업로드 -----
         pickFile(key) {
             const refKey = 'file_' + key;
             const ref = this.$refs[refKey];
@@ -185,24 +275,77 @@ export default {
             this.form.files = { ...this.form.files, [key]: file };
         },
 
-        submitRegister() {
-            if (!this.form.number.trim()) {
-                alert('발신 번호를 입력해 주세요.');
-                return;
-            }
-            const docs = this.requiredDocs;
-            for (const d of docs) {
-                if (!this.form.files[d.key]) {
-                    alert(`${d.label}을(를) 첨부해 주세요.`);
+        // ----- Step 3b: 휴대폰 본인인증 -----
+        sendPhoneCode() {
+            if (!this.canSendPhoneCode) return;
+            this.phoneAuth.codeSent = true;
+            this.phoneAuth.verified = false;
+            this.phoneAuth.code = '';
+            this.phoneAuth.secondsLeft = PHONE_CODE_SECONDS;
+            this.startPhoneTimer();
+            alert('인증번호 6자리가 휴대폰 문자메시지로 발송되었습니다. 3분 이내 입력해 주세요.');
+        },
+
+        startPhoneTimer() {
+            this.clearPhoneTimer();
+            this._phoneTimer = setInterval(() => {
+                if (this.phoneAuth.secondsLeft <= 0) {
+                    this.clearPhoneTimer();
                     return;
                 }
-            }
+                this.phoneAuth.secondsLeft--;
+            }, 1000);
+        },
 
-            const typeOpt = TYPE_OPTIONS.find(t => t.value === this.form.type);
+        clearPhoneTimer() {
+            if (this._phoneTimer) {
+                clearInterval(this._phoneTimer);
+                this._phoneTimer = null;
+            }
+        },
+
+        verifyPhoneCode() {
+            if (!this.canVerifyPhoneCode) return;
+            if (this.phoneAuth.secondsLeft <= 0) {
+                alert('인증 시간이 만료되었습니다. 인증번호를 다시 받아주세요.');
+                return;
+            }
+            // 데모용 - 실제 환경에서는 서버 검증 호출
+            this.phoneAuth.verified = true;
+            this.clearPhoneTimer();
+            alert('휴대폰 본인인증이 완료되었습니다.');
+        },
+
+        formatPhoneNumber() {
+            const p = this.phoneAuth;
+            return `${p.phonePrefix}${p.phoneMid}${p.phoneLast}`;
+        },
+
+        // ----- 최종 제출 -----
+        submitRegister() {
+            if (!this.canSubmitStep3) return;
+
             const now = new Date();
             const pad = (n) => String(n).padStart(2, '0');
             const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
+            if (this.registerMethod === 'phone') {
+                this.rows.unshift({
+                    id: Date.now(),
+                    type: 'employee',
+                    typeLabel: '본인 명의 휴대폰 (본인인증)',
+                    number: this.formatPhoneNumber(),
+                    status: 'approved',
+                    statusLabel: STATUS_LABEL.approved,
+                    requestedAt: stamp,
+                    approvedAt: stamp
+                });
+                this.closeModal('register');
+                alert('본인인증이 완료되어 발신 번호가 즉시 등록되었습니다.');
+                return;
+            }
+
+            const typeOpt = TYPE_OPTIONS.find(t => t.value === this.form.type);
             this.rows.unshift({
                 id: Date.now(),
                 type: this.form.type,
@@ -238,6 +381,7 @@ export default {
 
         closeModal(name) {
             this.modals[name] && this.modals[name].hide();
+            if (name === 'register') this.clearPhoneTimer();
         }
     }
 };

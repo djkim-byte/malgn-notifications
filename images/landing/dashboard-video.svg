@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" font-family="-apple-system, 'Noto Sans KR', sans-serif">
+  <defs>
+    <linearGradient id="playerGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+    <linearGradient id="brandGrad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 배경 -->
+  <rect width="960" height="540" fill="#0f172a"/>
+
+  <!-- 상단 헤더 -->
+  <rect x="0" y="0" width="960" height="56" fill="#1e293b"/>
+  <line x1="0" y1="56" x2="960" y2="56" stroke="#334155"/>
+
+  <!-- 로고 -->
+  <rect x="20" y="14" width="28" height="28" rx="6" fill="url(#brandGrad)"/>
+  <text x="34" y="33" font-weight="800" font-size="13" fill="#fff" text-anchor="middle">▶</text>
+  <text x="58" y="32" font-weight="800" font-size="16" fill="#fff">위캔디오</text>
+  <rect x="146" y="20" width="36" height="16" rx="4" fill="#a855f7"/>
+  <text x="164" y="32" font-weight="700" font-size="9" fill="#fff" text-anchor="middle">2.0 BETA</text>
+
+  <!-- 메뉴 -->
+  <text x="240" y="34" font-weight="600" font-size="12" fill="#fff">미디어</text>
+  <text x="300" y="34" font-size="12" fill="#94a3b8">인코딩</text>
+  <text x="360" y="34" font-size="12" fill="#94a3b8">분석</text>
+  <text x="410" y="34" font-size="12" fill="#94a3b8">설정</text>
+
+  <!-- 검색/유저 -->
+  <rect x="700" y="14" width="180" height="28" rx="8" fill="#0f172a"/>
+  <text x="716" y="32" font-size="11" fill="#64748b">콘텐츠 검색</text>
+  <circle cx="908" cy="28" r="14" fill="#6366f1"/>
+  <text x="908" y="32" font-weight="700" font-size="11" fill="#fff" text-anchor="middle">M</text>
+
+  <!-- 메인 그리드: 플레이어(좌) + 사이드(우) -->
+  <!-- 플레이어 -->
+  <g transform="translate(20, 76)">
+    <rect width="560" height="316" rx="12" fill="url(#playerGrad)"/>
+
+    <!-- 플레이 버튼 -->
+    <circle cx="280" cy="148" r="38" fill="#fff" opacity="0.9"/>
+    <path d="M 268 130 L 268 166 L 300 148 Z" fill="#312e81"/>
+
+    <!-- 컨트롤 바 -->
+    <rect x="20" y="270" width="520" height="6" rx="3" fill="#fff" opacity="0.2"/>
+    <rect x="20" y="270" width="340" height="6" rx="3" fill="#a855f7"/>
+    <circle cx="360" cy="273" r="6" fill="#fff"/>
+
+    <text x="20" y="296" font-size="11" fill="#fff" opacity="0.7">02:14 / 03:28</text>
+    <text x="540" y="296" font-size="11" fill="#fff" opacity="0.7" text-anchor="end">1080p · CDN: EU-WEST</text>
+
+    <!-- 라이브 배지 -->
+    <rect x="20" y="20" width="56" height="22" rx="6" fill="#ef4444"/>
+    <circle cx="32" cy="31" r="3" fill="#fff"/>
+    <text x="42" y="35" font-weight="700" font-size="11" fill="#fff">LIVE</text>
+    <text x="84" y="35" font-size="11" fill="#fff" opacity="0.8">시청자 12,840</text>
+
+    <!-- 우상단 메뉴 -->
+    <text x="540" y="36" font-size="14" fill="#fff" text-anchor="end" opacity="0.8">⋯</text>
+  </g>
+
+  <!-- 영상 정보 -->
+  <g transform="translate(20, 408)">
+    <text x="0" y="16" font-weight="700" font-size="15" fill="#fff">2026 Spring Brand Film</text>
+    <text x="0" y="36" font-size="11" fill="#94a3b8">조회 2,481,932회 · 4월 18일 업로드 · 1080p / 4K HDR</text>
+
+    <rect x="0" y="56" width="78" height="28" rx="14" fill="#6366f1"/>
+    <text x="39" y="74" font-weight="700" font-size="11" fill="#fff" text-anchor="middle">▶ 재생</text>
+    <rect x="86" y="56" width="78" height="28" rx="14" fill="#1e293b" stroke="#334155"/>
+    <text x="125" y="74" font-weight="600" font-size="11" fill="#fff" text-anchor="middle">↗ 공유</text>
+    <rect x="172" y="56" width="78" height="28" rx="14" fill="#1e293b" stroke="#334155"/>
+    <text x="211" y="74" font-weight="600" font-size="11" fill="#fff" text-anchor="middle">⬇ 임베드</text>
+  </g>
+
+  <!-- 우측 사이드: 인코딩 큐 -->
+  <g transform="translate(600, 76)">
+    <rect width="340" height="180" rx="12" fill="#1e293b" stroke="#334155"/>
+    <text x="20" y="30" font-weight="700" font-size="13" fill="#fff">인코딩 큐</text>
+    <rect x="270" y="14" width="52" height="22" rx="6" fill="#0f172a"/>
+    <text x="296" y="29" font-size="10" fill="#94a3b8" text-anchor="middle">전체 8</text>
+
+    <!-- Item 1 -->
+    <rect x="14" y="50" width="312" height="36" rx="6" fill="#0f172a"/>
+    <circle cx="32" cy="68" r="4" fill="#10b981"/>
+    <text x="44" y="64" font-size="11" fill="#fff">brand_film_master.mp4</text>
+    <rect x="44" y="72" width="240" height="4" rx="2" fill="#1e293b"/>
+    <rect x="44" y="72" width="240" height="4" rx="2" fill="#10b981"/>
+    <text x="316" y="76" font-size="9" fill="#10b981" text-anchor="end">100%</text>
+
+    <!-- Item 2 -->
+    <rect x="14" y="92" width="312" height="36" rx="6" fill="#0f172a"/>
+    <circle cx="32" cy="110" r="4" fill="#a855f7"/>
+    <text x="44" y="106" font-size="11" fill="#fff">spring_promo_4k.mov</text>
+    <rect x="44" y="114" width="240" height="4" rx="2" fill="#1e293b"/>
+    <rect x="44" y="114" width="156" height="4" rx="2" fill="#a855f7"/>
+    <text x="316" y="118" font-size="9" fill="#a855f7" text-anchor="end">65%</text>
+
+    <!-- Item 3 -->
+    <rect x="14" y="134" width="312" height="36" rx="6" fill="#0f172a"/>
+    <circle cx="32" cy="152" r="4" fill="#fbbf24"/>
+    <text x="44" y="148" font-size="11" fill="#fff">ad_15s_v3_final.mp4</text>
+    <rect x="44" y="156" width="240" height="4" rx="2" fill="#1e293b"/>
+    <rect x="44" y="156" width="60" height="4" rx="2" fill="#fbbf24"/>
+    <text x="316" y="160" font-size="9" fill="#fbbf24" text-anchor="end">25%</text>
+  </g>
+
+  <!-- 우측 하단: 통계 -->
+  <g transform="translate(600, 272)">
+    <rect width="340" height="220" rx="12" fill="#1e293b" stroke="#334155"/>
+    <text x="20" y="30" font-weight="700" font-size="13" fill="#fff">실시간 시청 통계</text>
+
+    <!-- KPI -->
+    <text x="20" y="60" font-size="10" fill="#94a3b8">현재 시청자</text>
+    <text x="20" y="84" font-weight="800" font-size="22" fill="#fff">12,840</text>
+    <text x="106" y="84" font-size="11" fill="#10b981">↑ 8.2%</text>
+
+    <text x="180" y="60" font-size="10" fill="#94a3b8">평균 시청 시간</text>
+    <text x="180" y="84" font-weight="800" font-size="22" fill="#fff">02:48</text>
+
+    <line x1="20" y1="102" x2="320" y2="102" stroke="#334155"/>
+
+    <!-- 막대 차트 (실시간 시청자 추이) -->
+    <text x="20" y="124" font-size="10" fill="#94a3b8">최근 12시간</text>
+    <g transform="translate(20, 132)">
+      <rect x="0" y="40" width="14" height="20" rx="2" fill="#6366f1"/>
+      <rect x="22" y="32" width="14" height="28" rx="2" fill="#6366f1"/>
+      <rect x="44" y="36" width="14" height="24" rx="2" fill="#6366f1"/>
+      <rect x="66" y="28" width="14" height="32" rx="2" fill="#6366f1"/>
+      <rect x="88" y="22" width="14" height="38" rx="2" fill="#6366f1"/>
+      <rect x="110" y="14" width="14" height="46" rx="2" fill="#6366f1"/>
+      <rect x="132" y="6" width="14" height="54" rx="2" fill="#a855f7"/>
+      <rect x="154" y="10" width="14" height="50" rx="2" fill="#a855f7"/>
+      <rect x="176" y="0" width="14" height="60" rx="2" fill="#a855f7"/>
+      <rect x="198" y="4" width="14" height="56" rx="2" fill="#a855f7"/>
+      <rect x="220" y="12" width="14" height="48" rx="2" fill="#a855f7"/>
+      <rect x="242" y="18" width="14" height="42" rx="2" fill="#a855f7"/>
+      <rect x="264" y="14" width="14" height="46" rx="2" fill="#a855f7"/>
+      <rect x="286" y="8" width="14" height="52" rx="2" fill="#a855f7"/>
+    </g>
+
+    <!-- 지역 분포 -->
+    <text x="20" y="206" font-size="10" fill="#94a3b8">상위 지역</text>
+    <rect x="100" y="196" width="40" height="14" rx="7" fill="#312e81"/>
+    <text x="120" y="206" font-weight="600" font-size="9" fill="#a5b4fc" text-anchor="middle">KR 42%</text>
+    <rect x="146" y="196" width="40" height="14" rx="7" fill="#312e81"/>
+    <text x="166" y="206" font-weight="600" font-size="9" fill="#a5b4fc" text-anchor="middle">US 21%</text>
+    <rect x="192" y="196" width="40" height="14" rx="7" fill="#312e81"/>
+    <text x="212" y="206" font-weight="600" font-size="9" fill="#a5b4fc" text-anchor="middle">JP 18%</text>
+    <rect x="238" y="196" width="40" height="14" rx="7" fill="#312e81"/>
+    <text x="258" y="206" font-weight="600" font-size="9" fill="#a5b4fc" text-anchor="middle">SG 11%</text>
+  </g>
+</svg>

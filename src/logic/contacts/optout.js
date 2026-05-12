@@ -152,6 +152,7 @@ export default {
                 downloadRequest: new bootstrap.Modal(this.$refs.downloadRequestModal),
                 downloadList: new bootstrap.Modal(this.$refs.downloadListModal)
             };
+            window.openPopupFromQuery && window.openPopupFromQuery(this);
         });
     },
 
